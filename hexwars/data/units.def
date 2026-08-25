@@ -1,0 +1,586 @@
+﻿# units.def - ユニット定義（仕様書 3章 / 11章）
+# atk_* はダメージ×10 スケール（55 = 満HP時 5.5ダメージ期待）
+# 架空WW2風の独自名称
+#
+# 戦闘アニメ動画（任意）: 各ユニットに `anim = gfx/anim/xxx.gif` を書くと、
+# オプションの「戦闘アニメを動画で再生」をONにしたとき、そのユニットの攻撃時に
+# 動画が再生される。ユニット毎に別の動画を指定できる。
+# 対応形式: mp4 等の動画（ffmpeg必須）/ アニメーションGIF（assets/ からの相対パス）
+# 未指定・読込失敗のユニットは従来のHPバー演出になる。詳しくは assets/gfx/anim/README.txt
+
+[unit INFANTRY]
+image     = gfx/units/infantry.png
+name      = 歩兵
+icon      = 歩
+class     = LAND_FOOT
+armor     = SOFT
+cost      = 100
+move      = 3
+fuel      = 60
+ammo      = 6
+vision    = 2
+atk_soft  = 55
+atk_hard  = 15
+atk_air   = 5
+atk_sea   = 12
+def       = 30
+can_capture = 1
+transport_by = TRUCK,T_COPTER,T_SHIP
+
+[unit AT_INFANTRY]
+image     = gfx/units/at_infantry.png
+name      = 対戦車兵
+icon      = 対
+class     = LAND_FOOT
+armor     = SOFT
+cost      = 150
+move      = 2
+fuel      = 50
+ammo      = 4
+vision    = 2
+atk_soft  = 35
+atk_hard  = 60
+atk_air   = 0
+atk_sea   = 25
+def       = 28
+can_capture = 1
+transport_by = TRUCK,T_COPTER,T_SHIP
+
+[unit RECON]
+image     = gfx/units/recon.png
+name      = 偵察車
+icon      = 偵
+class     = LAND_WHEEL
+armor     = HARD
+cost      = 160
+move      = 7
+fuel      = 80
+ammo      = 8
+vision    = 5
+atk_soft  = 45
+atk_hard  = 10
+atk_air   = 8
+atk_sea   = 10
+def       = 25
+transport_by = T_SHIP
+
+[unit TANK]
+image     = gfx/units/tank.png
+# 戦闘アニメ動画のサンプル（実際の動画に差し替えてください）
+anim      = gfx/anim/sample_land.mp4
+name      = 中戦車「T-40型」
+icon      = 戦
+class     = LAND_TRACK
+armor     = HARD
+cost      = 300
+move      = 5
+fuel      = 70
+ammo      = 7
+vision    = 3
+atk_soft  = 65
+atk_hard  = 55
+atk_air   = 10
+atk_sea   = 15
+def       = 45
+transport_by = T_SHIP
+
+[unit HTANK]
+image     = gfx/units/htank.png
+name      = 重戦車「G-6型」
+icon      = 重
+class     = LAND_TRACK
+armor     = HARD
+cost      = 500
+move      = 4
+fuel      = 60
+ammo      = 6
+vision    = 2
+atk_soft  = 75
+atk_hard  = 70
+atk_air   = 12
+atk_sea   = 15
+def       = 60
+transport_by = T_SHIP
+
+[unit ARTILLERY]
+image     = gfx/units/artillery.png
+name      = 自走砲「H-15型」
+icon      = 砲
+class     = LAND_TRACK
+armor     = HARD
+cost      = 320
+move      = 4
+fuel      = 55
+ammo      = 5
+vision    = 2
+atk_soft  = 70
+atk_hard  = 60
+atk_air   = 0
+atk_sea   = 45
+def       = 20
+range_min = 2
+range_max = 3
+move_and_fire = 0
+transport_by = T_SHIP
+
+[unit AA_TANK]
+image     = gfx/units/aa_tank.png
+name      = 対空戦車「F-8型」
+icon      = 高
+class     = LAND_TRACK
+armor     = HARD
+cost      = 280
+move      = 5
+fuel      = 65
+ammo      = 8
+vision    = 3
+atk_soft  = 30
+atk_hard  = 10
+atk_air   = 85
+atk_sea   = 5
+def       = 35
+transport_by = T_SHIP
+
+[unit TRUCK]
+image     = gfx/units/truck.png
+name      = トラック
+icon      = 輸
+class     = LAND_WHEEL
+armor     = HARD
+cost      = 120
+move      = 6
+fuel      = 80
+ammo      = 0
+vision    = 1
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 0
+def       = 10
+capacity  = 1
+
+[unit T_COPTER]
+image     = gfx/units/t_copter.png
+name      = 輸送ヘリ「Hv-4型」
+icon      = 吊
+class     = AIR
+armor     = AIR
+cost      = 250
+move      = 7
+fuel      = 55
+ammo      = 0
+vision    = 1
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 0
+def       = 20
+capacity  = 1
+
+[unit FIGHTER]
+image     = gfx/units/fighter.png
+name      = 戦闘機「Fk-9型」
+icon      = 翼
+class     = AIR
+armor     = AIR
+cost      = 400
+move      = 9
+fuel      = 60
+ammo      = 6
+vision    = 4
+atk_soft  = 15
+atk_hard  = 5
+atk_air   = 70
+atk_sea   = 20
+def       = 40
+transport_by = CARRIER
+
+[unit BOMBER]
+image     = gfx/units/bomber.png
+name      = 爆撃機「Bx-17型」
+icon      = 爆
+class     = AIR
+armor     = AIR
+cost      = 550
+move      = 7
+fuel      = 55
+ammo      = 4
+vision    = 3
+atk_soft  = 85
+atk_hard  = 80
+atk_air   = 0
+atk_sea   = 85
+def       = 35
+transport_by = CARRIER
+
+[unit HELI]
+image     = gfx/units/heli.png
+name      = 攻撃ヘリ「Hv-2型」
+icon      = 旋
+class     = AIR
+armor     = AIR
+cost      = 380
+move      = 6
+fuel      = 50
+ammo      = 6
+vision    = 3
+atk_soft  = 70
+atk_hard  = 60
+atk_air   = 25
+atk_sea   = 30
+def       = 30
+anti_sub  = 1
+transport_by = CARRIER
+
+[unit DESTROYER]
+image     = gfx/units/destroyer.png
+name      = 駆逐艦「Dn-3型」
+icon      = 駆
+class     = SEA
+armor     = SEA
+cost      = 450
+move      = 6
+fuel      = 90
+ammo      = 8
+vision    = 4
+atk_soft  = 40
+atk_hard  = 20
+atk_air   = 55
+atk_sea   = 60
+def       = 45
+anti_sub  = 1
+
+[unit CRUISER]
+image     = gfx/units/cruiser.png
+name      = 巡洋艦「Kv-1型」
+icon      = 巡
+class     = SEA
+armor     = SEA
+cost      = 700
+move      = 5
+fuel      = 90
+ammo      = 6
+vision    = 3
+atk_soft  = 75
+atk_hard  = 55
+atk_air   = 40
+atk_sea   = 70
+def       = 55
+
+[unit SUBMARINE]
+image     = gfx/units/submarine.png
+name      = 潜水艦「U-11型」
+icon      = 潜
+class     = SEA_SUB
+armor     = SEA
+cost      = 420
+move      = 5
+fuel      = 70
+ammo      = 5
+vision    = 3
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 80
+def       = 40
+is_sub    = 1
+
+[unit T_SHIP]
+image     = gfx/units/t_ship.png
+name      = 輸送艦「Ln-2型」
+icon      = 舶
+class     = SEA
+armor     = SEA
+cost      = 300
+move      = 5
+fuel      = 90
+ammo      = 0
+vision    = 2
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 0
+def       = 30
+capacity  = 2
+
+# 補給車（ammo=補給物資、最大10を搭載）。隣接味方に燃料・弾薬を補給（物資-1/体、
+# 手動「補給」＋手番開始時に自動）、コマンド「回復」で物資10を使い1HP回復（1回1HPのみ）。
+# 物資は自軍の都市・工場・首都に乗るとターン開始時に満タン(10)まで補充。
+[unit SUPPLY]
+image     = gfx/units/supply.png
+name      = 補給車
+icon      = 給
+class     = LAND_WHEEL
+armor     = HARD
+cost      = 200
+move      = 5
+fuel      = 80
+ammo      = 100
+vision    = 1
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 0
+def       = 12
+supply    = 1
+transport_by = T_SHIP
+
+# 補給機（航空用の補給車。物資最大10。空港でターン開始時に補充）
+[unit SUPPLY_AIR]
+image     = gfx/units/supply_air.png
+name      = 補給機「Cg-5型」
+icon      = 補
+class     = AIR
+armor     = AIR
+cost      = 280
+move      = 7
+fuel      = 55
+ammo      = 100
+vision    = 2
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 0
+def       = 20
+supply    = 1
+
+# ---- 以下、拡充ユニット（仕様書11章の24種構成へ）。セーブ互換のため末尾追加 ----
+
+[unit MILITIA]
+image     = gfx/units/militia.png
+name      = 民兵
+icon      = 民
+class     = LAND_FOOT
+armor     = SOFT
+cost      = 60
+move      = 3
+fuel      = 50
+ammo      = 4
+vision    = 2
+atk_soft  = 40
+atk_hard  = 8
+atk_air   = 3
+atk_sea   = 8
+def       = 20
+can_capture = 1
+transport_by = TRUCK,T_COPTER,T_SHIP
+
+[unit MECH_INF]
+image     = gfx/units/mech_inf.png
+name      = 機械化歩兵
+icon      = 機
+class     = LAND_TRACK
+armor     = HARD
+cost      = 220
+move      = 5
+fuel      = 70
+ammo      = 6
+vision    = 2
+atk_soft  = 60
+atk_hard  = 25
+atk_air   = 8
+atk_sea   = 12
+def       = 35
+can_capture = 1
+transport_by = T_SHIP
+
+[unit LTANK]
+image     = gfx/units/ltank.png
+name      = 軽戦車「T-20型」
+icon      = 軽
+class     = LAND_TRACK
+armor     = HARD
+cost      = 200
+move      = 7
+fuel      = 75
+ammo      = 7
+vision    = 4
+atk_soft  = 55
+atk_hard  = 35
+atk_air   = 8
+atk_sea   = 10
+def       = 32
+transport_by = T_SHIP
+
+[unit ROCKET]
+image     = gfx/units/rocket.png
+name      = 自走ロケット砲「R-8型」
+icon      = 噴
+class     = LAND_WHEEL
+armor     = HARD
+cost      = 450
+move      = 4
+fuel      = 50
+ammo      = 4
+vision    = 2
+atk_soft  = 90
+atk_hard  = 55
+atk_air   = 0
+atk_sea   = 40
+def       = 15
+range_min = 3
+range_max = 4
+move_and_fire = 0
+transport_by = T_SHIP
+
+[unit AA_GUN]
+image     = gfx/units/aa_gun.png
+name      = 高射砲
+icon      = 射
+class     = LAND_FOOT
+armor     = SOFT
+cost      = 160
+move      = 1
+fuel      = 30
+ammo      = 8
+vision    = 3
+atk_soft  = 15
+atk_hard  = 5
+atk_air   = 95
+atk_sea   = 0
+def       = 25
+range_min = 3
+range_max = 4
+transport_by = TRUCK,T_SHIP
+
+[unit DIVE_BOMBER]
+image     = gfx/units/dive_bomber.png
+name      = 襲撃機「Sk-6型」
+icon      = 襲
+class     = AIR
+armor     = AIR
+cost      = 420
+move      = 7
+fuel      = 55
+ammo      = 5
+vision    = 3
+atk_soft  = 60
+atk_hard  = 75
+atk_air   = 10
+atk_sea   = 60
+def       = 32
+transport_by = CARRIER
+
+[unit SCOUT_PLANE]
+image     = gfx/units/scout_plane.png
+name      = 偵察機「Mk-3型」
+icon      = 察
+class     = AIR
+armor     = AIR
+cost      = 180
+move      = 10
+fuel      = 70
+ammo      = 0
+vision    = 6
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 0
+def       = 25
+transport_by = CARRIER
+
+# ---- 艦船の拡充（港で生産。セーブ互換のため末尾追加） ----
+
+# 戦艦: 射程2-5の巨砲を持つ海の主力。対地・対艦に絶大、鈍足で対空は苦手
+[unit BATTLESHIP]
+image     = gfx/units/battleship.png
+# 戦闘アニメ動画のサンプル（ユニット毎に別の動画を指定できる）
+anim      = gfx/anim/sample_sea.gif
+name      = 戦艦「Rz-9型」
+icon      = 艦
+class     = SEA
+armor     = SEA
+cost      = 900
+move      = 4
+fuel      = 99
+ammo      = 6
+vision    = 3
+atk_soft  = 85
+atk_hard  = 80
+atk_air   = 25
+atk_sea   = 75
+def       = 70
+range_min = 2
+range_max = 5
+move_and_fire = 0
+
+# 空母: 航空ユニットを2機まで搭載して海を越えて運ぶ洋上基地（隣接ヘクスへ発艦）。
+# 搭載中の航空機はターン開始時に空港と同様に燃料・弾薬回復＋HP+2修理される
+[unit CARRIER]
+image     = gfx/units/carrier.png
+name      = 空母「Hy-4型」
+icon      = 母
+class     = SEA
+armor     = SEA
+cost      = 850
+move      = 5
+fuel      = 99
+ammo      = 0
+vision    = 5
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 30
+atk_sea   = 10
+def       = 55
+capacity  = 2
+resupply_cargo = 1
+
+# 砲艦: 安価な沿岸砲撃艦。射程2の間接攻撃で上陸支援
+[unit GUNBOAT]
+image     = gfx/units/gunboat.png
+name      = 砲艦「Bt-2型」
+icon      = 舟
+class     = SEA
+armor     = SEA
+cost      = 350
+move      = 5
+fuel      = 70
+ammo      = 6
+vision    = 2
+atk_soft  = 60
+atk_hard  = 40
+atk_air   = 10
+atk_sea   = 45
+def       = 35
+range_min = 2
+range_max = 3
+move_and_fire = 0
+
+# ミサイル艇: 高速・対艦特化の小型艇。安く数を揃えて群狼戦法
+[unit MISSILE_BOAT]
+image     = gfx/units/missile_boat.png
+name      = ミサイル艇「Fk-5型」
+icon      = 艇
+class     = SEA
+armor     = SEA
+cost      = 320
+move      = 8
+fuel      = 60
+ammo      = 5
+vision    = 4
+atk_soft  = 30
+atk_hard  = 30
+atk_air   = 35
+atk_sea   = 75
+def       = 25
+
+# 補給艦（海上の補給車。物資最大10=ammo。隣接する味方の艦船のみ燃料・弾薬を補給し
+# 「回復」でHPも回復できる（補給車=陸/補給機=空と同じくドメイン限定＝船のみが対象）。
+# 物資は自軍の港でターン開始時に補充。セーブ互換のため末尾追加。
+[unit SUPPLY_SHIP]
+image     = gfx/units/supply_ship.png
+name      = 補給艦「Ho-6型」
+icon      = 糧
+class     = SEA
+armor     = SEA
+cost      = 400
+move      = 5
+fuel      = 99
+ammo      = 100
+vision    = 2
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 0
+def       = 30
+supply    = 1

@@ -1,0 +1,149 @@
+# terrain.def - 地形定義（仕様書 5.3）
+# 移動コストは2倍整数（道路=1, 平地=2, 0=進入不可）
+
+[terrain PLAIN]
+name       = 平地
+char       = .
+def        = 0
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+color      = 9CBF6B
+
+[terrain ROAD]
+name       = 道路
+char       = =
+def        = 0
+cost_foot  = 2
+cost_wheel = 1
+cost_track = 1
+cost_air   = 2
+color      = C9B79C
+
+[terrain FOREST]
+name       = 森
+char       = w
+def        = 20
+cost_foot  = 4
+cost_wheel = 6
+cost_track = 4
+cost_air   = 2
+hide       = 1
+color      = 55884F
+
+[terrain MOUNTAIN]
+name       = 山
+char       = ^
+def        = 40
+cost_foot  = 6
+cost_air   = 2
+color      = 8D8578
+
+[terrain RIVER]
+name       = 川
+char       = r
+def        = 0
+cost_foot  = 4
+cost_air   = 2
+color      = 7FB2D9
+
+[terrain SEA]
+name       = 海
+char       = ~
+def        = 0
+cost_air   = 2
+cost_sea   = 2
+cost_sub   = 2
+color      = 4A7FB5
+
+[terrain CITY]
+name       = 都市
+char       = c
+def        = 30
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+income     = 100
+capturable = 1
+supplies   = LAND
+hide       = 1
+color      = C8C8C0
+
+[terrain FACTORY]
+name       = 工場
+char       = f
+def        = 30
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+income     = 150
+capturable = 1
+produces   = LAND
+supplies   = LAND
+color      = A89A8E
+
+[terrain AIRPORT]
+name       = 空港
+char       = a
+def        = 20
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+income     = 100
+capturable = 1
+produces   = AIR
+supplies   = AIR
+color      = B7B7C4
+
+[terrain PORT]
+name       = 港
+char       = p
+def        = 20
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+cost_sea   = 2
+cost_sub   = 2
+income     = 100
+capturable = 1
+produces   = SEA
+supplies   = SEA,SUB
+color      = 9FB4C0
+
+[terrain HILL]
+name       = 丘
+char       = h
+def        = 20
+cost_foot  = 2
+cost_wheel = 4
+cost_track = 3
+cost_air   = 2
+color      = A8A276
+
+[terrain HQ]
+name       = 首都
+char       = H
+def        = 40
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+income     = 300
+capturable = 1
+produces   = LAND
+supplies   = LAND
+hq         = 1
+color      = D9C766
+
+# 圏外: マップの輪郭を長方形以外にするための「盤外」。
+# 全コスト0=全ユニット進入不可。描画側で 'x' はスキップされる（セーブ互換のため末尾）
+[terrain VOID]
+name       = 圏外
+char       = x
+def        = 0
+color      = 161A20

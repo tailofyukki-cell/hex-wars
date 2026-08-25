@@ -1,0 +1,65 @@
+# c02 森林の防衛線 - 十字型の森。中央交差点を封鎖して守る
+[map]
+name = 森林の防衛線
+width  = 38
+height = 25
+turns  = 38
+timeout_winner = 0
+funds0 = 1250
+funds1 = 2450
+
+[terrain]
+row = xxxxxxxxxxxxxx....w.....wxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx....w.c...wxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx.wwww....wwxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx....wwwwwwwxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxw...wwwwwwwxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxw...wwwwwwwxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxwwwwwwwwwwwxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx.wwwwww..w.xxxxxxxxxxxxx
+row = ..w.....www.....wwwww...w...wwwwwwww..
+row = ..w.....www.....wwwww...w...wwwwwwww..
+row = ..ww....www....www...www....wwww......
+row = ww.w....c.w.....ww..c........www.c.a..
+row = .....H.a========================.Haf.w
+row = ...fcc.a========================.c...w
+row = ..w..f.....wwwwwww.....w.www...f.....w
+row = ...........www.www.....ww....ww......w
+row = ...wwww...w.ww.....ww..wwww....w......
+row = ...wwww...w.ww.....ww..wwww....w......
+row = xxxxxxxxxxxxxxw...wwwwww.xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx....wwwwww.xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx.wwwwwwc...xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx.wwwwww....xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx..wwwww....xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx.wwwwwwwww.xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxw.....wwww.xxxxxxxxxxxxx
+
+[owners]
+own = 5,12,0
+own = 5,14,0
+own = 3,13,0
+own = 5,13,0
+own = 4,13,0
+own = 8,11,0
+own = 7,13,0
+own = 7,12,0
+own = 33,12,1
+own = 35,12,1
+own = 31,14,1
+own = 33,11,1
+own = 33,13,1
+own = 35,11,1
+own = 34,12,1
+
+[units]
+unit = 0,INFANTRY,8,12
+unit = 0,AT_INFANTRY,7,11
+unit = 0,ARTILLERY,8,13
+unit = 0,TANK,9,12
+unit = 1,TANK,30,12
+unit = 1,TANK,31,12
+unit = 1,INFANTRY,31,11
+unit = 1,INFANTRY,30,11
+unit = 1,ARTILLERY,29,12
+unit = 1,RECON,30,13

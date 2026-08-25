@@ -1,0 +1,64 @@
+# c07 山岳の隘路 - ドーナツ型の環状谷。北回りか南回りか
+[map]
+name = 山岳の隘路
+width  = 42
+height = 25
+turns  = 73
+timeout_winner = -1
+funds0 = 1950
+funds1 = 1950
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxx............xxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxww...c......wxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxw.............xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxwc............xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxx................xxxxxxxxxxx
+row = xxxxxxxxxxxxxx.....^^^^^^....wwxxxxxxxxxxx
+row = xxxxxxxxxxxxxx.....^^^^^^^^...c.xxxxxxxxxx
+row = xxxxxxxxxxxxax.....^^^^^^^^.....xxxxxxxxxx
+row = xxxxxxxxxxxx......^^^^^^^^^.wwwwxxxxxxxxxx
+row = xxxxxxxxxxxxca....^^^^^^^^^^.f.wfxxxxxxxxx
+row = xxxxxxxxxxH...f.^^^^^^^^^^^^.ac.Hxxxxxxxxx
+row = xxxxxxxxxxx.c.w.^^^^^^^^^^^^....axxxxxxxxx
+row = xxxxxxxxxxxxf..www^^^^^^^^^^.....xxxxxxxxx
+row = xxxxxxxxxxxx..wwww^^^^^^^^^.....xxxxxxxxxx
+row = xxxxxxxxxxxxxxwwwww^^^^^^^^..wwwxxxxxxxxxx
+row = xxxxxxxxxxxxxxwwwww^^^^^^^^..wwwxxxxxxxxxx
+row = xxxxxxxxxxxxxxww...^^^^^^.c....xxxxxxxxxxx
+row = xxxxxxxxxxxxxxx......ww........xxxxxxxxxxx
+row = xxxxxxxxxxxxxxx...wwwwww.....xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxx...wwwwww.....xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxwwwwwcwww...wxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxx...ww.......xxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 10,12,0
+own = 12,14,0
+own = 14,12,0
+own = 12,11,0
+own = 12,13,0
+own = 13,11,0
+own = 12,9,0
+own = 32,12,1
+own = 32,11,1
+own = 29,11,1
+own = 30,12,1
+own = 30,8,1
+own = 32,13,1
+own = 29,12,1
+
+[units]
+unit = 0,INFANTRY,13,14
+unit = 1,INFANTRY,30,9
+unit = 0,INFANTRY,13,13
+unit = 1,INFANTRY,29,9
+unit = 0,TANK,13,16
+unit = 1,TANK,30,11
+unit = 0,ARTILLERY,12,12
+unit = 1,ARTILLERY,29,7
+unit = 0,AT_INFANTRY,14,14
+unit = 1,AT_INFANTRY,29,8

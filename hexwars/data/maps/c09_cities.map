@@ -1,0 +1,66 @@
+# c09 補給都市の攻防 - 斜めに走る帯状の市街地を端から端まで奪い合う
+[map]
+name = 補給都市の攻防
+width  = 46
+height = 25
+turns  = 83
+timeout_winner = -1
+funds0 = 2100
+funds1 = 2100
+objective_count = 22
+objective_player = 0
+
+[terrain]
+row = ..w................w....xxxxxxxxxxxxxxxxxxxxxx
+row = ..w................w....xxxxxxxxxxxxxxxxxxxxxx
+row = ..........w.........ww.....xxxxxxxxxxxxxxxxxxx
+row = ........ww...................xxxxxxxxxxxxxxxxx
+row = ww............................f.xxxxxxxxxxxxxx
+row = ww..............................axxxxxxxxxxxxx
+row = ...............................w.xxxxxxxxxxxxx
+row = ww..........................c...afH.xxxxxxxxxx
+row = ................................=======xxxxxxx
+row = ................................c=cc===xxxxxxx
+row = .............................ww=.........xxxxx
+row = xx.....w.............c....c....=............xx
+row = xxxx....a..............=======c...............
+row = xxxx...f...ac..........========...............
+row = xxxxxxx..H.cf...c.w....=.ww....w..............
+row = xxxxxxxxxx............=.................w.....
+row = xxxxxxxxxxxxc.......c.=.w.....................
+row = xxxxxxxxxxxx..........=.w.....................
+row = xxxxxxxxxxxxxxx=c=====...............www...w..
+row = xxxxxxxxxxxxxxxx...................w.........w
+row = xxxxxxxxxxxxxxxxxxc........................w..
+row = xxxxxxxxxxxxxxxxxxx........................w..
+row = xxxxxxxxxxxxxxxxxxxxxx........................
+row = xxxxxxxxxxxxxxxxxxxxxxxx......................
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxx..ww.....w.......w.
+
+[owners]
+own = 9,14,0
+own = 7,13,0
+own = 12,14,0
+own = 11,14,0
+own = 12,13,0
+own = 8,12,0
+own = 11,13,0
+own = 34,7,1
+own = 33,7,1
+own = 30,4,1
+own = 34,9,1
+own = 35,9,1
+own = 32,7,1
+own = 32,5,1
+
+[units]
+unit = 0,INFANTRY,13,13
+unit = 1,INFANTRY,32,8
+unit = 0,INFANTRY,12,12
+unit = 1,INFANTRY,33,8
+unit = 0,TRUCK,11,12
+unit = 1,TRUCK,30,7
+unit = 0,TANK,14,13
+unit = 1,TANK,30,8
+unit = 0,RECON,13,12
+unit = 1,RECON,30,9

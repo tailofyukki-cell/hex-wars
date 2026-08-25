@@ -1,0 +1,71 @@
+# c04 首都攻略 - 三角形の大陸。頂点の敵首都へ2本の登り道
+[map]
+name = 首都攻略
+width  = 42
+height = 29
+turns  = 94
+timeout_winner = -1
+funds0 = 3900
+funds1 = 4200
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxx.ww.xxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx.ww.xxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx....xxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxx....wwxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxc..H..a..xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxx..f.f....xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxx.........xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxx....wc......xxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxx....^^^^^^^^^.xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxx....^^^^^^^^^.xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxx....=......==^w..xxxxxxxxxxx
+row = xxxxxxxxxxxxxx.^^^^=.......=^..xxxxxxxxxxx
+row = xxxxxxxxxxxx......=..a.....=....xxxxxxxxxx
+row = xxxxxxxxxxxx......=........=....xxxxxxxxxx
+row = xxxxxxxxxxx.......=.........=....xxxxxxxxx
+row = xxxxxxxxxxx.....==.......ww.=....xxxxxxxxx
+row = xxxxxxxxxx......==...c.......==....xxxxxxx
+row = xxxxxxxxxx...c..==...........=c....xxxxxxx
+row = xxxxxxxx..w.ww.=..w........w.==.....xxxxxx
+row = xxxxxxx........=.........ww....=.....xxxxx
+row = xxxxxxx.......=..............========xxxxx
+row = xxxxxxx.......=.......f......========xxxxx
+row = xxxxxxw.www...=......a..w............==xxx
+row = xxxx........==w......................==wxx
+row = xxxx........==..wcc.cH.................=xx
+row = xxxx........==..ww.....................=xx
+row = xxx.========......w..rfrcrrrrrrrrrrr.ww=.x
+row = xx....wrrrrrrrrrrrrrrrr.............rww...
+row = .....................a..w.................
+
+[owners]
+own = 21,24,0
+own = 22,21,0
+own = 22,26,0
+own = 24,26,0
+own = 18,24,0
+own = 17,24,0
+own = 20,24,0
+own = 21,22,0
+own = 21,28,0
+own = 21,4,1
+own = 20,5,1
+own = 22,5,1
+own = 21,7,1
+own = 18,4,1
+own = 24,4,1
+own = 21,12,1
+
+[units]
+unit = 0,INFANTRY,17,22
+unit = 0,INFANTRY,18,22
+unit = 0,RECON,18,21
+unit = 0,TANK,17,21
+unit = 0,ARTILLERY,16,22
+unit = 1,HTANK,21,10
+unit = 1,TANK,22,10
+unit = 1,AA_TANK,20,10
+unit = 1,ARTILLERY,21,11
+unit = 1,INFANTRY,22,8
+unit = 1,FIGHTER,18,7

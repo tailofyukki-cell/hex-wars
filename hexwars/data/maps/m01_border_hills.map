@@ -1,0 +1,70 @@
+# m01 国境の丘 - 六角形の大陸。対角に走る丘の尾根が国境線
+[map]
+name = 国境の丘
+width  = 42
+height = 29
+turns  = 104
+timeout_winner = -1
+funds0 = 2100
+funds1 = 2100
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxx..............xxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxx.ww.w...........xxxxxxxxxxx
+row = xxxxxxxxxxxxxf.............hhhhxxxxxxxxxxx
+row = xxxxxxxxxxxxxf.............hhhhxxxxxxxxxxx
+row = xxxxxxxxxxxxxx.w....w..w...hhhhhxxxxxxxxxx
+row = xxxxxxxxxxxxwwww...w.....hhhhhh.xxxxxxxxxx
+row = xxxxxxxxxxxxHca...www....^^^h....xxxxxxxxx
+row = xxxxxxxxxxxx......www....^^^hc...xxxxxxxxx
+row = xxxxxxxxxxx=====........^hhh.....xxxxxxxxx
+row = xxxxxxxxxxxwa...==...hhh^hhh.......xxxxxxx
+row = xxxxxxxxxc..c...==..hhh^hhh........xxxxxxx
+row = xxxxxxxxxx......==..hhh^hhh........xxxxxxx
+row = xxxxxxxxxx........=====^hhhw.ww.....xxxxxx
+row = xxxxxxxx...........^^^^====......wwwxxxxxx
+row = xxxxxxxxxx......hhh^hc.....=...w....xxxxxx
+row = xxxxxxxxxx......hhh^h......=...wcc..xxxxxx
+row = xxxxxxxxxx.....hhh^hhww....=====.c.xxxxxxx
+row = xxxxxxxxxxx....hhh^hh...........=..xxxxxxx
+row = xxxxxxxxxxx..c.h^^w...........a.=xxxxxxxxx
+row = xxxxxxxxxxx....h^^w.........ffH.=xxxxxxxxx
+row = xxxxxxxxxxxx..hh^^...ww.......a.wxxxxxxxxx
+row = xxxxxxxxxxxxhhhh................xxxxxxxxxx
+row = xxxxxxxxxxxxxxhh...w............xxxxxxxxxx
+row = xxxxxxxxxxxxxxhh...w............xxxxxxxxxx
+row = xxxxxxxxxxxxxxh........w.......xxxxxxxxxxx
+row = xxxxxxxxxxxxxxx........ww......xxxxxxxxxxx
+row = xxxxxxxxxxxxxxx.ww.wwww......xxxxxxxxxxxxx
+
+[owners]
+own = 12,8,0
+own = 13,5,0
+own = 13,4,0
+own = 13,8,0
+own = 9,12,0
+own = 12,12,0
+own = 12,11,0
+own = 14,8,0
+own = 30,21,1
+own = 28,21,1
+own = 29,21,1
+own = 33,18,1
+own = 33,17,1
+own = 32,17,1
+own = 30,22,1
+own = 30,20,1
+
+[units]
+unit = 0,INFANTRY,14,9
+unit = 1,INFANTRY,28,20
+unit = 0,INFANTRY,16,9
+unit = 1,INFANTRY,29,20
+unit = 0,RECON,16,8
+unit = 1,RECON,29,18
+unit = 0,TANK,13,9
+unit = 1,TANK,28,18
+unit = 0,ARTILLERY,14,11
+unit = 1,ARTILLERY,26,20

@@ -1,0 +1,240 @@
+/* types.h - 共通型・上限定数（仕様書 2.4） */
+#ifndef HW_TYPES_H
+#define HW_TYPES_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#define MAX_MAP_W        64
+#define MAX_MAP_H        64
+#define MAX_PLAYERS       2
+#define MAX_UNITS       200
+#define MAX_UNIT_TYPES   96   /* 種類数。索引は1バイトなので255まで増やせる */
+#define MAX_TERRAIN      32   /* 同上。ファンタジー等で地形を増やす余地 */
+#define MAX_COMMANDERS   16
+#define MAX_CAMPAIGN_MAPS 20
+#define MAX_CARRY_UNITS  30
+#define MAX_STORE_UNITS  64   /* 倉庫（持越し不可ユニットの保管庫）容量 */
+/* 持越しユニットの初期配置上限 = マップ本来の自軍ユニット数 × この倍率。
+ * 超過分は倉庫行き（生産拠点で無料で引き出せる） */
+#define DEPLOY_CARRY_RATIO 2
+/* キャンペーンで敵に与える増援の上限倍率。
+ * 自軍は持越しで最大3倍（元の戦力＋DEPLOY_CARRY_RATIO倍）まで増えるので、
+ * 敵にも「実際に持ち込んだ数」に応じた増援を出して戦力差を埋める。
+ * 2 なら敵は最大で元の2倍まで。 */
+#define CAMPAIGN_ENEMY_MAX_RATIO 2
+#define MAX_EVENTS 16     /* 1作戦に仕込めるイベント数（events_fired が32bitなので32が上限） */
+
+/* 移動タイプ（仕様書 5.2） */
+typedef enum {
+    MC_FOOT = 0,
+    MC_WHEEL,
+    MC_TRACK,
+    MC_AIR,
+    MC_SEA,
+    MC_SUB,
+    MC_COUNT
+} MoveClass;
+
+/* 高度レイヤー（マップ立体化。docs/layering_spec.md）。
+ * 高さが違えば同一セルに共存でき、各(セル,レイヤー)に最大1体。
+ * レイヤーは MoveClass から一意に決まる（Unit には保存しない＝セーブ互換）。 */
+typedef enum {
+    LAYER_AIR = 0,   /* 空: 航空機 */
+    LAYER_SURFACE,   /* 地表・海面: 歩兵/車両/戦車 と 水上艦 */
+    LAYER_UNDER,     /* 海中: 潜水艦 */
+    LAYER_COUNT
+} Layer;
+
+static inline Layer unit_layer(int mclass)
+{
+    if (mclass == MC_AIR) return LAYER_AIR;
+    if (mclass == MC_SUB) return LAYER_UNDER;
+    return LAYER_SURFACE;   /* FOOT/WHEEL/TRACK/SEA */
+}
+
+/* 装甲カテゴリ（攻撃側がどの ATK 値を使うか） */
+typedef enum {
+    ARMOR_SOFT = 0,
+    ARMOR_HARD,
+    ARMOR_AIR,
+    ARMOR_SEA,
+    ARMOR_COUNT
+} ArmorCat;
+
+/* 燃料切れになったときの扱い（.def の no_fuel）。
+ * 現代戦では航空機=墜落・艦船=漂流だが、飛竜や浮遊要塞には不要なのでデータで選ぶ。 */
+typedef enum {
+    NOFUEL_NONE = 0,   /* 何も起きない */
+    NOFUEL_DIE,        /* その場で失われる（墜落） */
+    NOFUEL_DAMAGE,     /* 毎ターン HP-1（漂流） */
+    NOFUEL_AUTO = 255  /* 未指定: class から従来どおりに決める */
+} NoFuelKind;
+
+/* upkeep 未指定を表す値（0 は「消費しない」という有効な指定なので分ける） */
+#define UPKEEP_AUTO 255
+
+/* 施設の生産カテゴリ */
+typedef enum {
+    PROD_NONE = 0,
+    PROD_LAND,
+    PROD_AIR,
+    PROD_SEA
+} ProduceCat;
+
+typedef struct { int8_t q, r; } Axial;
+typedef struct { uint8_t x, y; } Cell;
+
+/* ユニット定義（units.def の1エントリ） */
+typedef struct {
+    char     id[24];
+    char     name[32];
+    char     icon[8];        /* 1文字表示用 (UTF-8) */
+    uint8_t  mclass;         /* MoveClass */
+    uint8_t  armor;          /* ArmorCat: 被弾時カテゴリ */
+    int16_t  cost;
+    uint8_t  move;
+    uint8_t  fuel;
+    uint8_t  ammo;
+    uint8_t  vision;
+    int16_t  atk[ARMOR_COUNT]; /* 対 SOFT/HARD/AIR/SEA 攻撃力 */
+    int16_t  def_;
+    uint8_t  range_min;
+    uint8_t  range_max;
+    uint8_t  can_capture;
+    uint8_t  move_and_fire;  /* 1=移動後攻撃可（直射） */
+    uint8_t  anti_sub;       /* 1=対潜能力あり */
+    uint8_t  is_sub;         /* 1=潜水艦 */
+    uint8_t  supply;         /* 1=隣接味方に燃料・弾薬を補給できる（補給車等） */
+    /* 維持コストと燃料切れの扱い。既定は class から決まる（従来の挙動）ので、
+     * 現代戦以外（飛竜・浮遊要塞など）では .def で明示して上書きする。 */
+    uint8_t  upkeep;         /* 補給施設の外にいる間、毎ターン減る燃料。UPKEEP_AUTO=未指定 */
+    uint8_t  no_fuel;        /* NoFuelKind。NOFUEL_AUTO=未指定 */
+    int8_t   move_se;        /* 移動時の効果音（SeId）。-1=class から自動 */
+    /* 輸送（仕様書 5.9） */
+    uint8_t  capacity;              /* 搭載可能数 (0=輸送不可) */
+    uint8_t  resupply_cargo;        /* 1=搭載中ユニットをターン開始時に補給（空母） */
+    char     transport_by[4][24];   /* このユニットを搭載できる輸送手段ID */
+    uint8_t  n_transport_by;
+    /* スプライト画像（assets/ 相対パス。空=図形描画にフォールバック）
+     * image[0]=P0用 / image[1]=P1用（units.def の image は両方に設定） */
+    char     image[2][64];
+    /* 戦闘アニメ動画（assets/ 相対パス。アニメーションGIF/WebP）。
+     * units.def の `anim =` で指定。空=動画なし（従来のHPバー演出にフォールバック） */
+    char     anim[64];
+} UnitType;
+
+/* 地形定義（terrain.def の1エントリ） */
+typedef struct {
+    char     id[24];
+    char     name[32];
+    char     chr;                 /* マップファイル上の1文字 */
+    int16_t  def_bonus;           /* 防御補正 % */
+    int16_t  mcost[MC_COUNT];     /* 移動コスト（2倍整数、0=進入不可） */
+    int16_t  income;              /* 収入 */
+    uint8_t  capturable;          /* 占領対象か */
+    uint8_t  produces;            /* ProduceCat */
+    uint8_t  supplies;            /* 補給対象 MoveClass のビットマスク */
+    uint8_t  hide;                /* 1=隣接しないと中の敵を視認不可 */
+    uint8_t  is_hq;               /* 1=首都 */
+    uint32_t color;               /* 0xRRGGBB 描画色 */
+} TerrainType;
+
+/* 天候（仕様: 晴=変化なし / 曇=空↔地上の攻撃半減・視界-1 / 雨=同攻撃不可・
+ * 視界-2・地上移動-1）。ラウンド単位で抽選し数ターン継続する。 */
+typedef enum {
+    WX_CLEAR = 0,   /* 晴 */
+    WX_CLOUDY,      /* 曇り */
+    WX_RAIN,        /* 雨 */
+    WX_COUNT
+} Weather;
+
+/* 指揮官（CO）の必殺技の種類 */
+typedef enum {
+    CO_POW_HEAL = 0,   /* 全軍HP+val */
+    CO_POW_RUSH,       /* 全軍が再行動 */
+    CO_POW_STRIKE,     /* このターン攻撃+val% */
+    CO_POW_FUNDS,      /* 資金+val */
+    CO_POW_SCOUT       /* このターン全マップ視認 + 資金val */
+} CoPowerType;
+
+/* 常時効果の対象ドメイン（0=全部 / 以降は move_domain()+1 と対応） */
+typedef enum {
+    CO_DOM_ALL = 0, CO_DOM_LAND, CO_DOM_AIR, CO_DOM_SEA
+} CoDomain;
+
+/* 指揮官定義（commanders.def の1エントリ） */
+typedef struct {
+    char     id[24];
+    char     name[32];
+    char     title[48];
+    char     desc[128];
+    uint8_t  domain;          /* CoDomain */
+    int16_t  atk_pct;
+    int16_t  def_pct;
+    int8_t   move_bonus;
+    int8_t   vision_bonus;
+    int16_t  income_pct;
+    char     power_name[32];
+    char     power_desc[128];
+    int16_t  power_cost;
+    uint8_t  power_type;      /* CoPowerType */
+    int16_t  power_val;
+    int16_t  unlock_clears;   /* 解禁に必要なクリア数（0=最初から使える） */
+} CommanderType;
+
+/* --- マップイベント（作戦途中で起きる出来事） ---
+ * .cpn に `event = 条件 | 動作 | メッセージ` と書く。各イベントは1回だけ発火する。
+ * 条件・動作とも数値化して Game が持つので、セーブ/ロードをまたいでも状態が保たれる。 */
+typedef enum {
+    EV_C_NONE = 0,
+    EV_C_TURN,      /* c1 ターン目に到達した */
+    EV_C_BLD,       /* 陣営 c1 の建物が c2 個以上 */
+    EV_C_LOSS,      /* 陣営 c1 の損失が c2 体以上 */
+    EV_C_AREA       /* 陣営 c1 のユニットが (c2,c3) から半径 c4 以内にいる */
+} EvCond;
+
+typedef enum {
+    EV_A_NONE = 0,
+    EV_A_MSG,       /* メッセージだけ */
+    EV_A_SPAWN,     /* 陣営 a1 のユニット種別 a2 を (a3,a4) 付近に a5 体出す */
+    EV_A_FUNDS      /* 陣営 a1 に資金 a2 を与える */
+} EvAct;
+
+typedef struct {
+    uint8_t cond;              /* EvCond */
+    int16_t c1, c2, c3, c4;
+    uint8_t act;               /* EvAct */
+    int16_t a1, a2, a3, a4, a5;
+    char    msg[96];
+} MapEvent;
+
+/* マップ1ヘクス */
+typedef struct {
+    uint8_t terrain;   /* TerrainType のインデックス */
+    int8_t  owner;     /* -1=中立 / 0..1=陣営 */
+    uint8_t cap_hp;    /* 占領残耐久（満タン=CAPTURE_HP） */
+    int16_t capturer;  /* 占領中ユニット index、-1=なし */
+} Tile;
+
+#define CAPTURE_HP 20
+
+/* ユニットフラグ */
+#define UF_ALIVE   0x01
+#define UF_DONE    0x02   /* このターン行動済み */
+#define UF_MOVED   0x04   /* このターン移動した（間接攻撃判定用） */
+#define UF_LOADED  0x08   /* 輸送ユニットに搭載中（盤上に存在しない） */
+
+typedef struct {
+    uint8_t  type;
+    uint8_t  owner;
+    Cell     pos;
+    int8_t   hp;          /* 1..10 */
+    uint8_t  fuel;
+    uint8_t  ammo;
+    uint8_t  exp;         /* 0..100 */
+    uint8_t  flags;
+    int16_t  cargo[2];    /* 搭載ユニットの index、-1で空 */
+} Unit;
+
+#endif /* HW_TYPES_H */

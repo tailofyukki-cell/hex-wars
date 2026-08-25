@@ -1,0 +1,36 @@
+# ---- ビルド生成物 ----
+hexwars/build/
+hexwars/build-debug/
+build/
+build-debug/
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.lib
+.vs/
+
+# ---- 配布フォルダ（build から組み立て直せる） ----
+HexWars_配布/
+
+# ---- 外部SDK（サイズが大きいので含めない。入手方法は README 参照）----
+hexwars/third_party/
+
+# ---- 個人の記録・設定 ----
+hexwars/saves/
+saves/
+*.sav
+options.cfg
+progress.cfg
+
+# ---- 実行時キャッシュ（mp4→PNG 展開など） ----
+cache/
+hexwars/cache/
+
+# ---- その他 ----
+__pycache__/
+*.pyc
+*.log
+
+# ---- Claude Code の端末固有設定（ローカルのフルパスを含む）----
+.claude/settings.local.json

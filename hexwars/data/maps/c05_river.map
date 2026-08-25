@@ -1,0 +1,66 @@
+# c05 河川突破 - 稲妻型の回廊。中段の渡河点がボトルネック
+[map]
+name = 河川突破
+width  = 42
+height = 25
+turns  = 62
+timeout_winner = -1
+funds0 = 1750
+funds1 = 1750
+
+[terrain]
+row = xxx..f........w.....xxxxxxxxxxxxxxxxxxxxxx
+row = xxx...........w.....xxxxxxxxxxxxxxxxxxxxxx
+row = xx.....w............xxxxxxxxxxxxxxxxxxxxxx
+row = xx...H.ca......w.....xxxxxxxxxxxxxxxxxxxxx
+row = xx...c.c........c.w..xxxxxxxxxxxxxxxxxxxxx
+row = xx...f.a..........w..xxxxxxxxxxxxxxxxxxxxx
+row = xxx..................xxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxx........xxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxww....rxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxww....rxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxx.......r......xxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxx........r.......xxxxxxxxxxxxxxx
+row = xxxxxxxxxx.wc.=====r.......xxxxxxxxxxxxxxx
+row = xxxxxxxxxx.w..=====r....c..xxxxxxxxxxxxxxx
+row = xxxxxxxxxxx........=====....xxxxxxxxxxxxxx
+row = xxxxxxxxxxx...w...r........xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxx..ww..wwxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxx..ww..wwxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxr.....xxxxxxxxxxxfxxxxxx
+row = xxxxxxxxxxxxxxxxxx.................w....xx
+row = xxxxxxxxxxxxxxxx.....ww.....wwww......f.xx
+row = xxxxxxxxxxxxxxxx....cww.....wwww...H.ca.xx
+row = xxxxxxxxxxxxxxxx........w...wwww...c.c...x
+row = xxxxxxxxxxxxxxxx....w....ww.............xx
+row = xxxxxxxxxxxxxxxxxx..................wa..xx
+
+[owners]
+own = 5,3,0
+own = 5,5,0
+own = 5,0,0
+own = 7,4,0
+own = 7,3,0
+own = 5,4,0
+own = 8,3,0
+own = 7,5,0
+own = 35,21,1
+own = 38,20,1
+own = 35,18,1
+own = 37,22,1
+own = 35,22,1
+own = 37,21,1
+own = 38,21,1
+own = 37,24,1
+
+[units]
+unit = 0,INFANTRY,8,4
+unit = 1,INFANTRY,33,20
+unit = 0,INFANTRY,9,4
+unit = 1,INFANTRY,34,20
+unit = 0,TANK,9,3
+unit = 1,TANK,34,18
+unit = 0,ARTILLERY,8,5
+unit = 1,ARTILLERY,33,18
+unit = 0,RECON,9,5
+unit = 1,RECON,32,20

@@ -1,0 +1,100 @@
+# commanders.def - 指揮官（CO）定義
+#
+# 出撃前に指揮官を選ぶと、常時効果が全軍にかかる。
+# 戦闘でダメージを与える／受けるとゲージが溜まり、満タンで必殺技を使える。
+#
+#   domain      … 常時効果の対象  ALL / LAND / AIR / SEA
+#   atk_pct     … 攻撃力補正 %（+10 で1割増）
+#   def_pct     … 防御補正 %
+#   move_bonus  … 移動力 +N
+#   vision_bonus… 視界 +N
+#   income_pct  … 収入補正 %
+#   power_cost  … 必殺技に必要なゲージ。ゲージは与ダメージ1につき2、
+#                 被ダメージ1につき1 溜まる（倍率は game.c の CO_GAUGE_PER_DMG_*）
+#                 目安: 150 なら中規模の戦闘で5〜6ターン程度
+#   power_type  … HEAL   全軍HP+val
+#                 RUSH   全軍が再行動できる
+#                 STRIKE このターン攻撃力 +val%
+#                 FUNDS  資金 +val
+#                 SCOUT  このターン全マップを視認
+#   power_val   … 必殺技の効果量
+#   unlock_clears … 解禁に必要な作戦クリア数（0=最初から使える）
+
+[commander GRAF]
+name       = グレーフ将軍
+title      = 鉄壁
+desc       = 全軍の防御が上がる。守勢に強い。
+domain     = ALL
+def_pct    = 15
+power_name = 要塞化
+power_desc = 全軍のHPを3回復する
+power_cost = 150
+power_type = HEAL
+power_val  = 3
+
+[commander LIESE]
+name       = リーゼ中佐
+title      = 疾風
+desc       = 全軍の移動力が1増える。機動戦向き。
+domain     = ALL
+move_bonus = 1
+power_name = 電撃戦
+power_desc = 全軍がもう一度行動できる
+power_cost = 170
+power_type = RUSH
+power_val  = 1
+
+[commander BALT]
+name       = バルト大佐
+title      = 猛攻
+desc       = 全軍の攻撃力が上がるが、防御はやや下がる。
+domain     = ALL
+atk_pct    = 15
+def_pct    = -5
+power_name = 総攻撃
+power_desc = このターン、攻撃力が40%上がる
+power_cost = 150
+power_type = STRIKE
+power_val  = 40
+
+[commander WOLF]
+unlock_clears = 4
+name       = ヴォルフ提督
+title      = 海の狼
+desc       = 艦船が非常に強い。陸上部隊には補正がない。
+domain     = SEA
+atk_pct    = 25
+def_pct    = 10
+power_name = 艦隊決戦
+power_desc = このターン、攻撃力が35%上がる
+power_cost = 160
+power_type = STRIKE
+power_val  = 35
+
+[commander KARLA]
+unlock_clears = 2
+name       = カーラ参謀
+title      = 策士
+desc       = 収入と視界が増える。長期戦・索敵に強い。
+domain     = ALL
+income_pct = 20
+vision_bonus = 1
+power_name = 全域偵察
+power_desc = このターン全マップを視認し、資金を2000得る
+power_cost = 140
+power_type = SCOUT
+power_val  = 2000
+
+[commander EAGLE]
+unlock_clears = 6
+name       = アドラー中佐
+title      = 蒼空
+desc       = 航空部隊が強力。制空権を握る戦い向き。
+domain     = AIR
+atk_pct    = 25
+def_pct    = 10
+power_name = 制空掌握
+power_desc = このターン、攻撃力が35%上がる
+power_cost = 160
+power_type = STRIKE
+power_val  = 35

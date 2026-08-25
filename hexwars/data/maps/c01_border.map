@@ -1,0 +1,61 @@
+# c01 国境の哨戒線 - L字型の国境地帯。角の村を巡る遭遇戦
+[map]
+name = 国境の哨戒線
+width  = 34
+height = 25
+turns  = 52
+timeout_winner = -1
+funds0 = 1550
+funds1 = 1550
+
+[terrain]
+row = ww.w..........xxxxxxxxxxxxxxxxxxxx
+row = ww.w..........xxxxxxxxxxxxxxxxxxxx
+row = ..............xxxxxxxxxxxxxxxxxxxx
+row = ....c.wwww....xxxxxxxxxxxxxxxxxxxx
+row = ....ww=H.a....xxxxxxxxxxxxxxxxxxxx
+row = ....ww=c.f....xxxxxxxxxxxxxxxxxxxx
+row = ......=.......xxxxxxxxxxxxxxxxxxxx
+row = ....==.fa.....xxxxxxxxxxxxxxxxxxxx
+row = ..w...=...w...xxxxxxxxxxxxxxxxxxxx
+row = ..w...=...w...xxxxxxxxxxxxxxxxxxxx
+row = ww....=.ww....xxxxxxxxxxxxxxxxxxxx
+row = .....c.=www...xxxxxxxxxxxxxxxxxxxx
+row = ......w=ww....xxxxxxxxxxxxxxxxxxxx
+row = ......w=ww....xxxxxxxxxxxxxxxxxxxx
+row = .......=ww....xxxxxxxxxxxxxxxxxxxx
+row = .......=...wwwxxxxxxxxxxxxxxxxxxxx
+row = ........==.www.........w.....ww...
+row = ........==.www...c.....w.....wf...
+row = ww.....wc=...............wwc.wf.w.
+row = ..........==========..............
+row = .......c.........ww==========Hc...
+row = .................ww==========a....
+row = ....ww...........ww...............
+row = ..........w.ww..............w.....
+row = ww....w.ww...........ww.w..w......
+
+[owners]
+own = 7,4,0
+own = 9,5,0
+own = 7,7,0
+own = 4,3,0
+own = 7,5,0
+own = 9,4,0
+own = 8,7,0
+own = 29,20,1
+own = 30,17,1
+own = 30,18,1
+own = 27,18,1
+own = 30,20,1
+own = 29,21,1
+
+[units]
+unit = 0,INFANTRY,9,7
+unit = 0,INFANTRY,8,5
+unit = 0,RECON,8,8
+unit = 0,TANK,9,8
+unit = 1,INFANTRY,26,20
+unit = 1,INFANTRY,27,20
+unit = 1,RECON,26,18
+unit = 1,AT_INFANTRY,25,20

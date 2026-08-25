@@ -1,0 +1,101 @@
+﻿# audio.def - BGM と効果音の一覧
+#
+# ここを書き換えるだけで自作の音源に差し替えられる（プログラムの変更は不要）。
+# パスは assets/ からの相対。拡張子は自由で、WAV / OGG / MP3 / FLAC が使える。
+# 読み込めなかった音は無音になるだけで、ゲームは動き続ける（起動ログに出る）。
+#
+# 差し替えの例:
+#   [battle]
+#   file = bgm/my_theme.ogg
+#   name = 自作テーマ
+
+# ------------------------------------------------------------------
+# 効果音のファイル名
+#   ここで決めた名前を、下の [seset] で指定した各フォルダから探す。
+#   つまり「セットを増やす」= 同じ名前のファイルを入れたフォルダを作る。
+# ------------------------------------------------------------------
+[se CURSOR]
+file = se_cursor.wav
+
+[se OK]
+file = se_ok.wav
+
+[se CANCEL]
+file = se_cancel.wav
+
+[se MOVE_FOOT]
+file = se_move_foot.wav
+
+[se MOVE_VEHICLE]
+file = se_move_vehicle.wav
+
+[se MOVE_AIR]
+file = se_move_air.wav
+
+[se SHOT]
+file = se_shot.wav
+
+[se EXPLOSION]
+file = se_explosion.wav
+
+[se CAPTURE]
+file = se_capture.wav
+
+[se TURN]
+file = se_turn.wav
+
+# ------------------------------------------------------------------
+# 効果音セット（オプション画面で切り替えられる。最大6個）
+#   dir = assets/ からのフォルダ名
+# ------------------------------------------------------------------
+[seset]
+name = 標準
+dir  = sfx
+
+[seset]
+name = レトロ
+dir  = sfx/set1
+
+[seset]
+name = 重厚
+dir  = sfx/set2
+
+# ------------------------------------------------------------------
+# 場面ごとのBGM（固定枠）
+# ------------------------------------------------------------------
+[music TITLE]
+file = bgm/bgm_title.wav
+
+[music VICTORY]
+file = bgm/bgm_victory.wav
+
+[music DEFEAT]
+file = bgm/bgm_defeat.wav
+
+# ------------------------------------------------------------------
+# 戦闘BGM（最大12曲。ここに足すとオプションの選択肢が増える）
+#   name はオプション画面に出る表示名（省略すると「曲1」等になる）
+# ------------------------------------------------------------------
+[battle]
+file = bgm/bgm_battle0.wav
+name = 進撃
+
+[battle]
+file = bgm/bgm_battle1.wav
+name = 鉄の意志
+
+[battle]
+file = bgm/bgm_battle2.wav
+name = 疾走
+
+[battle]
+file = bgm/bgm_battle3.wav
+name = 緊迫
+
+[battle]
+file = bgm/bgm_battle4.wav
+name = 荘厳
+
+[battle]
+file = bgm/bgm_battle5.wav
+name = 鋼鉄の行進

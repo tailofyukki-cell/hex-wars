@@ -1,0 +1,64 @@
+# c08 空の要衝 - Y字の三叉空域。中心の飛行場を制した側が空を制す
+[map]
+name = 空の要衝
+width  = 42
+height = 25
+turns  = 73
+timeout_winner = -1
+funds0 = 2250
+funds1 = 2250
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxaxxxcxxxxxxxxxxxxxxxxxxxxxxxxxfxxfcxxx
+row = xxxx...w...........xxxxx................xx
+row = xxxx...Hwfc.........xxxx........w.aa.....x
+row = xxx.fa.www..........xxx..ww........H.....x
+row = xxx....www..........xxx..ww...........c..x
+row = xxxx.................xx............w.ww..x
+row = xxxx...............w....................xx
+row = xxxxxxxxxxxxxxxx..w.......a.xxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxx.aw.........xxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxww.........xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxx...ww....xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxx.......xxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxx...a...xxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxx......xxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxx....w.xxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx.......xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx.......xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx.......xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxx....ww.xxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx.......xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx.a.....xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxc...w..xxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxx......xxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx.....xxxxxxxxxxxxxxxxx
+
+[owners]
+own = 7,3,0
+own = 9,3,0
+own = 4,4,0
+own = 8,1,0
+own = 10,3,0
+own = 4,1,0
+own = 5,4,0
+own = 35,4,1
+own = 37,1,1
+own = 34,1,1
+own = 38,5,1
+own = 38,1,1
+own = 35,3,1
+own = 34,3,1
+
+[units]
+unit = 0,FIGHTER,9,4
+unit = 1,FIGHTER,33,5
+unit = 0,HELI,10,4
+unit = 1,HELI,34,5
+unit = 0,INFANTRY,8,4
+unit = 1,INFANTRY,33,4
+unit = 0,INFANTRY,9,5
+unit = 1,INFANTRY,32,4
+unit = 0,AA_TANK,10,5
+unit = 1,AA_TANK,32,5

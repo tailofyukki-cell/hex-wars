@@ -1,0 +1,251 @@
+# text_ja.def - UI文字列（仕様書 8.4。%記法は printf 書式）
+
+# --- 共通 ---
+FACTION0        = 西方同盟
+FACTION1        = 東方連邦
+NEUTRAL         = 中立
+ON              = ON
+OFF             = OFF
+
+# --- タイトル ---
+TITLE_SUB1      = 大戦略ライク ターン制ウォー・シミュレーション
+TITLE_SUB2      = 西方同盟 vs 東方連邦 — 架空WW2大陸戦争
+TITLE_CAMPAIGN  = キャンペーン
+TITLE_FREE      = フリー対戦
+TITLE_LOAD      = ロード
+TITLE_OPTIONS   = オプション
+TITLE_QUIT      = 終了
+TITLE_HINT      = 矢印:選択  Z/Enter:決定
+
+# --- セットアップ ---
+SETUP_TITLE     = フリー対戦
+SETUP_MAP       = マップ
+SETUP_OPP       = 相手（東方連邦）
+SETUP_FOG       = 索敵（戦場の霧）
+SETUP_CO0       = 指揮官（自軍）
+SETUP_CO1       = 指揮官（敵軍）
+SETUP_START     = 開始
+SETUP_BACK      = タイトルへ戻る
+SETUP_NOMAP     = （マップなし）
+SETUP_HINT      = 矢印:選択/変更  Z/Enter:決定  X/Esc:戻る
+OPP_CPU_EASY    = CPU（EASY）
+OPP_CPU_NORMAL  = CPU（NORMAL）
+OPP_CPU_HARD    = CPU（HARD）
+OPP_HUMAN       = 人間（ホットシート）
+
+# --- オプション ---
+# ウィンドウ（タスクバー）に出るゲーム名
+WINDOW_TITLE    = HEX WARS
+
+OPT_TITLE       = オプション
+OPT_BGM         = BGM音量
+OPT_SE          = SE音量
+OPT_ANIM        = 戦闘アニメ
+OPT_ANIM_VIDEO  = 戦闘アニメを動画で再生
+OPT_BACK        = タイトルへ戻る
+OPT_HINT        = ←→:変更  Z/Enter:決定  X/Esc:戻る
+
+# --- ロード / セーブ ---
+LOAD_TITLE      = ロード
+LOAD_AUTO       = オート
+LOAD_SLOT_FMT   = スロット%2d %s  %s  ターン%d
+LOAD_EMPTY_FMT  = スロット%2d %s  （空き）
+LOAD_HINT       = Z/Enter:ロード  X/Esc:戻る
+SAVE_TITLE      = セーブ先スロット
+SAVE_SLOT_FMT   = スロット%2d  %s  ターン%d
+SAVE_EMPTY_FMT  = スロット%2d  （空き）
+
+# --- キャンペーン全体マップ ---
+CPNMAP_TITLE    = 作戦全体図
+CPNMAP_DONE     = 制圧
+CPNMAP_NEXT_FMT = 次の作戦: %s
+CPNMAP_HINT     = Z:出撃準備へ  C:指揮官変更  X:タイトルへ
+
+# --- ブリーフィング ---
+BRIEF_CARRY_FMT = 持越し部隊: %d ユニット   持越し資金: +%dG
+BRIEF_STORE_FMT = 倉庫に %d ユニット保管中（生産拠点で無料で出撃可）
+BRIEF_GO        = Z / クリックで出撃
+BRIEF_NONODE    = （ノードなし）
+
+# --- ご褒美画像 ---
+REWARD_TITLE      = 任務達成！
+REWARD_HINT       = Z / クリックで次へ
+REWARD_NONE       = （画像なし）
+
+# --- 結果 ---
+RESULT_WIN_FMT    = %s軍の勝利！
+RESULT_DRAW       = 引き分け
+RESULT_TURNS_FMT  = 経過ターン: %d
+RESULT_LOSSES_FMT = 損失ユニット  %s軍: %d   %s軍: %d
+RESULT_NEXT_FMT   = 次の作戦: %s
+RESULT_CARRY_FMT  = 持越し部隊 %d ユニット / 持越し資金 +%dG
+RESULT_NEXT_HINT  = Z:次の作戦へ  X:タイトルへ
+RESULT_CLEAR      = キャンペーンクリア！
+RESULT_CLEAR_SUB  = 大陸に平和が戻った — Z / クリックでタイトルへ
+RESULT_LOSE       = 作戦は失敗した…
+RESULT_RETRY_HINT = Z:再挑戦  X:タイトルへ
+RESULT_HINT       = Z / クリックでタイトルへ
+
+# --- 作戦評価（S/A/B/C）---
+RANK_TITLE_FMT       = 作戦評価  %s
+RANK_DETAIL_FMT      = 速さ %d ／ 温存 %d ／ 戦果 %d  →  総合 %d
+RANK_DETAIL_BONUS_FMT = 速さ %d ／ 温存 %d ／ 戦果 %d  →  総合 %d   評価ボーナス +%dG
+CO_LOCKED_FMT        = 未解禁の指揮官 %d 人（作戦をクリアすると解禁）
+
+# --- 戦闘画面 ---
+BANNER_TURN_FMT = ターン %d — %s軍の手番
+TOP_TURNLIM_FMT = %s  ターン %d/%d
+TOP_TURN_FMT    = %s  ターン %d
+TOP_FACTION_FMT = %s軍
+TOP_FUNDS_FMT   = 資金 %dG
+TOP_OBJ_FMT     = 拠点確保: %s %d/%d
+TOP_WEATHER_FMT = %s（次:%s）
+WX_CLEAR        = 晴
+WX_CLOUDY       = 曇り
+WX_RAIN         = 雨
+BTN_MENU        = メニュー (E)
+CPU_THINKING    = CPU 思考中…
+HANDOVER_FMT    = %s軍の手番です
+HANDOVER_SUB    = プレイヤーを交代してください — Z / クリックで開始
+
+ACT_ATTACK      = 攻撃
+ACT_CAPTURE     = 占領
+ACT_WAIT        = 待機
+ACT_CANCEL      = キャンセル
+ACT_UNLOAD      = 降ろす
+ACT_SUPPLY      = 補給
+ACT_HEAL        = 回復
+
+TMENU_UNITLIST  = 未行動ユニット
+TMENU_END       = ターン終了
+TMENU_SAVE      = セーブ
+TMENU_TITLE     = タイトルへ戻る
+TMENU_CLOSE     = 閉じる
+PROD_TITLE      = 生産 / 倉庫
+PROD_STORE_TAG  = 倉
+PROD_FREE       = 無料
+
+PANEL_DEF_FMT    = 防御補正 +%d%%
+PANEL_INCOME_FMT = 収入 %dG
+PANEL_OWNER_FMT  = 所有: %s
+PANEL_NOUNIT     = （ユニットなし）
+PANEL_HP_FMT     = HP %d/10   燃料 %d/%d   弾薬 %d/%d
+PANEL_HP_SUP_FMT = HP %d/10   燃料 %d/%d   物資 %d/%d
+PANEL_EXP_FMT    = 経験 %d (ランク%d)   移動 %d
+PANEL_ATK_FMT    = 攻: 軟%d 装%d 空%d 海%d   射程 %d-%d
+PANEL_CARGO_FMT  = 搭載: %s
+CARGO_TITLE      = 搭載ユニットの状態
+CARGO_ROW_FMT    = %s   HP %d/10   燃料 %d/%d   弾薬 %d/%d
+CARGO_ROW_SUP_FMT = %s   HP %d/10   燃料 %d/%d   物資 %d/%d
+PANEL_SUPPLY_HINT = 補給:物資-1/体  回復:物資10で1HP(1回1HP)
+
+HINT_IDLE       = Z:選択  N:次ユニット  P:必殺技  E:メニュー  ホイール:ズーム  中ボタン:スクロール
+HINT_MOVE       = Z:移動先決定  X:キャンセル
+HINT_MENU       = ↑↓:選択  Z:決定  X:戻る
+HINT_TARGET     = 対象を選択  ←→:切替  Z:攻撃  X:戻る
+
+# --- 戦闘予測（攻撃対象選択中に表示）---
+FC_DMG_FMT      = 与ダメージ  %d    HP %d → %d
+FC_DMG_KILL_FMT = 与ダメージ  %d    HP %d → 撃破！
+FC_CNT_FMT      = 反撃        %d    自軍 %d → %d
+FC_CNT_KILL_FMT = 反撃        %d    自軍 %d → 撃破される！
+FC_NO_COUNTER   = 反撃なし
+FC_NOTE         = ※期待値。実際は ±15% ぶれます
+HINT_UNLOAD     = 降ろす先を選択（続けて複数降車可）  Z:決定  X:終了
+HINT_LAYER_PICK = 高度を選択  ↑↓:選択  Z:決定  X:戻る
+HINT_UNITLIST   = ↑↓/ホイール:選択  Z:そのユニットへ移動  X:戻る
+LAYER_AIR       = 空
+LAYER_SURFACE   = 地上
+LAYER_UNDER     = 海中
+HINT_PROD       = ↑↓/ホイール:選択  Z:生産/引出  X:閉じる
+HINT_SAVE       = ↑↓:選択  Z:セーブ  X:戻る
+HINT_ANIM       = Z:スキップ
+
+POP_AMBUSH      = 敵を発見！移動中断
+POP_BOARD       = 搭載
+POP_JOIN_FMT    = 合流 HP%d
+POP_REFUND_FMT  = 払戻 +%d
+POP_UNBOARD     = 降車
+POP_KILL        = 撃破！
+POP_LOST        = 損失…
+POP_CAP_DONE    = 占領完了！
+POP_CAP_PROG    = 占領中…
+POP_NOFUNDS     = 資金不足
+POP_PROD        = 生産完了
+POP_WITHDRAW    = 倉庫から出撃
+POP_SAVED       = セーブしました
+POP_SAVEFAIL    = セーブ失敗
+POP_SUPPLY_FMT  = %d ユニットに補給
+POP_HEAL_FMT    = +%d HP 回復
+
+# ---- エンドロール（キャンペーン全クリア後）----
+# END_L01 から連番。未定義の番号で終端。行頭 '@' は見出し（大きい文字）。
+# 背景動画を出したいときは assets/gfx/anim/endroll.mp4（または .gif）を置く。
+END_HINT_SKIP   = Z / クリックで早送り
+END_HINT_DONE   = Z / クリックでタイトルへ
+END_L01 = @HEX WARS
+END_L02 = 大戦略ライク ターン制ウォー・シミュレーション
+END_L03 =
+END_L04 = @キャンペーン「西方の反攻」 完
+END_L05 =
+END_L06 = 全12作戦を完遂し、大陸に平和が戻った。
+END_L07 = 貴官の指揮に敬意を表する。
+END_L08 =
+END_L09 = @STAFF
+END_L10 =
+END_L11 = ゲームデザイン / プログラム
+END_L12 = HEX WARS 開発チーム
+END_L13 =
+END_L14 = マップデザイン
+END_L15 = tools/gen_maps.py（手続き生成）
+END_L16 =
+END_L17 = ユニット / グラフィック
+END_L18 = tools/gen_units_gfx.py
+END_L19 =
+END_L20 = サウンド
+END_L21 = tools/gen_audio.py
+END_L22 =
+END_L23 = @SPECIAL THANKS
+END_L24 =
+END_L25 = SDL2 / SDL2_ttf / SDL2_mixer / SDL2_image
+END_L26 = Noto Sans JP (SIL Open Font License)
+END_L27 = FFmpeg（動画変換）
+END_L28 =
+END_L29 = @THANK YOU FOR PLAYING!
+END_L30 =
+
+# --- 指揮官（CO）---
+CO_NONE            = なし
+CO_READY           = 必殺技 準備完了！(P)
+CO_POWER_BANNER_FMT = %s ─ %s ！
+CPNMAP_CO_FMT      = 指揮官: %s   （C キー / ここをクリックで変更）
+
+# --- 未行動ユニット一覧 ---
+ULIST_TITLE_FMT = 未行動ユニット （%d体）
+ULIST_ROW_FMT   = HP%2d  %s  (%d,%d)
+ULIST_EMPTY     = 未行動のユニットはありません
+
+# --- 出撃部隊の編成（持越しが上限を超えたとき）---
+DEPLOY_TITLE      = 出撃部隊の編成
+DEPLOY_COUNT_FMT  = 出撃 %d / %d 部隊　（引き継ぎ %d 部隊）
+DEPLOY_NOTE       = 出撃させない部隊は倉庫へ送られます（失われません。生産拠点で無料で出撃できます）
+DEPLOY_MARK_GO    = ＞ 出撃
+DEPLOY_MARK_KEEP  = 　 倉庫
+DEPLOY_EXP_FMT    = 経験 %d (ランク%d)
+DEPLOY_GO         = この編成で出撃
+DEPLOY_HINT       = ↑↓/ホイール:選択  Z/Space:出撃⇔倉庫  A:経験値順で自動  X:出撃
+
+# --- 副目標（サブミッション） ---
+SUB_TITLE_FMT   = ◆ 副目標（各 +%d）
+SUB_ROW_FMT     = ・%s
+SUB_RESULT_FMT  = 副目標 %d/%d 達成  ボーナス +%d
+SUB_OK_FMT      = ○ %s
+SUB_NG_FMT      = × %s
+SUB_HUD_TITLE   = 副目標
+
+# --- 音声オプション ---
+OPT_BGM_TRACK   = 戦闘BGM
+OPT_SE_SET      = 効果音セット
+OPT_TRACK_AUTO  = 自動（マップごと）
+OPT_TRACK_FMT   = %d/%d  %s
+OPT_TRACK_NONE  = （曲がありません）
