@@ -1,5 +1,10 @@
 # terrain.def - 地形定義（仕様書 5.3）
 # 移動コストは2倍整数（道路=1, 平地=2, 0=進入不可）
+#
+# height = 斜め見下ろし表示での起伏（**見た目だけ**。移動・戦闘のルールには一切影響しない）。
+#   ヘクス半径32px基準のpx値で、正=高く盛り上がる / 負=沈む。描画時にズーム倍率で拡縮する。
+#   目安: 山22 / 丘11 / 首都5 / 森4 / 都市・工場3 / 平地・道路0 / 川-3 / 海-7
+#   オプションの「マップ表示」を「平面」にすると height は無視される。
 
 [terrain PLAIN]
 name       = 平地
@@ -10,6 +15,7 @@ cost_wheel = 2
 cost_track = 2
 cost_air   = 2
 color      = 9CBF6B
+height     = 0
 
 [terrain ROAD]
 name       = 道路
@@ -20,6 +26,7 @@ cost_wheel = 1
 cost_track = 1
 cost_air   = 2
 color      = C9B79C
+height     = 0
 
 [terrain FOREST]
 name       = 森
@@ -31,6 +38,7 @@ cost_track = 4
 cost_air   = 2
 hide       = 1
 color      = 55884F
+height     = 4
 
 [terrain MOUNTAIN]
 name       = 山
@@ -39,6 +47,7 @@ def        = 40
 cost_foot  = 6
 cost_air   = 2
 color      = 8D8578
+height     = 22
 
 [terrain RIVER]
 name       = 川
@@ -47,6 +56,7 @@ def        = 0
 cost_foot  = 4
 cost_air   = 2
 color      = 7FB2D9
+height     = -3
 
 [terrain SEA]
 name       = 海
@@ -56,6 +66,7 @@ cost_air   = 2
 cost_sea   = 2
 cost_sub   = 2
 color      = 4A7FB5
+height     = -7
 
 [terrain CITY]
 name       = 都市
@@ -70,6 +81,7 @@ capturable = 1
 supplies   = LAND
 hide       = 1
 color      = C8C8C0
+height     = 3
 
 [terrain FACTORY]
 name       = 工場
@@ -84,6 +96,7 @@ capturable = 1
 produces   = LAND
 supplies   = LAND
 color      = A89A8E
+height     = 3
 
 [terrain AIRPORT]
 name       = 空港
@@ -98,6 +111,7 @@ capturable = 1
 produces   = AIR
 supplies   = AIR
 color      = B7B7C4
+height     = 2
 
 [terrain PORT]
 name       = 港
@@ -114,6 +128,7 @@ capturable = 1
 produces   = SEA
 supplies   = SEA,SUB
 color      = 9FB4C0
+height     = 1
 
 [terrain HILL]
 name       = 丘
@@ -124,6 +139,7 @@ cost_wheel = 4
 cost_track = 3
 cost_air   = 2
 color      = A8A276
+height     = 11
 
 [terrain HQ]
 name       = 首都
@@ -139,6 +155,7 @@ produces   = LAND
 supplies   = LAND
 hq         = 1
 color      = D9C766
+height     = 5
 
 # 圏外: マップの輪郭を長方形以外にするための「盤外」。
 # 全コスト0=全ユニット進入不可。描画側で 'x' はスキップされる（セーブ互換のため末尾）
@@ -147,3 +164,4 @@ name       = 圏外
 char       = x
 def        = 0
 color      = 161A20
+height     = 0

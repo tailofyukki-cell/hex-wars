@@ -115,6 +115,7 @@ int data_load_terrain(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "capturable")) cur->capturable = (uint8_t)atoi(val);
         else if (!strcmp(key, "hide"))       cur->hide = (uint8_t)atoi(val);
         else if (!strcmp(key, "hq"))         cur->is_hq = (uint8_t)atoi(val);
+        else if (!strcmp(key, "height"))     cur->height = (int16_t)atoi(val);
         else if (!strcmp(key, "color"))      cur->color = (uint32_t)strtoul(val, NULL, 16);
         else if (!strcmp(key, "supplies"))   cur->supplies = (uint8_t)mc_supply_mask(val);
         else if (!strcmp(key, "produces")) {
@@ -264,6 +265,7 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "image0")) snprintf(cur->image[0], sizeof cur->image[0], "%s", val);
         else if (!strcmp(key, "image1")) snprintf(cur->image[1], sizeof cur->image[1], "%s", val);
         else if (!strcmp(key, "anim"))   snprintf(cur->anim, sizeof cur->anim, "%s", val);
+        else if (!strcmp(key, "cutin"))  snprintf(cur->cutin, sizeof cur->cutin, "%s", val);
         else if (!strcmp(key, "transport_by")) {
             char buf[128];
             snprintf(buf, sizeof buf, "%s", val);
@@ -502,6 +504,7 @@ int data_load_commanders(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "power_cost"))   cur->power_cost = (int16_t)atoi(val);
         else if (!strcmp(key, "unlock_clears")) cur->unlock_clears = (int16_t)atoi(val);
         else if (!strcmp(key, "power_val"))    cur->power_val = (int16_t)atoi(val);
+        else if (!strcmp(key, "cutin"))        snprintf(cur->cutin, sizeof cur->cutin, "%s", val);
         else if (!strcmp(key, "power_type")) {
             if      (!strcmp(val, "HEAL"))   cur->power_type = CO_POW_HEAL;
             else if (!strcmp(val, "RUSH"))   cur->power_type = CO_POW_RUSH;

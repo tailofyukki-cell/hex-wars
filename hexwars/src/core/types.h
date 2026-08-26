@@ -122,6 +122,9 @@ typedef struct {
     /* 戦闘アニメ動画（assets/ 相対パス。アニメーションGIF/WebP）。
      * units.def の `anim =` で指定。空=動画なし（従来のHPバー演出にフォールバック） */
     char     anim[64];
+    /* 攻撃時のカットイン1枚絵（assets/ 相対パス）。units.def の `cutin =`。
+     * 空なら指揮官の cutin にフォールバックし、それも無ければ出さない。 */
+    char     cutin[64];
 } UnitType;
 
 /* 地形定義（terrain.def の1エントリ） */
@@ -138,6 +141,9 @@ typedef struct {
     uint8_t  hide;                /* 1=隣接しないと中の敵を視認不可 */
     uint8_t  is_hq;               /* 1=首都 */
     uint32_t color;               /* 0xRRGGBB 描画色 */
+    /* 斜め見下ろし表示での起伏（見た目のみ。ルールには一切影響しない）。
+     * ヘクス半径32px基準のpx値で、山=高く/海=負=沈む。描画時にズーム倍率で拡縮する。 */
+    int16_t  height;
 } TerrainType;
 
 /* 天候（仕様: 晴=変化なし / 曇=空↔地上の攻撃半減・視界-1 / 雨=同攻撃不可・
@@ -181,6 +187,9 @@ typedef struct {
     uint8_t  power_type;      /* CoPowerType */
     int16_t  power_val;
     int16_t  unlock_clears;   /* 解禁に必要なクリア数（0=最初から使える） */
+    /* 攻撃時のカットイン1枚絵（assets/ 相対パス）。commanders.def の `cutin =`。
+     * ユニット側に cutin が無いときのフォールバックとして使う。 */
+    char     cutin[64];
 } CommanderType;
 
 /* --- マップイベント（作戦途中で起きる出来事） ---

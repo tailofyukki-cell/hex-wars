@@ -132,6 +132,27 @@ int main(int argc, char *argv[])
                 a->next_screen = SCREEN_RESULT;
             }
         }
+        else if (!strcmp(argv[2], "battle")) {
+            /* マップ描画（斜め見下ろし表示など）の確認用。
+             *   --screen battle [maplistの番号]   索敵OFFで全体が見える状態にする */
+            char path[600], err[256];
+            int mi = (argc >= 4) ? atoi(argv[3]) : 0;
+            if (mi < 0 || mi >= a->maps.n) mi = 0;
+            snprintf(path, sizeof path, "%sdata/%s", a->base_path,
+                     a->maps.file[mi]);
+            if (data_load_map(&a->game, path, err, sizeof err) == 0) {
+                a->campaign_mode = false;
+                a->cps.active = false;
+                a->game.fog = false;
+                a->game.ctrl[0] = CTRL_HUMAN;
+                a->game.ctrl[1] = CTRL_CPU_NORMAL;
+                a->game.co_id[0] = a->game.co_id[1] = -1;
+                game_start(&a->game, 12345u);
+                a->next_screen = SCREEN_BATTLE;
+            } else {
+                SDL_Log("マップ読込失敗: %s", err);
+            }
+        }
         else if (!strcmp(argv[2], "reward")) {
             /* キャンペーンを読み込み、先頭ノードのご褒美画面を表示 */
             char path[600], err[256];

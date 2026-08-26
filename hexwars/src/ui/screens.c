@@ -40,6 +40,8 @@ void options_load(App *a)
     a->opt_se_set = 0;
     a->opt_anim = 1;
     a->opt_anim_video = 0;   /* 既定OFF（同梱の動画がまだ無いため） */
+    a->opt_tilt = 1;         /* 既定は斜め見下ろし。平面に戻せる */
+    a->opt_cutin = 1;        /* 既定は毎回。設定で「撃破時のみ」「出さない」に変えられる */
     char path[600];
     snprintf(path, sizeof path, "%soptions.cfg", a->base_path);
     FILE *f = fopen(path, "rb");
@@ -55,6 +57,8 @@ void options_load(App *a)
             else if (!strcmp(key, "volcurve"))  curve = atoi(val);
             else if (!strcmp(key, "anim")) a->opt_anim = atoi(val);
             else if (!strcmp(key, "anim_video")) a->opt_anim_video = atoi(val);
+            else if (!strcmp(key, "tilt")) a->opt_tilt = atoi(val) ? 1 : 0;
+            else if (!strcmp(key, "cutin")) a->opt_cutin = atoi(val);
         }
         fclose(f);
     }
@@ -75,6 +79,7 @@ void options_load(App *a)
     if (a->opt_bgm_track < -1) a->opt_bgm_track = -1;
     if (a->opt_bgm_track >= snd_battle_track_count()) a->opt_bgm_track = -1;
     if (a->opt_se_set < 0 || a->opt_se_set >= snd_se_set_count()) a->opt_se_set = 0;
+    if (a->opt_cutin < 0 || a->opt_cutin > 2) a->opt_cutin = 1;
     snd_apply_volumes(a->opt_bgm, a->opt_se);
     snd_set_se_set(a->opt_se_set);
     if (curve < 2) options_save(a);   /* 換算結果を書き戻して二重換算を防ぐ */
@@ -86,9 +91,9 @@ void options_save(App *a)
     snprintf(path, sizeof path, "%soptions.cfg", a->base_path);
     FILE *f = fopen(path, "wb");
     if (!f) return;
-    fprintf(f, "bgm = %d\nse = %d\nanim = %d\nanim_video = %d\nbgm_track = %d\nse_set = %d\nvolcurve = 2\n",
+    fprintf(f, "bgm = %d\nse = %d\nanim = %d\nanim_video = %d\nbgm_track = %d\nse_set = %d\ntilt = %d\nvolcurve = 2\n",
             a->opt_bgm, a->opt_se, a->opt_anim, a->opt_anim_video,
-            a->opt_bgm_track, a->opt_se_set);
+            a->opt_bgm_track, a->opt_se_set, a->opt_tilt);
     fclose(f);
 }
 
@@ -458,8 +463,10 @@ static void setup_draw(App *a)
 /* ------------------------------------------------------------------ */
 /* オプション画面（仕様書 10章: 音量、8.2: 戦闘アニメOFF）             */
 /* ------------------------------------------------------------------ */
-#define OPT_ROWS 7
+#define OPT_ROWS 9
 #define OPT_BACK_ROW (OPT_ROWS - 1)
+#define OPT_TILT_ROW 6
+#define OPT_CUTIN_ROW 7
 
 static void opt_enter(App *a) { a->opt_row = 0; }
 
@@ -472,7 +479,7 @@ static void opt_leave(App *a)
 
 static SDL_Rect opt_row_rect(int i)
 {
-    SDL_Rect r = { WIN_W / 2 - 300, 210 + i * 58, 600, 46 };
+    SDL_Rect r = { WIN_W / 2 - 300, 196 + i * 54, 600, 44 };
     return r;
 }
 
@@ -512,6 +519,16 @@ static void opt_change(App *a, int dir)
         if (v < 0) v += n;
         a->opt_se_set = v;
         snd_set_se_set(a->opt_se_set);
+        break;
+    }
+    case OPT_TILT_ROW:
+        a->opt_tilt = !a->opt_tilt;   /* 斜め見下ろし ⇔ 平面（見た目のみ） */
+        break;
+    case OPT_CUTIN_ROW: {
+        /* 出さない → 毎回 → 撃破時のみ → …（左右で巡回） */
+        int v = (a->opt_cutin + dir) % 3;
+        if (v < 0) v += 3;
+        a->opt_cutin = v;
         break;
     }
     default:
@@ -602,7 +619,8 @@ static void opt_draw(App *a)
 
     const char *labels[OPT_ROWS] = {
         tx("OPT_BGM"), tx("OPT_SE"), tx("OPT_ANIM"), tx("OPT_ANIM_VIDEO"),
-        tx("OPT_BGM_TRACK"), tx("OPT_SE_SET"), tx("OPT_BACK")
+        tx("OPT_BGM_TRACK"), tx("OPT_SE_SET"), tx("OPT_TILT"), tx("OPT_CUTIN"),
+        tx("OPT_BACK")
     };
     for (int i = 0; i < OPT_ROWS; i++) {
         SDL_Rect r = opt_row_rect(i);
@@ -644,6 +662,18 @@ static void opt_draw(App *a)
         if (i == 5)
             draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW,
                       snd_se_set_name(a->opt_se_set));
+        if (i == OPT_TILT_ROW)
+            draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW,
+                      tx(a->opt_tilt ? "OPT_TILT_ON" : "OPT_TILT_OFF"));
+        if (i == OPT_CUTIN_ROW) {
+            static const char *K[3] = {
+                "OPT_CUTIN_OFF", "OPT_CUTIN_ALWAYS", "OPT_CUTIN_KILL"
+            };
+            int v = a->opt_cutin;
+            if (v < 0 || v > 2) v = 0;
+            draw_text(a, a->font_m, r.x + 320, r.y + 11,
+                      v ? COL_YELLOW : COL_DIM, tx(K[v]));
+        }
     }
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 40, COL_DIM, tx("OPT_HINT"));
 }

@@ -17,24 +17,157 @@ const SDL_Color COL_DIM    = {  90,  92,  95, 255 };
 static const float ZOOM_SIZES[3] = { 16.0f, 24.0f, 32.0f };
 #define SQRT3 1.7320508f
 
+/* --- 斜め見下ろし表示（2.5D） ---
+ * 真上からの平面図を「Y軸だけ潰す」ことで斜めから見たように見せ、さらに地形ごとの
+ * 起伏（terrain.def の height）でタイルを持ち上げて側面（崖）を描く。
+ * ルールには一切影響しない純粋な見た目の変換で、a->opt_tilt==0 なら従来の平面図。
+ * 起伏は height を「ヘクス半径32px基準のpx」として扱い、ズーム倍率で拡縮する。 */
+#define TILT_SQUASH  0.60f   /* Y軸の圧縮率 */
+#define TILT_DEPTH   10.0f   /* 全タイル共通の厚み（s=32基準px） */
+
 float hex_size(const App *a) { return ZOOM_SIZES[a->zoom]; }
 
-void hex_center_px(const App *a, int x, int y, float *px, float *py)
+/* Y方向の圧縮率（平面表示なら1.0） */
+static float tilt_squash(const App *a) { return a->opt_tilt ? TILT_SQUASH : 1.0f; }
+float hex_tilt_squash(const App *a) { return tilt_squash(a); }
+
+/* ヘクス(x,y)の起伏を画面px換算で返す（平面表示なら0） */
+static float tile_lift(const App *a, int x, int y)
+{
+    if (!a->opt_tilt) return 0.0f;
+    const Game *g = &a->game;
+    if (!game_in_bounds(g, x, y)) return 0.0f;
+    const TerrainType *t = &g->terrains[g->tiles[y][x].terrain];
+    return (float)t->height * (hex_size(a) / 32.0f);
+}
+
+/* 起伏を無視した素の中心（ピック計算やカメラ基準に使う） */
+static void hex_center_flat(const App *a, int x, int y, float *px, float *py)
 {
     float s = hex_size(a);
     *px = SQRT3 * s * ((float)x + 0.5f * (float)(y & 1)) + SQRT3 * s * 0.5f
           - a->cam_x;
-    *py = 1.5f * s * (float)y + s - a->cam_y;
+    *py = (1.5f * s * (float)y + s) * tilt_squash(a) - a->cam_y;
+}
+
+void hex_center_px(const App *a, int x, int y, float *px, float *py)
+{
+    hex_center_flat(a, x, y, px, py);
+    *py -= tile_lift(a, x, y);   /* 高い地形ほど上へ持ち上がる */
+}
+
+/* 頂点計算（ポイントトップ: 上が尖る）。squash はY方向の圧縮率。 */
+static void hex_corners_sq(float cx, float cy, float size, float squash,
+                           SDL_FPoint out[6])
+{
+    for (int i = 0; i < 6; i++) {
+        float ang = (float)(3.14159265 / 180.0) * (60.0f * (float)i - 90.0f);
+        out[i].x = cx + size * cosf(ang);
+        out[i].y = cy + size * sinf(ang) * squash;
+    }
+}
+
+/* 点(mx,my)が中心(cx,cy)の（潰した）六角形の内側か */
+static bool point_in_hex(float mx, float my, float cx, float cy,
+                         float size, float squash)
+{
+    float dx = fabsf(mx - cx);
+    float dy = fabsf((my - cy) / (squash > 0.01f ? squash : 1.0f));
+    if (dx > size * 0.8660254f || dy > size) return false;
+    /* 斜辺: y = size - (dx / (√3/2*size)) * (size/2) の内側 */
+    return dy <= size - dx * 0.5773503f;
+}
+
+/* 描画時にユニットをヘクス中心からどれだけずらすか（draw_unit と同じ規則）。
+ * クリック判定を見た目に一致させるため両者で共有する。 */
+static float unit_draw_oy(const App *a, Layer L, float s)
+{
+    float oy = (L == LAYER_AIR) ? -s * 0.30f
+             : (L == LAYER_UNDER) ? s * 0.26f : 0.0f;
+    if (a->opt_tilt && L == LAYER_SURFACE) oy -= s * 0.26f;
+    return oy;
+}
+
+/* 描画に使う視点プレイヤー（CPU手番中は人間側の視界で描く） */
+static int render_viewer(const Game *g)
+{
+    int viewer = g->current;
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (g->ctrl[g->current] != CTRL_HUMAN && g->ctrl[p] == CTRL_HUMAN)
+            viewer = p;
+    return viewer;
+}
+
+/* 斜め表示ではヘクスがY方向に潰れる一方でユニットの絵は縮まないため、絵が
+ * タイルからはみ出す。絵の上をクリックしたら「そのユニットのヘクス」を返さないと
+ * 1つ奥のヘクスが選ばれてしまうので、タイル判定より先にユニットを当たり判定する。
+ * 見えている順（空→海面→海中、同レイヤーなら手前=y大）に見る。 */
+static bool pick_unit_hex(const App *a, int mx, int my, int *hx, int *hy)
+{
+    const Game *g = &a->game;
+    float s = hex_size(a);
+    int viewer = render_viewer(g);
+    static const Layer order[LAYER_COUNT] = {
+        LAYER_AIR, LAYER_SURFACE, LAYER_UNDER
+    };
+    for (int pass = 0; pass < LAYER_COUNT; pass++) {
+        int best = -1, besty = -1;
+        for (int i = 0; i < g->n_units; i++) {
+            const Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+            if (unit_layer(g->types[u->type].mclass) != order[pass]) continue;
+            if (!game_unit_visible_to(g, viewer, u)) continue;
+            float cx, cy;
+            hex_center_px(a, u->pos.x, u->pos.y, &cx, &cy);
+            cy += unit_draw_oy(a, order[pass], s);
+            /* 絵の当たり判定は本体まわりだけに絞る（スプライトの余白で
+             * 隣のヘクスを奪わないよう、描画サイズより一回り小さく取る） */
+            float rx = s * 0.62f, ry = s * 0.62f;
+            if (mx < cx - rx || mx > cx + rx || my < cy - ry || my > cy + ry)
+                continue;
+            if (u->pos.y > besty) { besty = u->pos.y; best = i; }
+        }
+        if (best >= 0) {
+            *hx = g->units[best].pos.x;
+            *hy = g->units[best].pos.y;
+            return true;
+        }
+    }
+    return false;
 }
 
 bool px_to_hex(const App *a, int mx, int my, int *hx, int *hy)
 {
+    /* 斜め表示のみ: まず「絵の上をクリックしたか」を見る（上のコメント参照）。
+     * 平面表示は絵がヘクスに収まるので従来どおりタイルだけで判定する。 */
+    if (a->opt_tilt && pick_unit_hex(a, mx, my, hx, hy)) return true;
+
     float s = hex_size(a);
-    int gy = (int)floorf(((float)my + a->cam_y) / (1.5f * s));
+    float sq = tilt_squash(a);
+    int gy = (int)floorf(((float)my + a->cam_y) / (1.5f * s * sq));
     int gx = (int)floorf(((float)mx + a->cam_x) / (SQRT3 * s));
+
+    /* 起伏があるとタイルが持ち上がって手前の行に食い込むので、探索窓を上下に広げ、
+     * 手前(y大)から奥(y小)へ＝描画順の逆に見て最初に当たったものを選ぶ
+     * （＝実際に画面で一番手前に見えているタイルが取れる）。 */
+    int up = a->opt_tilt ? 4 : 1;
+    for (int dy = up; dy >= -up; dy--) {
+        for (int dx = -1; dx <= 1; dx++) {
+            int x = gx + dx, y = gy + dy;
+            if (!game_in_bounds(&a->game, x, y)) continue;
+            if (a->game.terrains[a->game.tiles[y][x].terrain].chr == 'x') continue;
+            float cx, cy;
+            hex_center_px(a, x, y, &cx, &cy);
+            if (point_in_hex((float)mx, (float)my, cx, cy, s - 0.5f, sq)) {
+                *hx = x; *hy = y;
+                return true;
+            }
+        }
+    }
+    /* どの六角形にも入らなかった: 従来どおり最寄り中心で拾う（辺の隙間の保険） */
     float bd = 1e30f;
     int bx = -1, by = -1;
-    for (int dy = -1; dy <= 1; dy++) {
+    for (int dy = -up; dy <= up; dy++) {
         for (int dx = -1; dx <= 1; dx++) {
             int x = gx + dx, y = gy + dy;
             if (!game_in_bounds(&a->game, x, y)) continue;
@@ -49,20 +182,11 @@ bool px_to_hex(const App *a, int mx, int my, int *hx, int *hy)
     return true;
 }
 
-/* 頂点計算（ポイントトップ: 上が尖る） */
-static void hex_corners(float cx, float cy, float size, SDL_FPoint out[6])
-{
-    for (int i = 0; i < 6; i++) {
-        float ang = (float)(3.14159265 / 180.0) * (60.0f * (float)i - 90.0f);
-        out[i].x = cx + size * cosf(ang);
-        out[i].y = cy + size * sinf(ang);
-    }
-}
-
-void render_fill_hex(App *a, float cx, float cy, float size, SDL_Color c)
+static void fill_hex_sq(App *a, float cx, float cy, float size, float squash,
+                        SDL_Color c)
 {
     SDL_FPoint p[6];
-    hex_corners(cx, cy, size, p);
+    hex_corners_sq(cx, cy, size, squash, p);
     /* コーナーファン: (0,1,2)(0,2,3)(0,3,4)(0,4,5) */
     int tri[4][3] = { {0,1,2},{0,2,3},{0,3,4},{0,4,5} };
     SDL_Vertex verts[12];
@@ -78,13 +202,36 @@ void render_fill_hex(App *a, float cx, float cy, float size, SDL_Color c)
     SDL_RenderGeometry(a->ren, NULL, verts, 12, NULL, 0);
 }
 
-void render_hex_outline(App *a, float cx, float cy, float size, SDL_Color c)
+static void hex_outline_sq(App *a, float cx, float cy, float size, float squash,
+                           SDL_Color c)
 {
     SDL_FPoint p[7];
-    hex_corners(cx, cy, size, p);
+    hex_corners_sq(cx, cy, size, squash, p);
     p[6] = p[0];
     SDL_SetRenderDrawColor(a->ren, c.r, c.g, c.b, c.a);
     SDL_RenderDrawLinesF(a->ren, p, 7);
+}
+
+/* UI装飾用（タイトル画面・作戦全体図など）。常に潰さない真円状の六角形。 */
+void render_fill_hex(App *a, float cx, float cy, float size, SDL_Color c)
+{
+    fill_hex_sq(a, cx, cy, size, 1.0f, c);
+}
+
+void render_hex_outline(App *a, float cx, float cy, float size, SDL_Color c)
+{
+    hex_outline_sq(a, cx, cy, size, 1.0f, c);
+}
+
+/* マップ上のヘクス用。斜め表示ならY方向に潰れる。 */
+void render_fill_hex_map(App *a, float cx, float cy, float size, SDL_Color c)
+{
+    fill_hex_sq(a, cx, cy, size, tilt_squash(a), c);
+}
+
+void render_hex_outline_map(App *a, float cx, float cy, float size, SDL_Color c)
+{
+    hex_outline_sq(a, cx, cy, size, tilt_squash(a), c);
 }
 
 void fill_rect(App *a, int x, int y, int w, int h, SDL_Color c)
@@ -115,8 +262,44 @@ static SDL_Color darken(SDL_Color c, int pct)
     return c;
 }
 
-/* 塗りつぶし円（ユニット本体用） */
-static void fill_circle(App *a, float cx, float cy, float r, SDL_Color c)
+/* darken と違い pct>100（明るくする）でも 255 で頭打ちにする。
+ * 起伏の陰影で天面を明るくする用途では飽和させないと Uint8 が巻き戻る。 */
+static SDL_Color shade(SDL_Color c, int pct)
+{
+    int r = c.r * pct / 100, g = c.g * pct / 100, b = c.b * pct / 100;
+    c.r = (Uint8)(r > 255 ? 255 : r);
+    c.g = (Uint8)(g > 255 ? 255 : g);
+    c.b = (Uint8)(b > 255 ? 255 : b);
+    return c;
+}
+
+/* タイルの手前側面（崖）。ポイントトップ六角形の手前3辺
+ * （右上→右下→下→左下）を下方向へ dep px 押し出した帯を塗る。 */
+static void draw_tile_side(App *a, float cx, float cy, float size, float dep,
+                           SDL_Color c)
+{
+    SDL_FPoint p[6];
+    hex_corners_sq(cx, cy, size, TILT_SQUASH, p);
+    SDL_Vertex verts[18];
+    int n = 0;
+    for (int e = 1; e <= 3; e++) {          /* 辺 p1-p2, p2-p3, p3-p4 */
+        SDL_FPoint t0 = p[e], t1 = p[e + 1];
+        SDL_FPoint b0 = { t0.x, t0.y + dep }, b1 = { t1.x, t1.y + dep };
+        SDL_FPoint quad[6] = { t0, t1, b1, t0, b1, b0 };
+        for (int k = 0; k < 6; k++) {
+            verts[n].position.x = quad[k].x;
+            verts[n].position.y = quad[k].y;
+            verts[n].color = c;
+            verts[n].tex_coord.x = verts[n].tex_coord.y = 0;
+            n++;
+        }
+    }
+    SDL_RenderGeometry(a->ren, NULL, verts, n, NULL, 0);
+}
+
+/* 塗りつぶし楕円（接地影など） */
+static void fill_ellipse(App *a, float cx, float cy, float rx, float ry,
+                         SDL_Color c)
 {
 #define SEG 20
     SDL_Vertex verts[SEG * 3];
@@ -125,14 +308,20 @@ static void fill_circle(App *a, float cx, float cy, float r, SDL_Color c)
         float a1 = 6.2831853f * (float)(i + 1) / SEG;
         SDL_Vertex *v = &verts[i * 3];
         v[0].position.x = cx; v[0].position.y = cy;
-        v[1].position.x = cx + r * cosf(a0); v[1].position.y = cy + r * sinf(a0);
-        v[2].position.x = cx + r * cosf(a1); v[2].position.y = cy + r * sinf(a1);
+        v[1].position.x = cx + rx * cosf(a0); v[1].position.y = cy + ry * sinf(a0);
+        v[2].position.x = cx + rx * cosf(a1); v[2].position.y = cy + ry * sinf(a1);
         for (int k = 0; k < 3; k++) {
             v[k].color = c;
             v[k].tex_coord.x = v[k].tex_coord.y = 0;
         }
     }
     SDL_RenderGeometry(a->ren, NULL, verts, SEG * 3, NULL, 0);
+}
+
+/* 塗りつぶし円（ユニット本体用） */
+static void fill_circle(App *a, float cx, float cy, float r, SDL_Color c)
+{
+    fill_ellipse(a, cx, cy, r, r, c);
 }
 
 /* 塗りつぶし菱形（P1ユニット用: 色覚配慮の形状差） */
@@ -164,10 +353,16 @@ static void draw_unit(App *a, const Unit *u, float cx, float cy)
 
     /* 立体化: 高度でヘクス内の描画位置をずらし、重なりを見分けられるようにする。
      * 空=上に浮かせ地面に影 / 海中=下に沈め半透明 / 地表海面=中央。 */
-    float oy = (L == LAYER_AIR) ? -s * 0.30f
-             : (L == LAYER_UNDER) ? s * 0.26f : 0.0f;
+    float oy = unit_draw_oy(a, L, s);
     if (L == LAYER_AIR)
-        fill_circle(a, cx, cy + s * 0.18f, s * 0.22f, (SDL_Color){ 0, 0, 0, 90 });
+        fill_ellipse(a, cx, cy + s * 0.18f, s * 0.22f,
+                     s * 0.22f * hex_tilt_squash(a),
+                     (SDL_Color){ 0, 0, 0, 90 });
+    /* 斜め表示: 地表のユニットはタイルの上に「立たせ」、足元に潰した影を落とす。
+     * 空・海中は上の oy で既にずらしているので二重に持ち上げない。 */
+    if (a->opt_tilt && L == LAYER_SURFACE)
+        fill_ellipse(a, cx, cy + s * 0.10f, r * 0.92f, r * 0.32f,
+                     (SDL_Color){ 0, 0, 0, 95 });
     cy += oy;
     Uint8 alpha = (L == LAYER_UNDER) ? 170 : 255;   /* 海中は半透明 */
 
@@ -246,11 +441,7 @@ void render_map(App *a)
 {
     Game *g = &a->game;
     float s = hex_size(a);
-    int viewer = g->current;
-    /* 人間視点: CPU手番中は人間側の視界で描画 */
-    for (int p = 0; p < MAX_PLAYERS; p++)
-        if (g->ctrl[g->current] != CTRL_HUMAN && g->ctrl[p] == CTRL_HUMAN)
-            viewer = p;
+    int viewer = render_viewer(g);   /* CPU手番中は人間側の視界で描画 */
 
     int ww, wh;
     SDL_GetRendererOutputSize(a->ren, &ww, &wh);
@@ -270,8 +461,33 @@ void render_map(App *a)
             bool vis = !g->fog || g->visible[viewer][y][x];
             if (!vis) col = darken(col, 45);
 
-            render_fill_hex(a, cx, cy, s - 0.5f, col);
-            render_hex_outline(a, cx, cy, s - 0.5f, darken(col, 70));
+            /* 斜め表示: タイルの側面（崖）を先に描いて厚みを出す。
+             * 起伏が高いほど側面が長くなり、山や丘が盛り上がって見える。 */
+            if (a->opt_tilt) {
+                float lift = tile_lift(a, x, y);
+                float dep = TILT_DEPTH * (s / 32.0f) + lift;
+                if (dep > 1.0f)
+                    draw_tile_side(a, cx, cy, s - 0.5f, dep,
+                                   shade(col, lift > s * 0.25f ? 66 : 52));
+            }
+
+            /* 天面: 高い地形は少し明るく、沈む地形は少し暗く＝陰影で起伏を強調 */
+            SDL_Color top = col;
+            if (a->opt_tilt && t->height != 0) {
+                int h = t->height;
+                top = shade(col, 100 + (h > 0 ? (h > 18 ? 18 : h)
+                                              : (h < -6 ? -12 : h * 2)));
+            }
+            if (a->opt_tilt) {
+                /* 斜め表示では六角形の上下の辺が寝るので、線で縁取ると
+                 * ジャギーが目立つ。一回り大きい六角形を縁色で塗り、その上に
+                 * 天面を重ねてリング状の境界を作る（面で塗るほうが滑らか）。 */
+                render_fill_hex_map(a, cx, cy, s - 0.5f, shade(col, 74));
+                render_fill_hex_map(a, cx, cy, s - 0.5f - s * 0.06f, top);
+            } else {
+                render_fill_hex_map(a, cx, cy, s - 0.5f, top);
+                render_hex_outline_map(a, cx, cy, s - 0.5f, shade(col, 70));
+            }
 
             /* 建物: 所有者色の屋根形マーク + 地形1文字 */
             if (t->capturable) {

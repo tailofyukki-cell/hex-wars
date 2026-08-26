@@ -68,6 +68,9 @@ typedef struct {
     bool shot_played, hit_played, cshot_played, chit_played;
     uint32_t start_ms;          /* 動画再生の基準時刻（SDL_GetTicks） */
     bool use_video;             /* この演出で動画を再生するか */
+    /* 攻撃時カットイン（assets/相対パス。空=この演出では出さない）。
+     * 演出開始時に「出すか」を決めて焼き付けるので、途中で設定が変わってもぶれない。 */
+    char cutin[64];
 } BattleAnim;
 
 typedef struct App App;
@@ -129,6 +132,8 @@ struct App {
     int opt_anim_video; /* 0/1 戦闘アニメを動画で再生（既定OFF。動画未指定なら従来演出） */
     int opt_bgm_track;  /* 戦闘BGM: -1=自動(マップ毎) / 0..SND_BATTLE_TRACKS-1=曲指定 */
     int opt_se_set;     /* 効果音セット: 0=標準 1=レトロ 2=重厚 */
+    int opt_tilt;       /* 0=平面(真上) / 1=斜め見下ろし（Y圧縮＋地形の起伏）。見た目のみ */
+    int opt_cutin;      /* 攻撃時カットイン: 0=出さない / 1=毎回 / 2=撃破時のみ */
     /* 進捗（progress.cfg に永続化。指揮官の解禁条件に使う） */
     int progress_clears;   /* これまでにクリアした作戦の総数 */
     int progress_best[MAX_CAMPAIGN_MAPS]; /* ノード毎の最高ランク（CpnRank） */
@@ -217,6 +222,11 @@ void  hex_center_px(const App *a, int x, int y, float *px, float *py);
 bool  px_to_hex(const App *a, int mx, int my, int *hx, int *hy);
 void  render_fill_hex(App *a, float cx, float cy, float size, SDL_Color c);
 void  render_hex_outline(App *a, float cx, float cy, float size, SDL_Color c);
+/* マップ上のヘクス用（斜め見下ろし表示ならY方向に潰れる）。
+ * タイトル画面等のUI装飾は潰してはいけないので上の非 _map 版を使う。 */
+void  render_fill_hex_map(App *a, float cx, float cy, float size, SDL_Color c);
+void  render_hex_outline_map(App *a, float cx, float cy, float size, SDL_Color c);
+float hex_tilt_squash(const App *a);   /* Y圧縮率（平面表示なら1.0） */
 void  render_map(App *a);
 void  fill_rect(App *a, int x, int y, int w, int h, SDL_Color c);
 void  outline_rect(App *a, int x, int y, int w, int h, SDL_Color c);

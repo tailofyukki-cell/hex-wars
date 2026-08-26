@@ -11,6 +11,16 @@ static bool s_img_ready = false;
 static SDL_Texture *s_tex[MAX_UNIT_TYPES][2];
 static int8_t       s_state[MAX_UNIT_TYPES][2];
 
+/* パス指定の1枚絵（カットイン等）のキャッシュ。読めなかったパスも
+ * tex=NULL のまま覚えておき、毎フレーム読み直さないようにする。 */
+#define MAX_PATH_TEX 16
+static struct {
+    char         rel[64];
+    SDL_Texture *tex;
+    int          w, h;
+} s_ptex[MAX_PATH_TEX];
+static int s_ptex_n;
+
 int sprites_init(void)
 {
     int want = IMG_INIT_PNG;
@@ -25,6 +35,10 @@ int sprites_init(void)
 
 void sprites_clear(void)
 {
+    for (int i = 0; i < s_ptex_n; i++)
+        if (s_ptex[i].tex) SDL_DestroyTexture(s_ptex[i].tex);
+    memset(s_ptex, 0, sizeof s_ptex);
+    s_ptex_n = 0;
     for (int t = 0; t < MAX_UNIT_TYPES; t++)
         for (int o = 0; o < 2; o++) {
             if (s_tex[t][o]) SDL_DestroyTexture(s_tex[t][o]);
@@ -90,5 +104,29 @@ SDL_Texture *sprite_get(App *a, int type, int owner)
     SDL_SetTextureScaleMode(tex, SDL_ScaleModeLinear);
     s_tex[type][owner] = tex;
     s_state[type][owner] = 1;
+    return tex;
+}
+
+SDL_Texture *sprite_get_path(App *a, const char *rel, int *w, int *h)
+{
+    if (!s_img_ready || !rel || !rel[0]) return NULL;
+    for (int i = 0; i < s_ptex_n; i++)
+        if (!strcmp(s_ptex[i].rel, rel)) {
+            if (w) *w = s_ptex[i].w;
+            if (h) *h = s_ptex[i].h;
+            return s_ptex[i].tex;        /* 失敗済みなら NULL が返る */
+        }
+    if (s_ptex_n >= MAX_PATH_TEX) return NULL;
+
+    int tw = 0, th = 0;
+    SDL_Texture *tex = sprite_load_file(a, rel, &tw, &th);
+    if (!tex) SDL_Log("カットイン画像読込失敗: assets/%s", rel);
+    snprintf(s_ptex[s_ptex_n].rel, sizeof s_ptex[s_ptex_n].rel, "%s", rel);
+    s_ptex[s_ptex_n].tex = tex;
+    s_ptex[s_ptex_n].w = tw;
+    s_ptex[s_ptex_n].h = th;
+    s_ptex_n++;
+    if (w) *w = tw;
+    if (h) *h = th;
     return tex;
 }

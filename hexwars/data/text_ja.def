@@ -42,6 +42,13 @@ OPT_BGM         = BGM音量
 OPT_SE          = SE音量
 OPT_ANIM        = 戦闘アニメ
 OPT_ANIM_VIDEO  = 戦闘アニメを動画で再生
+OPT_TILT        = マップ表示
+OPT_TILT_ON     = 斜め見下ろし
+OPT_TILT_OFF    = 平面（真上）
+OPT_CUTIN       = 攻撃時のカットイン
+OPT_CUTIN_OFF   = 出さない
+OPT_CUTIN_ALWAYS= 毎回出す
+OPT_CUTIN_KILL  = 撃破したときだけ
 OPT_BACK        = タイトルへ戻る
 OPT_HINT        = ←→:変更  Z/Enter:決定  X/Esc:戻る
 

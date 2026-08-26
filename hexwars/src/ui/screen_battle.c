@@ -44,7 +44,8 @@ static void clamp_camera(App *a)
 {
     float s = hex_size(a);
     float map_w = 1.7320508f * s * (a->game.w + 1);
-    float map_h = 1.5f * s * a->game.h + s;
+    /* 斜め見下ろし表示ではマップ全体がY方向に潰れるので、可動域も同じだけ縮める */
+    float map_h = (1.5f * s * a->game.h + s) * hex_tilt_squash(a);
     float max_x = map_w - WIN_W;
     float max_y = map_h - (WIN_H - TOPBAR_H - PANEL_H);
     if (max_x < 0) max_x = 0;
@@ -402,6 +403,18 @@ static void execute_attack(App *a, int target)
         an->total = an->timer = (cd > 0 || ak) ? 150 : 95;
         an->start_ms = SDL_GetTicks();
         an->use_video = false;
+        /* カットイン: 攻撃側ユニットの cutin を優先し、無ければ攻撃側指揮官のものを使う。
+         * opt_cutin: 0=出さない / 1=毎回 / 2=撃破したときだけ */
+        an->cutin[0] = '\0';
+        if (a->opt_cutin == 1 || (a->opt_cutin == 2 && dk)) {
+            const char *rel = g->types[an->atk_type].cutin;
+            if (!rel[0]) {
+                const CommanderType *co = game_co(g, an->atk_owner);
+                if (co) rel = co->cutin;
+            }
+            if (rel[0])
+                snprintf(an->cutin, sizeof an->cutin, "%s", rel);
+        }
         /* 動画モードON かつ 攻撃側ユニットに動画が指定・読込できる場合のみ動画演出。
          * 動画が無ければ従来のHPバー演出にフォールバックする。 */
         if (a->opt_anim_video) {
@@ -1333,7 +1346,7 @@ static void draw_overlays(App *a)
                 if (a->mr.cost[y][x] < 0 || !a->mr.stop[y][x]) continue;
                 float cx, cy;
                 hex_center_px(a, x, y, &cx, &cy);
-                render_fill_hex(a, cx, cy, s - 1.5f,
+                render_fill_hex_map(a, cx, cy, s - 1.5f,
                                 (SDL_Color){ 255, 255, 255, 70 });
             }
     }
@@ -1343,9 +1356,9 @@ static void draw_overlays(App *a)
             if (!(t->flags & UF_ALIVE)) continue;
             float cx, cy;
             hex_center_px(a, t->pos.x, t->pos.y, &cx, &cy);
-            render_fill_hex(a, cx, cy, s - 1.5f,
+            render_fill_hex_map(a, cx, cy, s - 1.5f,
                             (SDL_Color){ 255, 60, 40, 90 });
-            render_hex_outline(a, cx, cy, s - 1.0f,
+            render_hex_outline_map(a, cx, cy, s - 1.0f,
                                (SDL_Color){ 255, 80, 60, 255 });
             /* 各対象に予想ダメージを小さく出して比較しやすくする */
             if (a->sel_unit >= 0) {
@@ -1362,9 +1375,9 @@ static void draw_overlays(App *a)
         for (int i = 0; i < a->n_unload; i++) {
             float cx, cy;
             hex_center_px(a, a->unload_x[i], a->unload_y[i], &cx, &cy);
-            render_fill_hex(a, cx, cy, s - 1.5f,
+            render_fill_hex_map(a, cx, cy, s - 1.5f,
                             (SDL_Color){ 80, 200, 120, 90 });
-            render_hex_outline(a, cx, cy, s - 1.0f,
+            render_hex_outline_map(a, cx, cy, s - 1.0f,
                                (SDL_Color){ 100, 230, 140, 255 });
         }
     }
@@ -1373,15 +1386,15 @@ static void draw_overlays(App *a)
         const Unit *u = &g->units[a->sel_unit];
         float cx, cy;
         hex_center_px(a, u->pos.x, u->pos.y, &cx, &cy);
-        render_hex_outline(a, cx, cy, s - 1.0f, COL_WHITE);
+        render_hex_outline_map(a, cx, cy, s - 1.0f, COL_WHITE);
     }
     /* カーソル */
     {
         float cx, cy;
         hex_center_px(a, a->cur_x, a->cur_y, &cx, &cy);
         float pulse = 1.0f + 0.06f * sinf((float)a->frame * 0.15f);
-        render_hex_outline(a, cx, cy, (s - 1.0f) * pulse, COL_YELLOW);
-        render_hex_outline(a, cx, cy, (s - 2.5f) * pulse, COL_YELLOW);
+        render_hex_outline_map(a, cx, cy, (s - 1.0f) * pulse, COL_YELLOW);
+        render_hex_outline_map(a, cx, cy, (s - 2.5f) * pulse, COL_YELLOW);
     }
 }
 
@@ -1933,6 +1946,35 @@ static void draw_battle_anim_video(App *a, UnitAnim *ua)
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 56, COL_DIM, tx("HINT_ANIM"));
 }
 
+/* 攻撃時のカットイン1枚絵。左からスライドインし、最後にスライドアウトする。
+ * 画像が無い/読めない場合は何も描かない（従来の演出だけになる）。 */
+static void draw_cutin(App *a, BattleAnim *an)
+{
+    if (!an->cutin[0]) return;
+    int iw = 0, ih = 0;
+    SDL_Texture *tex = sprite_get_path(a, an->cutin, &iw, &ih);
+    if (!tex || iw <= 0 || ih <= 0) return;
+
+    const int IN = 10, OUT = 12;          /* スライドイン/アウトのフレーム数 */
+    int t = an->total - an->timer;
+    float k = 1.0f;                        /* 0=画面外 1=定位置 */
+    if (t < IN)               k = (float)t / (float)IN;
+    else if (an->timer < OUT) k = (float)an->timer / (float)OUT;
+    if (k < 0.0f) k = 0.0f;
+    if (k > 1.0f) k = 1.0f;
+    /* 行き過ぎてから戻る動き（イーズアウト）で勢いを出す */
+    float e = 1.0f - (1.0f - k) * (1.0f - k);
+
+    /* 画面左下に接地させる（下で切れないよう下端合わせ） */
+    float dh = (float)WIN_H * 0.78f;
+    float dw = dh * (float)iw / (float)ih;
+    float x0 = -dw - 20.0f, x1 = 4.0f;
+    SDL_FRect dst = { x0 + (x1 - x0) * e, (float)WIN_H - dh, dw, dh };
+    SDL_SetTextureAlphaMod(tex, (Uint8)(255.0f * e));
+    SDL_RenderCopyF(a->ren, tex, NULL, &dst);
+    SDL_SetTextureAlphaMod(tex, 255);
+}
+
 static void draw_battle_anim(App *a)
 {
     BattleAnim *an = &a->anim;
@@ -1940,11 +1982,13 @@ static void draw_battle_anim(App *a)
 
     if (an->use_video) {
         UnitAnim *ua = uanim_get(a, an->atk_type);
-        if (ua) { draw_battle_anim_video(a, ua); return; }
+        if (ua) { draw_battle_anim_video(a, ua); draw_cutin(a, an); return; }
     }
 
     fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 10, 12, 16, 120 });
-    int px = WIN_W / 2 - 360, py = WIN_H / 2 - 110, pw = 720, ph = 220;
+    /* カットインは左に立つので、その間はパネルを右へ寄せて重ならないようにする */
+    int shift = an->cutin[0] ? 80 : 0;
+    int px = WIN_W / 2 - 360 + shift, py = WIN_H / 2 - 110, pw = 720, ph = 220;
     fill_rect(a, px, py, pw, ph, (SDL_Color){ 28, 32, 38, 245 });
     outline_rect(a, px, py, pw, ph, COL_DIM);
 
@@ -1959,6 +2003,7 @@ static void draw_battle_anim(App *a)
                      t < 75 ? "▼" : "▲");
     draw_text_center(a, a->font_s, px + pw / 2, py + ph - 4, COL_DIM,
                      tx("HINT_ANIM"));
+    draw_cutin(a, an);
 }
 
 /* 副目標の進捗を左上（トップバー直下）に常時表示する。

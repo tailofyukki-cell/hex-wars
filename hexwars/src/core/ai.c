@@ -136,12 +136,25 @@ static int nearest_supply(const Game *g, int me, MoveClass mc, int fx, int fy)
 /* ------------------------------------------------------------------ */
 
 /* 機動ドメイン 0=陸 1=空 2=海（game.c の move_domain と同じ分類） */
-static int move_domain_of(const Game *g, const Unit *u)
+static int domain_from_mclass(int mc)
 {
-    int mc = g->types[u->type].mclass;
     if (mc == MC_AIR) return 1;
     if (mc == MC_SEA || mc == MC_SUB) return 2;
     return 0;
+}
+static int move_domain_of(const Game *g, const Unit *u)
+{
+    return domain_from_mclass(g->types[u->type].mclass);
+}
+
+/* 無武装（攻撃力オール0）か。輸送艦/輸送ヘリ/トラックは無武装だが、
+ * 空母(CARRIER)は艦載機を積んでも対空攻撃力を持つため輸送とは区別する
+ * （区別しないと上陸作戦中に空母が一切攻撃しなくなる）。 */
+static bool type_unarmed(const UnitType *t)
+{
+    for (int c = 0; c < ARMOR_COUNT; c++)
+        if (t->atk[c] > 0) return false;
+    return true;
 }
 
 /* 自軍の陸ユニット・陸上生産拠点から、陸伝いに到達できる範囲を塗る */
@@ -208,18 +221,22 @@ static void pick_invasion_goal(Game *g, AiState *s)
     s->amphib = false;
     s->inv_x = s->inv_y = -1;
 
-    /* 自軍に港か輸送ユニットが無ければ上陸は狙わない */
+    /* 自軍に港/空港か輸送艦・輸送ヘリが無ければ上陸は狙わない
+     * （輸送ヘリは地形を無視して飛べるので、港が無く空港しか無いマップでも
+     *   上陸作戦の足になれる） */
     bool can_ship = false;
     for (int i = 0; i < g->n_units && !can_ship; i++) {
         const Unit *u = &g->units[i];
         if ((u->flags & UF_ALIVE) && u->owner == me &&
-            g->types[u->type].capacity > 0 && move_domain_of(g, u) == 2)
+            g->types[u->type].capacity > 0 && type_unarmed(&g->types[u->type]) &&
+            move_domain_of(g, u) != 0)
             can_ship = true;
     }
     for (int y = 0; y < g->h && !can_ship; y++)
         for (int x = 0; x < g->w && !can_ship; x++)
             if (g->tiles[y][x].owner == me &&
-                g->terrains[g->tiles[y][x].terrain].produces == PROD_SEA)
+                (g->terrains[g->tiles[y][x].terrain].produces == PROD_SEA ||
+                 g->terrains[g->tiles[y][x].terrain].produces == PROD_AIR))
                 can_ship = true;
     if (!can_ship) return;
 
@@ -371,9 +388,10 @@ static void act_unit(Game *g, AiState *s, int ui)
     Plan best = { -1000000, u->pos.x, u->pos.y, 0, -1, -1, -1 };
     bool retreat = hard && u->hp <= 3; /* HARD: 損傷ユニットは補給地点へ */
 
-    /* このユニットが上陸作戦に関わるか */
+    /* このユニットが上陸作戦・輸送任務に関わるか（輸送艦/輸送ヘリ/トラック。
+     * 空母は capacity>0 でも武装しているので type_unarmed で除外する） */
     int dom = move_domain_of(g, u);
-    bool is_transport = (ut->capacity > 0 && dom == 2);
+    bool is_transport = (ut->capacity > 0 && type_unarmed(ut));
     int cargo_n = 0;
     for (int cs = 0; cs < 2; cs++) if (u->cargo[cs] >= 0) cargo_n++;
     /* まだ積めるうえに「すぐ乗れる位置」に味方がいるなら、あと1ターンだけ待って
@@ -390,9 +408,20 @@ static void act_unit(Game *g, AiState *s, int ui)
         }
     }
     bool has_cargo = (cargo_n > 0) && !more_riders_near;
-    /* 陸ユニットが「陸路では目標に行けない」＝船に乗るべき状況か */
+    /* 陸ユニットが「陸路では目標に行けない」＝船・輸送ヘリに乗るべき状況か */
     bool wants_ride = s->amphib && dom == 0 && !ut->supply &&
                       s->inv_x >= 0 && !s->land_reach[s->inv_y][s->inv_x];
+    /* 足の遅い陸ユニットが、遠い目的地へトラックで速く運んでもらいたい状況か
+     * （上陸作戦とは無関係。トラック側の「拾いに行く」ロジックと対になる判定）。
+     * move*4 という長い距離を要求するのは、近場の攻撃・占領の好機をトラック待ちで
+     * 逃さないようにするため（sim_ai実測: move*2 だと m01 のような純陸マップでも
+     * NORMAL同士の対戦が軒並みターン切れの引き分けになった＝乗車が交戦を阻害した）。 */
+    bool wants_speed_ride = dom == 0 && !ut->supply && ut->move <= 3 &&
+                             ut->n_transport_by > 0 &&
+                             (ut->can_capture
+                                ? nearest_capture_goal(g, me, u->pos.x, u->pos.y)
+                                : nearest_enemy_goal(g, me, u->pos.x, u->pos.y))
+                               >= ut->move * 4;
 
     for (int y = 0; y < g->h; y++) {
         for (int x = 0; x < g->w; x++) {
@@ -402,7 +431,12 @@ static void act_unit(Game *g, AiState *s, int ui)
             {
                 int occ = game_unit_at_layer(g, x, y, unit_layer(mc));
                 if (occ >= 0 && occ != ui) {
-                    if (wants_ride && g->units[occ].owner == me &&
+                    int occ_dom = move_domain_of(g, &g->units[occ]);
+                    /* 上陸: トラック(陸)には乗らない（海・空隙は越えられない）。
+                     * 速度支援: トラックにだけ乗る（船・ヘリに乗せてもらう理由がない）。 */
+                    bool ride_ok = (wants_ride && occ_dom != 0) ||
+                                   (wants_speed_ride && occ_dom == 0);
+                    if (ride_ok && g->units[occ].owner == me &&
                         game_can_board(g, ui, occ))
                         board_t = occ;
                     /* 瀕死の部隊は合流して1個の使える部隊にまとめる。
@@ -417,10 +451,31 @@ static void act_unit(Game *g, AiState *s, int ui)
                     else
                         continue;
                 }
+                /* 輸送ヘリは LAYER_AIR にいるため、陸ユニット自身のレイヤー
+                 * （LAYER_SURFACE）の占有チェックには映らない。地表が空いていて
+                 * 頭上にヘリがいる、というケースを別途拾う。 */
+                if (board_t < 0 && wants_ride) {
+                    int air = game_unit_at_layer(g, x, y, LAYER_AIR);
+                    if (air >= 0 && air != ui && g->units[air].owner == me &&
+                        game_can_board(g, ui, air))
+                        board_t = air;
+                }
             }
-            /* 搭乗プラン: 乗れるなら高い優先度で乗る（上陸の足を確保する） */
+            /* 搭乗プラン: 乗れるなら高い優先度で乗る（上陸の足を確保する）。
+             * トラックへの速度支援搭乗は「上陸の足」ほど絶対に必要ではない
+             * （歩いても行ける）ので、前進評価と同スケールにわずかな優遇を
+             * 乗せるだけに留める（攻撃・占領の好機を奪わないため）。 */
             if (board_t >= 0) {
-                int sc = 4000 - hex_distance(x, y, s->inv_x, s->inv_y) * 10;
+                int sc;
+                if (move_domain_of(g, &g->units[board_t]) == 0) {
+                    const TerrainType *bterr = game_terrain_at(g, x, y);
+                    int bbase = bterr->def_bonus * 2 - s->threat[y][x] / 8;
+                    int goal = ut->can_capture ? nearest_capture_goal(g, me, x, y)
+                                                : nearest_enemy_goal(g, me, x, y);
+                    sc = bbase - goal * 40 - 150; /* 前進評価(-200)よりわずかに優遇するだけ */
+                } else {
+                    sc = 4000 - hex_distance(x, y, s->inv_x, s->inv_y) * 10;
+                }
                 if (sc > best.score) {
                     best.score = sc; best.mx = x; best.my = y;
                     best.action = 4; best.target = board_t;
@@ -457,8 +512,9 @@ static void act_unit(Game *g, AiState *s, int ui)
                 continue;
             }
 
-            /* --- 輸送艦: 積んで運ぶ / 空なら味方を拾いに行く --- */
-            if (is_transport && s->amphib) {
+            /* --- 輸送艦・輸送ヘリ: 積んで運ぶ / 空なら味方を拾いに行く ---
+             * dom!=0 でトラックを除外（トラックは陸路しか走れず上陸作戦の役に立たない） */
+            if (is_transport && dom != 0 && s->amphib) {
                 int sc;
                 if (has_cargo) {
                     /* 積荷あり: 上陸目標に最も近い「降ろせる隣接陸地」を探す */
@@ -499,6 +555,69 @@ static void act_unit(Game *g, AiState *s, int ui)
                         if (dd < nd) nd = dd;
                     }
                     sc = (nd < 9999) ? (3500 - nd * 70) : 0;
+                    sc -= s->threat[y][x] / 8;
+                    if (sc > best.score) {
+                        best.score = sc; best.mx = x; best.my = y;
+                        best.action = 0; best.target = -1;
+                    }
+                }
+                continue;
+            }
+
+            /* --- トラック: ノロマな味方を目的地の近くまで速く運ぶ。
+             * 上陸作戦とは無関係に、常時この役割で動く（陸路のみの速度支援）。 */
+            if (is_transport && dom == 0) {
+                int sc;
+                if (has_cargo) {
+                    int cslot = (u->cargo[0] >= 0) ? u->cargo[0] : u->cargo[1];
+                    const UnitType *put = &g->types[g->units[cslot].type];
+                    int here_goal = put->can_capture
+                                      ? nearest_capture_goal(g, me, x, y)
+                                      : nearest_enemy_goal(g, me, x, y);
+                    /* 積荷の目的地に一番近い「降ろせる隣接地」を探す */
+                    int bestu = -1, bux = -1, buy = -1;
+                    for (int d = 0; d < HEX_DIRS; d++) {
+                        int nx, ny;
+                        hex_neighbor(x, y, d, &nx, &ny);
+                        if (!game_in_bounds(g, nx, ny)) continue;
+                        if (!game_can_unload_to(g, ui, nx, ny)) continue;
+                        int gd = put->can_capture
+                                   ? nearest_capture_goal(g, me, nx, ny)
+                                   : nearest_enemy_goal(g, me, nx, ny);
+                        if (bestu < 0 || gd < bestu) { bestu = gd; bux = nx; buy = ny; }
+                    }
+                    /* 降ろすことで目的地に近づく場合だけ降ろす（無駄な即降ろしを防ぐ） */
+                    if (bestu >= 0 && bestu < here_goal) {
+                        sc = 5000 - bestu * 60 - s->threat[y][x] / 8;
+                        if (sc > best.score) {
+                            best.score = sc; best.mx = x; best.my = y;
+                            best.action = 5; best.target = -1;
+                            best.ux = bux; best.uy = buy;
+                        }
+                    }
+                    /* まだ近づけるなら、積んだまま目的地へ走る */
+                    sc = 2500 - here_goal * 50 - s->threat[y][x] / 8;
+                    if (sc > best.score) {
+                        best.score = sc; best.mx = x; best.my = y;
+                        best.action = 0; best.target = -1;
+                    }
+                } else {
+                    /* 空: 遠出が必要なノロマな味方の隣へ拾いに行く */
+                    int nd = 9999;
+                    for (int i = 0; i < g->n_units; i++) {
+                        const Unit *f = &g->units[i];
+                        if (!(f->flags & UF_ALIVE) || (f->flags & UF_LOADED)) continue;
+                        if (f->owner != me || !game_can_board(g, i, ui)) continue;
+                        const UnitType *ft = &g->types[f->type];
+                        if (ft->move > 3) continue; /* 元々速い部隊は自走に任せる */
+                        int fgoal = ft->can_capture
+                                      ? nearest_capture_goal(g, me, f->pos.x, f->pos.y)
+                                      : nearest_enemy_goal(g, me, f->pos.x, f->pos.y);
+                        if (fgoal < ft->move * 4) continue; /* 自走で十分近い（wants_speed_rideと同じ基準） */
+                        int dd = hex_distance(x, y, f->pos.x, f->pos.y);
+                        if (dd < nd) nd = dd;
+                    }
+                    sc = (nd < 9999) ? (2000 - nd * 70) : 0;
                     sc -= s->threat[y][x] / 8;
                     if (sc > best.score) {
                         best.score = sc; best.mx = x; best.my = y;
@@ -648,7 +767,7 @@ static int pick_production(Game *g, AiState *s, int x, int y)
 
     /* 自軍構成を数える */
     int n_cap = 0, n_combat = 0, n_supplier = 0;
-    int n_transport = 0, n_riders = 0;
+    int n_transport = 0, n_riders = 0, n_truck = 0, n_slow = 0;
     for (int i = 0; i < g->n_units; i++) {
         const Unit *u = &g->units[i];
         if (!(u->flags & UF_ALIVE) || u->owner != me) continue;
@@ -656,9 +775,15 @@ static int pick_production(Game *g, AiState *s, int x, int y)
         if (t->supply) n_supplier++;
         else if (t->can_capture) n_cap++;
         else n_combat++;
-        if (t->capacity > 0 && move_domain_of(g, u) == 2) n_transport++;
-        /* 船に乗せられる陸ユニット（上陸要員の在庫） */
-        if (move_domain_of(g, u) == 0 && t->n_transport_by > 0) n_riders++;
+        int ud = move_domain_of(g, u);
+        if (t->capacity > 0 && type_unarmed(t)) {
+            if (ud == 0) n_truck++;          /* トラック */
+            else n_transport++;              /* 輸送艦・輸送ヘリ（上陸作戦の足） */
+        }
+        /* 船・ヘリに乗せられる陸ユニット（上陸要員の在庫） */
+        if (ud == 0 && t->n_transport_by > 0) n_riders++;
+        /* トラックに乗せる価値がある、足の遅い陸ユニット */
+        if (ud == 0 && !t->supply && t->move <= 3 && t->n_transport_by > 0) n_slow++;
     }
 
     /* 奪える建物が残っているなら占領要員を最低3体維持 */
@@ -678,8 +803,10 @@ static int pick_production(Game *g, AiState *s, int x, int y)
         if (ut->cost > g->funds[me]) continue;
 
         int sc;
-        if (s->amphib && ut->capacity > 0 && ut->mclass == MC_SEA) {
-            /* 上陸作戦が必要: 輸送艦を2隻まで確保（乗せる部隊がいる時だけ） */
+        bool ut_unarmed = type_unarmed(ut);
+        int ut_dom = domain_from_mclass(ut->mclass);
+        if (s->amphib && ut->capacity > 0 && ut_unarmed && ut_dom != 0) {
+            /* 上陸作戦が必要: 輸送艦・輸送ヘリを2隻(機)まで確保（乗せる部隊がいる時だけ） */
             sc = (n_transport < 2 && n_riders >= 1) ? 12000 - ut->cost : 0;
         } else if (s->amphib && ut->can_capture && n_riders < 4) {
             /* 上陸させる占領要員を優先的に揃える */
@@ -689,6 +816,9 @@ static int pick_production(Game *g, AiState *s, int x, int y)
             sc = (n_supplier == 0 && n_combat >= 6) ? 9000 : 0;
         } else if (want_capture && ut->can_capture) {
             sc = 10000 - ut->cost; /* 安い占領ユニット優先 */
+        } else if (ut->capacity > 0 && ut_unarmed && ut_dom == 0) {
+            /* トラック: 足の遅い部隊が2体以上育ったら1台だけ確保（速度支援） */
+            sc = (n_truck < 1 && n_slow >= 3) ? 4000 - ut->cost : 0;
         } else if (ut->can_capture) {
             sc = 100; /* 占領枠は足りている */
         } else {

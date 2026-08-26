@@ -1,4 +1,9 @@
 ﻿# units.def - ユニット定義（仕様書 3章 / 11章）
+#
+# cutin … 攻撃時に出す1枚絵（assets/ からの相対パス）。オプションの
+#         「攻撃時のカットイン」が「毎回出す」「撃破したときだけ」のときに表示される。
+#         未指定なら攻撃側の指揮官の cutin にフォールバックし、それも無ければ出ない。
+#         仮絵は tools/gen_cutin_art.py（要Pillow）で生成したもの。
 # atk_* はダメージ×10 スケール（55 = 満HP時 5.5ダメージ期待）
 # 架空WW2風の独自名称
 #
@@ -10,6 +15,7 @@
 
 [unit INFANTRY]
 image     = gfx/units/infantry.png
+cutin     = gfx/cutin/infantry.png
 name      = 歩兵
 icon      = 歩
 class     = LAND_FOOT
@@ -29,6 +35,7 @@ transport_by = TRUCK,T_COPTER,T_SHIP
 
 [unit AT_INFANTRY]
 image     = gfx/units/at_infantry.png
+cutin     = gfx/cutin/infantry.png
 name      = 対戦車兵
 icon      = 対
 class     = LAND_FOOT
@@ -66,6 +73,7 @@ transport_by = T_SHIP
 
 [unit TANK]
 image     = gfx/units/tank.png
+cutin     = gfx/cutin/tank.png
 # 戦闘アニメ動画のサンプル（実際の動画に差し替えてください）
 anim      = gfx/anim/sample_land.mp4
 name      = 中戦車「T-40型」
@@ -86,6 +94,7 @@ transport_by = T_SHIP
 
 [unit HTANK]
 image     = gfx/units/htank.png
+cutin     = gfx/cutin/tank.png
 name      = 重戦車「G-6型」
 icon      = 重
 class     = LAND_TRACK
@@ -104,6 +113,7 @@ transport_by = T_SHIP
 
 [unit ARTILLERY]
 image     = gfx/units/artillery.png
+cutin     = gfx/cutin/tank.png
 name      = 自走砲「H-15型」
 icon      = 砲
 class     = LAND_TRACK
@@ -179,6 +189,7 @@ capacity  = 1
 
 [unit FIGHTER]
 image     = gfx/units/fighter.png
+cutin     = gfx/cutin/air.png
 name      = 戦闘機「Fk-9型」
 icon      = 翼
 class     = AIR
@@ -197,6 +208,7 @@ transport_by = CARRIER
 
 [unit BOMBER]
 image     = gfx/units/bomber.png
+cutin     = gfx/cutin/air.png
 name      = 爆撃機「Bx-17型」
 icon      = 爆
 class     = AIR
@@ -215,6 +227,7 @@ transport_by = CARRIER
 
 [unit HELI]
 image     = gfx/units/heli.png
+cutin     = gfx/cutin/air.png
 name      = 攻撃ヘリ「Hv-2型」
 icon      = 旋
 class     = AIR
@@ -234,6 +247,7 @@ transport_by = CARRIER
 
 [unit DESTROYER]
 image     = gfx/units/destroyer.png
+cutin     = gfx/cutin/ship.png
 name      = 駆逐艦「Dn-3型」
 icon      = 駆
 class     = SEA
@@ -252,6 +266,7 @@ anti_sub  = 1
 
 [unit CRUISER]
 image     = gfx/units/cruiser.png
+cutin     = gfx/cutin/ship.png
 name      = 巡洋艦「Kv-1型」
 icon      = 巡
 class     = SEA
@@ -269,6 +284,7 @@ def       = 55
 
 [unit SUBMARINE]
 image     = gfx/units/submarine.png
+cutin     = gfx/cutin/ship.png
 name      = 潜水艦「U-11型」
 icon      = 潜
 class     = SEA_SUB
@@ -348,6 +364,7 @@ supply    = 1
 
 [unit MILITIA]
 image     = gfx/units/militia.png
+cutin     = gfx/cutin/infantry.png
 name      = 民兵
 icon      = 民
 class     = LAND_FOOT
@@ -367,6 +384,7 @@ transport_by = TRUCK,T_COPTER,T_SHIP
 
 [unit MECH_INF]
 image     = gfx/units/mech_inf.png
+cutin     = gfx/cutin/infantry.png
 name      = 機械化歩兵
 icon      = 機
 class     = LAND_TRACK
@@ -386,6 +404,7 @@ transport_by = T_SHIP
 
 [unit LTANK]
 image     = gfx/units/ltank.png
+cutin     = gfx/cutin/tank.png
 name      = 軽戦車「T-20型」
 icon      = 軽
 class     = LAND_TRACK
@@ -445,6 +464,7 @@ transport_by = TRUCK,T_SHIP
 
 [unit DIVE_BOMBER]
 image     = gfx/units/dive_bomber.png
+cutin     = gfx/cutin/air.png
 name      = 襲撃機「Sk-6型」
 icon      = 襲
 class     = AIR
@@ -484,6 +504,7 @@ transport_by = CARRIER
 # 戦艦: 射程2-5の巨砲を持つ海の主力。対地・対艦に絶大、鈍足で対空は苦手
 [unit BATTLESHIP]
 image     = gfx/units/battleship.png
+cutin     = gfx/cutin/ship.png
 # 戦闘アニメ動画のサンプル（ユニット毎に別の動画を指定できる）
 anim      = gfx/anim/sample_sea.gif
 name      = 戦艦「Rz-9型」

@@ -20,4 +20,9 @@ void sprites_clear(void);
  * rel は assets/ 相対パス。失敗時 NULL */
 SDL_Texture *sprite_load_file(App *a, const char *rel, int *w, int *h);
 
+/* パス指定の画像を遅延読込＋キャッシュして返す（カットイン等の1枚絵用）。
+ * 読込に失敗したパスも覚えて再試行しない。破棄は sprites_clear/quit がまとめて行う。
+ * rel は assets/ 相対パス。失敗時 NULL */
+SDL_Texture *sprite_get_path(App *a, const char *rel, int *w, int *h);
+
 #endif
