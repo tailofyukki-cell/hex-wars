@@ -135,6 +135,10 @@ int main(void)
     for (uint32_t s = 1; s <= 2; s++)
         if (run_match("data/maps/m02_channel.map", s * 77 + 5,
                       CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    printf("== m04（立体戦: 空・海面・海中が重なるマップ） ==\n");
+    for (uint32_t s = 1; s <= 2; s++)
+        if (run_match("data/maps/m04_layers.map", s * 211 + 9,
+                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     printf("== m03/c11/c12（海戦・上陸マップ） ==\n");
     for (uint32_t s = 1; s <= 2; s++)
         if (run_match("data/maps/m03_archipelago.map", s * 131 + 3,

@@ -550,12 +550,18 @@ bool game_type_buildable_at(const Game *g, int x, int y, int type)
 {
     const TerrainType *t = game_terrain_at(g, x, y);
     MoveClass mc = (MoveClass)g->types[type].mclass;
+    bool cat_ok;
     switch (t->produces) {
-    case PROD_LAND: return mc == MC_FOOT || mc == MC_WHEEL || mc == MC_TRACK;
-    case PROD_AIR:  return mc == MC_AIR;
-    case PROD_SEA:  return mc == MC_SEA || mc == MC_SUB;
+    case PROD_LAND: cat_ok = (mc == MC_FOOT || mc == MC_WHEEL || mc == MC_TRACK); break;
+    case PROD_AIR:  cat_ok = (mc == MC_AIR); break;
+    case PROD_SEA:  cat_ok = (mc == MC_SEA || mc == MC_SUB); break;
     default:        return false;
     }
+    if (!cat_ok) return false;
+    /* 立体化: 出てくるユニットのレイヤーさえ空いていれば生産できる。
+     * 上空を飛んでいる航空機が工場の戦車生産を塞ぐ、といったことが起きないようにする。
+     * 港では海面が塞がっていても海中（潜水艦）は出せる、という判定にもなる。 */
+    return game_unit_at_layer(g, x, y, unit_layer(mc)) < 0;
 }
 
 bool game_can_produce_at(const Game *g, int player, int x, int y)
@@ -564,8 +570,11 @@ bool game_can_produce_at(const Game *g, int player, int x, int y)
     const TerrainType *t = &g->terrains[tile->terrain];
     if (t->produces == PROD_NONE) return false;
     if (tile->owner != player) return false;
-    if (game_unit_at(g, x, y) >= 0) return false; /* ユニット不在時のみ */
-    return true;
+    /* 立体化: 「何か1種類でも出せるか」で判断する。実際にどのレイヤーが空いて
+     * いるかは game_type_buildable_at が種別ごとに見るので、ここは入口の判定。 */
+    for (int i = 0; i < g->n_types; i++)
+        if (game_type_buildable_at(g, x, y, i)) return true;
+    return false;
 }
 
 int game_produce(Game *g, int x, int y, int type)

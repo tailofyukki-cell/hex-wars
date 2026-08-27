@@ -8,7 +8,11 @@ typedef struct {
     int  order[MAX_UNITS];
     int  n_order;
     int  idx;
-    int  threat[MAX_MAP_H][MAX_MAP_W]; /* 敵攻撃到達範囲の脅威値 */
+    /* 脅威マップ。**被弾する側の装甲カテゴリ別**に持つ。
+     * 立体戦では「誰にとって危険か」が相手によって全く違うため
+     * （高射砲は航空機に激烈だが戦車はほぼ無視でよい／潜水艦は艦船しか狙えない）、
+     * 1枚の代表値だと空・陸・海が互いの脅威に引きずられて動きが鈍る。 */
+    int  threat[ARMOR_COUNT][MAX_MAP_H][MAX_MAP_W];
     /* 上陸作戦（仕様書 7.1 の拡張）:
      * land_reach = 自軍の陸ユニットが陸路で到達できる範囲。
      * ここから外れた敵拠点があるとき amphib=true になり、

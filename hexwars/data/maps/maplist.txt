@@ -8,3 +8,4 @@ maps/c05_river.map|河川突破（42x25・渡河戦）
 maps/c07_pass.map|山岳の隘路（42x25・山岳戦）
 maps/c09_cities.map|補給都市の攻防（46x25・都市争奪）
 maps/c10_plains.map|平原の決戦（49x29・大機甲戦）
+maps/m04_layers.map|三層の要衝（44x28・立体戦）

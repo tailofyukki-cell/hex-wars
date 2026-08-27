@@ -44,7 +44,9 @@ BLOCK_ALL = {SEA, VOID}
 
 FOOT = {"INFANTRY", "AT_INFANTRY", "MILITIA", "AA_GUN"}
 AIRU = {"FIGHTER", "BOMBER", "HELI", "T_COPTER", "SUPPLY_AIR",
-        "DIVE_BOMBER", "SCOUT_PLANE"}
+        "DIVE_BOMBER", "SCOUT_PLANE", "T_PLANE"}
+# 海中レイヤー。高さが違うので海面の艦と同じセルに置ける
+SUBU = {"SUBMARINE"}
 SEAU = {"DESTROYER", "CRUISER", "T_SHIP", "SUBMARINE",
         "BATTLESHIP", "CARRIER", "GUNBOAT", "MISSILE_BOAT", "SUPPLY_SHIP"}
 
@@ -162,9 +164,21 @@ class M:
             self.owners.append((x, y, owner))
         return x, y
 
+    @staticmethod
+    def layer_of(tid):
+        """立体化: ユニットの高さ。空/海中/地表海面 の3層（C側 unit_layer と同じ分類）。"""
+        if tid in AIRU:
+            return "air"
+        if tid in SUBU:
+            return "under"
+        return "surface"
+
     def unit(self, owner, tid, x, y):
+        layer = self.layer_of(tid)
+
         def ok(cx, cy):
-            if (cx, cy) in self.unit_pos:
+            # 占有は (セル, 高さ) 単位。高さが違えば同じセルに重ねて置ける
+            if (cx, cy, layer) in self.unit_pos:
                 return False
             ch = self.g[cy][cx]
             if ch in BUILDINGS or ch == VOID:
@@ -177,7 +191,7 @@ class M:
                 return ch != SEA
             return ch not in (SEA, "^", "r")
         x, y = self._bfs(x, y, ok)
-        self.unit_pos.add((x, y))
+        self.unit_pos.add((x, y, layer))
         self.units.append((owner, tid, x, y))
 
     def base(self, x, y, owner, n_city=3, n_fact=2, n_air=2, spread=4):
@@ -316,6 +330,64 @@ def m03():  # 群島の海戦 - 盤面の大半が海。小島の港を足場に
 
     m.write("m03_archipelago.map", "群島の海戦", 100, 3600, 3600,
             "m03 群島の海戦 - 盤面の7割が海。中央の群島の港を奪い制海権を握る")
+
+
+def m04():  # 三層の要衝 - 空・海面・海中が同じセルで噛み合う立体戦マップ
+    """立体化(L5)の見せ場を作るマップ。
+
+    中央を深い海峡が縦に貫き、その上を陸の桟橋が横切る。海峡には潜水艦が潜り、
+    海面には艦が浮かび、上空を航空機が飛ぶ——同じセルに3層が同時に居られる状況を
+    意図的に多く作ってある。空港と港を近接させ、どの高さで戦うかを選ばせる。
+    """
+    m = M(44, 28, 407, fill=".")
+    # 中央の深い海峡（縦断）。ここが海面と海中の戦場になる
+    m.carve(lambda x, y: 19 <= x <= 25, SEA)
+    # 海峡を横切る陸の桟橋2本（陸路をつなぎ、艦の頭上を歩兵が渡る）
+    m.carve(lambda x, y: 19 <= x <= 25 and 7 <= y <= 8, ".")
+    m.carve(lambda x, y: 19 <= x <= 25 and 19 <= y <= 20, ".")
+    # 両岸の内海（小さな入り江。潜水艦の隠れ場所）
+    m.disk(9, 5, 3, SEA)
+    m.disk(34, 22, 3, SEA)
+    # 地形の変化
+    m.ring(9, 20, 2, 4, "^", over=".")
+    m.ring(34, 7, 2, 4, "^", over=".")
+    m.scatter("w", 0.07)
+    m.clump("w")
+    m.scatter("h", 0.05)
+
+    hx0, hy0 = m.base(5, 13, 0, n_city=4, n_fact=2, n_air=2, spread=4)
+    hx1, hy1 = m.base(38, 13, 1, n_city=4, n_fact=2, n_air=2, spread=4)
+    # 母港（海峡と入り江の両方に面させる）
+    m.bld(15, 6, "p", 0); m.bld(15, 20, "p", 0)
+    m.bld(28, 6, "p", 1); m.bld(28, 20, "p", 1)
+    # 海峡の要衝（中立）。桟橋の上の拠点＝陸で取り合いつつ、下を潜水艦が通る
+    m.bld(21, 7, "c");  m.bld(22, 19, "c")
+    m.bld(21, 13, "p"); m.bld(22, 13, "a")   # 海峡中央の港と飛行場
+    m.bld(9, 5, "p");   m.bld(34, 22, "p")   # 入り江の港
+
+    # --- 初期配置: 同じセルに空/海面/海中を重ねて立体戦の起点を作る ---
+    for t in ("INFANTRY", "INFANTRY", "AT_INFANTRY", "TANK", "AA_TANK",
+              "ARTILLERY", "SUPPLY"):
+        m.unit(0, t, hx0 + 2, hy0)
+        m.unit(1, t, hx1 - 2, hy1)
+    # 入り江の1セルに 海面・海中・上空 の3層を重ねて置く（立体化の見本）。
+    # 建物セルには置けない仕様なので、港そのものではなく隣の海面を使う。
+    for owner, (sx, sy) in ((0, (10, 5)), (1, (33, 22))):
+        m.unit(owner, "DESTROYER", sx, sy)    # 海面
+        m.unit(owner, "SUBMARINE", sx, sy)    # 海中（同じセル）
+        m.unit(owner, "FIGHTER",   sx, sy)    # 上空（同じセル）
+    # 残りの艦隊は海峡寄りに
+    for t, dx, dy in (("CRUISER", 0, 1), ("T_SHIP", 1, 0), ("GUNBOAT", 0, -1)):
+        m.unit(0, t, 15 + dx, 6 + dy)
+        m.unit(1, t, 28 - dx, 20 - dy)
+    for t in ("HELI",):
+        m.unit(0, t, 14, 6)
+        m.unit(1, t, 29, 20)
+    m.unit(0, "T_PLANE", hx0, hy0 - 2)
+    m.unit(1, "T_PLANE", hx1, hy1 + 2)
+
+    m.write("m04_layers.map", "三層の要衝", 100, 3400, 3400,
+            "m04 三層の要衝 - 中央の海峡で空・海面・海中が同じセルに重なる立体戦")
 
 
 def c11():  # 制海権の争奪（キャンペーン用・海戦主体）。P0西 vs P1東の島。
@@ -667,7 +739,16 @@ def c10():  # 巨大な楕円の大平原
             "c10 平原の決戦 - 巨大な楕円の大平原。遮蔽は三日月の丘だけ")
 
 
-for fn in (m01, m02, m03, c11, c12,
-           c01, c02, c03, c04, c05, c06, c07, c08, c09, c10):
-    fn()
-print("OK")
+ALL = (m01, m02, m03, m04, c11, c12,
+       c01, c02, c03, c04, c05, c06, c07, c08, c09, c10)
+
+if __name__ == "__main__":
+    import sys
+    # 引数を付けるとそのマップだけ生成する（例: python tools/gen_maps.py m04）。
+    # 引数なしは全再生成。**既存マップは scale_maps.py で拡大済みなので、
+    # 全再生成すると小さいサイズに戻る**（拡大したいときは gen → scale の順に実行）。
+    want = set(sys.argv[1:])
+    for fn in ALL:
+        if not want or fn.__name__ in want:
+            fn()
+    print("OK")

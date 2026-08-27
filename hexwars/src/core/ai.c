@@ -5,6 +5,13 @@
 #include "rules.h"
 #include <string.h>
 
+/* 脅威をスコアから差し引くときの割り算。小さいほど臆病になる。
+ * 装甲カテゴリ別に持つようになって数値が下がった（従来は全カテゴリの最大値を
+ * 使っていたので、当たらない相手の高い攻撃力まで数えていた）。実測でおよそ
+ * 6割程度に縮んだので、同じ警戒度になるよう 8 から下げてある。
+ * ここを大きくすると突っ込みやすく損失が増え、小さくすると慎重になり決着が遅くなる。 */
+#define THREAT_DIV 8
+
 /* ------------------------------------------------------------------ */
 /* 脅威マップ: 敵ユニットの攻撃到達範囲（移動+射程を距離近似）を加算   */
 /* ------------------------------------------------------------------ */
@@ -18,13 +25,13 @@ static void build_threat(Game *g, AiState *s)
         if (!game_unit_visible_to(g, me, u)) continue;
         const UnitType *t = &g->types[u->type];
         int reach = t->move + t->range_max;
-        int power = 0;
-        for (int c = 0; c < ARMOR_COUNT; c++)
-            if (t->atk[c] > power) power = t->atk[c];
+        if (u->ammo <= 0 && t->ammo > 0) continue;   /* 弾切れは脅威にならない */
         for (int y = 0; y < g->h; y++)
-            for (int x = 0; x < g->w; x++)
-                if (hex_distance(u->pos.x, u->pos.y, x, y) <= reach)
-                    s->threat[y][x] += power;
+            for (int x = 0; x < g->w; x++) {
+                if (hex_distance(u->pos.x, u->pos.y, x, y) > reach) continue;
+                for (int c = 0; c < ARMOR_COUNT; c++)
+                    s->threat[c][y][x] += t->atk[c];
+            }
     }
 }
 
@@ -75,6 +82,55 @@ static int nearest_enemy_goal(const Game *g, int me, int fx, int fy)
                 if (d < best) best = d;
             }
     return best;
+}
+
+/* 最寄りの「この部隊が実際に damage を与えられる敵」までの距離。
+ * 立体戦では射程内に居ても手が出ない組み合わせが多い（対空戦車→戦車、
+ * 戦闘機→歩兵、対潜装備なし→潜水艦）。全部の敵を等しく追いかけると、
+ * 手の出ない相手に貼り付いて撃たれるだけになるので、狙える相手を優先する。
+ * 狙える敵が1体も居なければ -1 を返し、呼び出し側が従来の判断に戻す。 */
+static int nearest_target_goal(const Game *g, int me, const Unit *self,
+                               int fx, int fy)
+{
+    const UnitType *st = &g->types[self->type];
+    int best = -1;
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *d = &g->units[i];
+        if (!(d->flags & UF_ALIVE) || (d->flags & UF_LOADED)) continue;
+        if (d->owner == me) continue;
+        if (!game_unit_visible_to(g, me, d)) continue;
+        if (st->atk[g->types[d->type].armor] <= 0) continue;
+        if (!unit_can_attack_target(g, self, d)) continue;
+        int dd = hex_distance(fx, fy, d->pos.x, d->pos.y);
+        if (best < 0 || dd < best) best = dd;
+    }
+    return best;
+}
+
+/* 最寄りの敵首都までの距離。前進の「引力」の要。 */
+static int nearest_enemy_hq(const Game *g, int me, int fx, int fy)
+{
+    int best = 9999;
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++)
+            if (g->terrains[g->tiles[y][x].terrain].is_hq &&
+                g->tiles[y][x].owner != me) {
+                int d = hex_distance(fx, fy, x, y);
+                if (d < best) best = d;
+            }
+    return best;
+}
+
+/* 前進の目標距離。狙える敵と敵首都の近いほうへ向かう。
+ * **敵首都を必ず候補に残すこと。** 「倒せる敵」だけを見ると部隊が殴り合いに
+ * 終始して首都へ進まなくなり、決着が減って損失だけ増える
+ * （sim_ai 実測: 首都を外したら 決着6→4・総損失 9595→12098 に悪化した）。 */
+static int advance_goal(const Game *g, int me, const Unit *self, int fx, int fy)
+{
+    int d = nearest_target_goal(g, me, self, fx, fy);
+    if (d < 0) return nearest_enemy_goal(g, me, fx, fy);
+    int h = nearest_enemy_hq(g, me, fx, fy);
+    return d < h ? d : h;
 }
 
 /* 最寄りの「補給・回復が必要な味方」までの距離（補給車の目標）。
@@ -317,7 +373,7 @@ static bool ai_try_co_power(Game *g, AiState *s, int phase)
             if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
             if (u->owner != me || u->ammo <= 0) continue;
             const UnitType *t = &g->types[u->type];
-            if (nearest_enemy_goal(g, me, u->pos.x, u->pos.y) <= t->move + t->range_max)
+            if (advance_goal(g, me, u, u->pos.x, u->pos.y) <= t->move + t->range_max)
                 n++;
         }
         fire = (n >= 3);
@@ -384,6 +440,11 @@ static void act_unit(Game *g, AiState *s, int ui)
     bool hard = g->ctrl[me] == CTRL_CPU_HARD;
 
     path_move_range(g, ui, &s_mr);
+
+    /* このユニットが受ける脅威は「自分の装甲カテゴリ」で引く。
+     * 立体戦では相手によって危険度がまるで違うのでここを取り違えると、
+     * 戦車が高射砲を恐れて動けない・戦闘機が対空砲に突っ込む、といった挙動になる。 */
+    const int (*threat)[MAX_MAP_W] = s->threat[ut->armor];
 
     Plan best = { -1000000, u->pos.x, u->pos.y, 0, -1, -1, -1 };
     bool retreat = hard && u->hp <= 3; /* HARD: 損傷ユニットは補給地点へ */
@@ -469,7 +530,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                 int sc;
                 if (move_domain_of(g, &g->units[board_t]) == 0) {
                     const TerrainType *bterr = game_terrain_at(g, x, y);
-                    int bbase = bterr->def_bonus * 2 - s->threat[y][x] / 8;
+                    int bbase = bterr->def_bonus * 2 - threat[y][x] / THREAT_DIV;
                     int goal = ut->can_capture ? nearest_capture_goal(g, me, x, y)
                                                 : nearest_enemy_goal(g, me, x, y);
                     sc = bbase - goal * 40 - 150; /* 前進評価(-200)よりわずかに優遇するだけ */
@@ -488,7 +549,7 @@ static void act_unit(Game *g, AiState *s, int ui)
             int tdef = terr->def_bonus;
 
             /* 共通項: 地形防御 − 脅威 */
-            int base = tdef * 2 - s->threat[y][x] / 8;
+            int base = tdef * 2 - threat[y][x] / THREAT_DIV;
 
             /* --- 合流評価: 傷むほど魅力的。ただし良い攻撃手には負ける値にする --- */
             if (join_t >= 0) {
@@ -535,7 +596,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                     }
                     if (bestu >= 0) {
                         /* 目標に近い岸へ降ろせるほど高評価 */
-                        sc = 6000 - bestu * 60 - s->threat[y][x] / 8;
+                        sc = 6000 - bestu * 60 - threat[y][x] / THREAT_DIV;
                         if (sc > best.score) {
                             best.score = sc; best.mx = x; best.my = y;
                             best.action = 5; best.target = -1;
@@ -544,7 +605,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                     }
                     /* 降ろせないなら、とにかく目標へ近づく */
                     sc = 3000 - hex_distance(x, y, s->inv_x, s->inv_y) * 50
-                         - s->threat[y][x] / 8;
+                         - threat[y][x] / THREAT_DIV;
                     if (sc > best.score) {
                         best.score = sc; best.mx = x; best.my = y;
                         best.action = 0; best.target = -1;
@@ -561,7 +622,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                         if (dd < nd) nd = dd;
                     }
                     sc = (nd < 9999) ? (3500 - nd * 70) : 0;
-                    sc -= s->threat[y][x] / 8;
+                    sc -= threat[y][x] / THREAT_DIV;
                     if (sc > best.score) {
                         best.score = sc; best.mx = x; best.my = y;
                         best.action = 0; best.target = -1;
@@ -594,7 +655,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                     }
                     /* 降ろすことで目的地に近づく場合だけ降ろす（無駄な即降ろしを防ぐ） */
                     if (bestu >= 0 && bestu < here_goal) {
-                        sc = 5000 - bestu * 60 - s->threat[y][x] / 8;
+                        sc = 5000 - bestu * 60 - threat[y][x] / THREAT_DIV;
                         if (sc > best.score) {
                             best.score = sc; best.mx = x; best.my = y;
                             best.action = 5; best.target = -1;
@@ -602,7 +663,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                         }
                     }
                     /* まだ近づけるなら、積んだまま目的地へ走る */
-                    sc = 2500 - here_goal * 50 - s->threat[y][x] / 8;
+                    sc = 2500 - here_goal * 50 - threat[y][x] / THREAT_DIV;
                     if (sc > best.score) {
                         best.score = sc; best.mx = x; best.my = y;
                         best.action = 0; best.target = -1;
@@ -624,7 +685,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                         if (dd < nd) nd = dd;
                     }
                     sc = (nd < 9999) ? (2000 - nd * 70) : 0;
-                    sc -= s->threat[y][x] / 8;
+                    sc -= threat[y][x] / THREAT_DIV;
                     if (sc > best.score) {
                         best.score = sc; best.mx = x; best.my = y;
                         best.action = 0; best.target = -1;
@@ -695,7 +756,7 @@ static void act_unit(Game *g, AiState *s, int ui)
             {
                 int d = ut->can_capture
                           ? nearest_capture_goal(g, me, x, y)
-                          : nearest_enemy_goal(g, me, x, y);
+                          : advance_goal(g, me, u, x, y);
                 int sc = base - d * 40 - 200; /* 攻撃・占領より弱い基本値 */
                 if (sc > best.score) {
                     best.score = sc; best.mx = x; best.my = y;

@@ -381,6 +381,64 @@ static void test_paradrop(void)
     CHECK(g->types[g->units[ci].type].paradrop == 0);
 }
 
+/* 立体化 L5: 生産の占有判定はレイヤー別。
+ * 上空の航空機は地上ユニットの生産を塞がず、港では海面が塞がっていても
+ * 海中（潜水艦）は出せる。 */
+static void test_produce_layers(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    g->fog = false;
+    game_start(g, 1);
+    g->n_units = 0;
+
+    int t_fac = -1, t_port = -1;
+    for (int i = 0; i < g->n_terrains; i++) {
+        if (g->terrains[i].produces == PROD_LAND && !g->terrains[i].is_hq) t_fac = i;
+        if (g->terrains[i].produces == PROD_SEA) t_port = i;
+    }
+    CHECK(t_fac >= 0 && t_port >= 0);
+    if (t_fac < 0 || t_port < 0) return;
+
+    int tank = data_find_unit_type(g, "TANK");
+    int fighter = data_find_unit_type(g, "FIGHTER");
+    int sub = data_find_unit_type(g, "SUBMARINE");
+    int destroyer = data_find_unit_type(g, "DESTROYER");
+    CHECK(tank >= 0 && fighter >= 0 && sub >= 0 && destroyer >= 0);
+    if (tank < 0 || fighter < 0 || sub < 0 || destroyer < 0) return;
+
+    /* --- 工場: 上空に航空機が居ても戦車は作れる --- */
+    g->tiles[2][2].terrain = (uint8_t)t_fac;
+    g->tiles[2][2].owner = 0;
+    g->current = 0;
+    CHECK(game_can_produce_at(g, 0, 2, 2));
+    int fi = game_spawn_unit(g, 0, fighter, 2, 2, 10);   /* 空レイヤーを占有 */
+    CHECK(fi >= 0);
+    CHECK(game_type_buildable_at(g, 2, 2, tank));        /* 地上は空いている */
+    CHECK(game_can_produce_at(g, 0, 2, 2));
+    /* 地上を塞ぐと作れなくなる */
+    int ti = game_spawn_unit(g, 0, tank, 2, 2, 10);
+    CHECK(ti >= 0);
+    CHECK(!game_type_buildable_at(g, 2, 2, tank));
+
+    /* --- 港: 海面が塞がっていても海中（潜水艦）は出せる --- */
+    g->tiles[4][4].terrain = (uint8_t)t_port;
+    g->tiles[4][4].owner = 0;
+    int di = game_spawn_unit(g, 0, destroyer, 4, 4, 10); /* 海面を占有 */
+    CHECK(di >= 0);
+    CHECK(!game_type_buildable_at(g, 4, 4, destroyer));  /* 海面は埋まった */
+    CHECK(game_type_buildable_at(g, 4, 4, sub));         /* 海中は空いている */
+    CHECK(game_can_produce_at(g, 0, 4, 4));
+    /* 海中も埋めると港からは何も出せない */
+    int si = game_spawn_unit(g, 0, sub, 4, 4, 10);
+    CHECK(si >= 0);
+    CHECK(!game_can_produce_at(g, 0, 4, 4));
+}
+
 static void test_transport(void)
 {
     Game *g = &s_game;
@@ -2262,6 +2320,7 @@ int main(void)
     test_layers();
     test_transport();
     test_paradrop();
+    test_produce_layers();
     test_supply();
     test_supply_layers();
     test_upkeep_data();
