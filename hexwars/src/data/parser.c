@@ -116,6 +116,7 @@ int data_load_terrain(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "hide"))       cur->hide = (uint8_t)atoi(val);
         else if (!strcmp(key, "hq"))         cur->is_hq = (uint8_t)atoi(val);
         else if (!strcmp(key, "height"))     cur->height = (int16_t)atoi(val);
+        else if (!strcmp(key, "image"))      snprintf(cur->image, sizeof cur->image, "%s", val);
         else if (!strcmp(key, "color"))      cur->color = (uint32_t)strtoul(val, NULL, 16);
         else if (!strcmp(key, "supplies"))   cur->supplies = (uint8_t)mc_supply_mask(val);
         else if (!strcmp(key, "produces")) {

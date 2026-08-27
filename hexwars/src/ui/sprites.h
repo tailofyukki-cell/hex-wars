@@ -13,6 +13,9 @@ void sprites_quit(void);
 /* type/owner のスプライトを返す（遅延読込）。なければ NULL */
 SDL_Texture *sprite_get(App *a, int type, int owner);
 
+/* 地形セルの画像を返す（terrain.def の image=。遅延読込）。なければ NULL */
+SDL_Texture *terrain_tex_get(App *a, int terrain);
+
 /* 定義再読込などでキャッシュを破棄したい場合に呼ぶ */
 void sprites_clear(void);
 

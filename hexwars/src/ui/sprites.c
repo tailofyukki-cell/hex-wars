@@ -11,6 +11,10 @@ static bool s_img_ready = false;
 static SDL_Texture *s_tex[MAX_UNIT_TYPES][2];
 static int8_t       s_state[MAX_UNIT_TYPES][2];
 
+/* 地形セル画像のキャッシュ（ユニットの s_tex と同じ 0/1/-1 方式） */
+static SDL_Texture *s_terr_tex[MAX_TERRAIN];
+static int8_t       s_terr_state[MAX_TERRAIN];
+
 /* パス指定の1枚絵（カットイン等）のキャッシュ。読めなかったパスも
  * tex=NULL のまま覚えておき、毎フレーム読み直さないようにする。 */
 #define MAX_PATH_TEX 16
@@ -39,6 +43,11 @@ void sprites_clear(void)
         if (s_ptex[i].tex) SDL_DestroyTexture(s_ptex[i].tex);
     memset(s_ptex, 0, sizeof s_ptex);
     s_ptex_n = 0;
+    for (int t = 0; t < MAX_TERRAIN; t++) {
+        if (s_terr_tex[t]) SDL_DestroyTexture(s_terr_tex[t]);
+        s_terr_tex[t] = NULL;
+        s_terr_state[t] = 0;
+    }
     for (int t = 0; t < MAX_UNIT_TYPES; t++)
         for (int o = 0; o < 2; o++) {
             if (s_tex[t][o]) SDL_DestroyTexture(s_tex[t][o]);
@@ -128,5 +137,25 @@ SDL_Texture *sprite_get_path(App *a, const char *rel, int *w, int *h)
     s_ptex_n++;
     if (w) *w = tw;
     if (h) *h = th;
+    return tex;
+}
+
+SDL_Texture *terrain_tex_get(App *a, int terrain)
+{
+    if (!s_img_ready) return NULL;
+    if (terrain < 0 || terrain >= a->game.n_terrains) return NULL;
+    if (s_terr_state[terrain] != 0) return s_terr_tex[terrain];
+
+    const char *rel = a->game.terrains[terrain].image;
+    if (!rel[0]) { s_terr_state[terrain] = -1; return NULL; }
+
+    SDL_Texture *tex = sprite_load_file(a, rel, NULL, NULL);
+    if (!tex) {
+        SDL_Log("地形画像読込失敗: assets/%s", rel);
+        s_terr_state[terrain] = -1;
+        return NULL;
+    }
+    s_terr_tex[terrain] = tex;
+    s_terr_state[terrain] = 1;
     return tex;
 }

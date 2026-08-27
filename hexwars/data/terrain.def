@@ -5,9 +5,15 @@
 #   ヘクス半径32px基準のpx値で、正=高く盛り上がる / 負=沈む。描画時にズーム倍率で拡縮する。
 #   目安: 山22 / 丘11 / 首都5 / 森4 / 都市・工場3 / 平地・道路0 / 川-3 / 海-7
 #   オプションの「マップ表示」を「平面」にすると height は無視される。
+#
+# image = セルの絵（assets/ からの相対パス）。**六角形の内側にクリップして貼る**ので、
+#   正方形PNGで全面を塗ればよい（四隅ははみ出して見えなくなる）。未指定なら color の
+#   単色で描く。差し替えは PNG を上書きするだけ（再ビルド不要）。
+#   同梱の仮絵は tools/gen_terrain_gfx.py（要Pillow）で生成したもの。
 
 [terrain PLAIN]
 name       = 平地
+image      = gfx/terrain/plain.png
 char       = .
 def        = 0
 cost_foot  = 2
@@ -19,6 +25,7 @@ height     = 0
 
 [terrain ROAD]
 name       = 道路
+image      = gfx/terrain/road.png
 char       = =
 def        = 0
 cost_foot  = 2
@@ -30,6 +37,7 @@ height     = 0
 
 [terrain FOREST]
 name       = 森
+image      = gfx/terrain/forest.png
 char       = w
 def        = 20
 cost_foot  = 4
@@ -42,6 +50,7 @@ height     = 4
 
 [terrain MOUNTAIN]
 name       = 山
+image      = gfx/terrain/mountain.png
 char       = ^
 def        = 40
 cost_foot  = 6
@@ -51,6 +60,7 @@ height     = 22
 
 [terrain RIVER]
 name       = 川
+image      = gfx/terrain/river.png
 char       = r
 def        = 0
 cost_foot  = 4
@@ -60,6 +70,7 @@ height     = -3
 
 [terrain SEA]
 name       = 海
+image      = gfx/terrain/sea.png
 char       = ~
 def        = 0
 cost_air   = 2
@@ -70,6 +81,7 @@ height     = -7
 
 [terrain CITY]
 name       = 都市
+image      = gfx/terrain/city.png
 char       = c
 def        = 30
 cost_foot  = 2
@@ -85,6 +97,7 @@ height     = 3
 
 [terrain FACTORY]
 name       = 工場
+image      = gfx/terrain/factory.png
 char       = f
 def        = 30
 cost_foot  = 2
@@ -100,6 +113,7 @@ height     = 3
 
 [terrain AIRPORT]
 name       = 空港
+image      = gfx/terrain/airport.png
 char       = a
 def        = 20
 cost_foot  = 2
@@ -115,6 +129,7 @@ height     = 2
 
 [terrain PORT]
 name       = 港
+image      = gfx/terrain/port.png
 char       = p
 def        = 20
 cost_foot  = 2
@@ -132,6 +147,7 @@ height     = 1
 
 [terrain HILL]
 name       = 丘
+image      = gfx/terrain/hill.png
 char       = h
 def        = 20
 cost_foot  = 2
@@ -143,6 +159,7 @@ height     = 11
 
 [terrain HQ]
 name       = 首都
+image      = gfx/terrain/hq.png
 char       = H
 def        = 40
 cost_foot  = 2

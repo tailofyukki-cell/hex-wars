@@ -202,6 +202,35 @@ static void fill_hex_sq(App *a, float cx, float cy, float size, float squash,
     SDL_RenderGeometry(a->ren, NULL, verts, 12, NULL, 0);
 }
 
+/* 画像を六角形の内側にクリップして貼る。
+ * UVは角度だけで決まる（六角形の外接矩形に画像を合わせる）ので定数表で持てる。
+ * 画像は正方形で、中央にセル1枚ぶんを描いたものを想定する。
+ * 頂点色は乗算されるので、索敵で暗くするときはここに暗い色を渡す。 */
+static void fill_hex_tex(App *a, float cx, float cy, float size, float squash,
+                         SDL_Texture *tex, SDL_Color mod)
+{
+    /* corner i の uv = (0.5 + cos(a)/√3, 0.5 + sin(a)/2), a = 60i-90° */
+    static const SDL_FPoint UV[6] = {
+        { 0.5f, 0.0f }, { 1.0f, 0.25f }, { 1.0f, 0.75f },
+        { 0.5f, 1.0f }, { 0.0f, 0.75f }, { 0.0f, 0.25f },
+    };
+    SDL_FPoint p[6];
+    hex_corners_sq(cx, cy, size, squash, p);
+    int tri[4][3] = { {0,1,2},{0,2,3},{0,3,4},{0,4,5} };
+    SDL_Vertex verts[12];
+    for (int t = 0; t < 4; t++) {
+        for (int k = 0; k < 3; k++) {
+            int ci = tri[t][k];
+            SDL_Vertex *vv = &verts[t * 3 + k];
+            vv->position.x = p[ci].x;
+            vv->position.y = p[ci].y;
+            vv->color = mod;
+            vv->tex_coord = UV[ci];
+        }
+    }
+    SDL_RenderGeometry(a->ren, tex, verts, 12, NULL, 0);
+}
+
 static void hex_outline_sq(App *a, float cx, float cy, float size, float squash,
                            SDL_Color c)
 {
@@ -459,6 +488,14 @@ void render_map(App *a)
                 continue;   /* 圏外は描かない（マップ輪郭を自由な形にする） */
             SDL_Color col = rgb(t->color);
             bool vis = !g->fog || g->visible[viewer][y][x];
+            /* 明暗は「％」で一本化する。単色なら色に、画像なら頂点色に同じ％を掛ける
+             * （色どうしの比を取ると明るい側で桁溢れするので、％で持つのが安全）。 */
+            int pct = 100;
+            if (a->opt_tilt && t->height != 0) {
+                int h = t->height;
+                pct += (h > 0 ? (h > 18 ? 18 : h) : (h < -6 ? -12 : h * 2));
+            }
+            if (!vis) pct = pct * 45 / 100;
             if (!vis) col = darken(col, 45);
 
             /* 斜め表示: タイルの側面（崖）を先に描いて厚みを出す。
@@ -471,19 +508,32 @@ void render_map(App *a)
                                    shade(col, lift > s * 0.25f ? 66 : 52));
             }
 
-            /* 天面: 高い地形は少し明るく、沈む地形は少し暗く＝陰影で起伏を強調 */
+            /* 天面: 高い地形は少し明るく、沈む地形は少し暗く＝陰影で起伏を強調。
+             * col は索敵の暗転を織り込み済みなので、ここでは起伏ぶんだけ掛ける。 */
             SDL_Color top = col;
             if (a->opt_tilt && t->height != 0) {
                 int h = t->height;
                 top = shade(col, 100 + (h > 0 ? (h > 18 ? 18 : h)
                                               : (h < -6 ? -12 : h * 2)));
             }
+            /* セル画像（terrain.def の image=）があればそれを六角形に貼る。
+             * 無ければ従来どおり color の単色で塗る。頂点色は乗算なので、
+             * 起伏の陰影も索敵の暗転も同じ％で画像のまま効く。 */
+            SDL_Texture *ttex = terrain_tex_get(a, tile->terrain);
+            SDL_Color tmod = shade((SDL_Color){ 255, 255, 255, 255 }, pct);
             if (a->opt_tilt) {
                 /* 斜め表示では六角形の上下の辺が寝るので、線で縁取ると
                  * ジャギーが目立つ。一回り大きい六角形を縁色で塗り、その上に
                  * 天面を重ねてリング状の境界を作る（面で塗るほうが滑らか）。 */
                 render_fill_hex_map(a, cx, cy, s - 0.5f, shade(col, 74));
-                render_fill_hex_map(a, cx, cy, s - 0.5f - s * 0.06f, top);
+                if (ttex)
+                    fill_hex_tex(a, cx, cy, s - 0.5f - s * 0.06f, TILT_SQUASH,
+                                 ttex, tmod);
+                else
+                    render_fill_hex_map(a, cx, cy, s - 0.5f - s * 0.06f, top);
+            } else if (ttex) {
+                fill_hex_tex(a, cx, cy, s - 0.5f, 1.0f, ttex, tmod);
+                render_hex_outline_map(a, cx, cy, s - 0.5f, shade(col, 70));
             } else {
                 render_fill_hex_map(a, cx, cy, s - 0.5f, top);
                 render_hex_outline_map(a, cx, cy, s - 0.5f, shade(col, 70));
