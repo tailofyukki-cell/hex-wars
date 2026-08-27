@@ -20,7 +20,7 @@ static const char *ACT_KEYS[] = {
 };
 
 /* ターンメニューの項目（順番を変えたらここだけ直せば済むように名前を付ける） */
-enum { TM_UNITLIST = 0, TM_END, TM_SAVE, TM_TITLE, TM_CLOSE, TMENU_ITEMS };
+enum { TM_UNITLIST = 0, TM_END, TM_SAVE, TM_TILT, TM_TITLE, TM_CLOSE, TMENU_ITEMS };
 
 #define UNITLIST_VISIBLE 10   /* 未行動一覧に一度に表示する行数 */
 /* 重なりセルの情報パネルを切り替える間隔（フレーム。60fps想定で約1.5秒） */
@@ -739,6 +739,19 @@ static void tmenu_select(App *a)
         a->smenu_idx = 0;
         a->bs = BS_SAVE_MENU;
         break;
+    case TM_TILT: {
+        /* マップ表示の切替。切り替えるとY方向の縮尺が変わるので、画面中央が
+         * 同じ場所を向いたままになるようカメラも合わせて伸縮させる
+         * （ズーム時と同じ考え方。やらないと視点が飛ぶ）。 */
+        float before = hex_tilt_squash(a);
+        a->opt_tilt = !a->opt_tilt;
+        float ratio = hex_tilt_squash(a) / before;
+        a->cam_y = (a->cam_y + WIN_H / 2.0f) * ratio - WIN_H / 2.0f;
+        clamp_camera(a);
+        options_save(a);        /* 次回起動にも引き継ぐ */
+        snd_se(SE_CURSOR);
+        break;                  /* メニューは開いたまま＝続けて見比べられる */
+    }
     case TM_TITLE:
         a->next_screen = SCREEN_TITLE;
         break;
@@ -1842,9 +1855,12 @@ static void draw_menus(App *a)
         }
     }
     if (a->bs == BS_TURN_MENU) {
+        char tiltbuf[64];
+        snprintf(tiltbuf, sizeof tiltbuf, tx("TMENU_TILT_FMT"),
+                 tx(a->opt_tilt ? "OPT_TILT_ON" : "OPT_TILT_OFF"));
         const char *items[TMENU_ITEMS] = {
             tx("TMENU_UNITLIST"), tx("TMENU_END"), tx("TMENU_SAVE"),
-            tx("TMENU_TITLE"), tx("TMENU_CLOSE")
+            tiltbuf, tx("TMENU_TITLE"), tx("TMENU_CLOSE")
         };
         fill_rect(a, WIN_W / 2 - 150, 240, 300, TMENU_ITEMS * 52 + 30,
                   (SDL_Color){ 28, 32, 38, 245 });

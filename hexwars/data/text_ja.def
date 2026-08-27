@@ -126,6 +126,7 @@ ACT_HEAL        = 回復
 TMENU_UNITLIST  = 未行動ユニット
 TMENU_END       = ターン終了
 TMENU_SAVE      = セーブ
+TMENU_TILT_FMT  = マップ表示: %s
 TMENU_TITLE     = タイトルへ戻る
 TMENU_CLOSE     = 閉じる
 PROD_TITLE      = 生産 / 倉庫
