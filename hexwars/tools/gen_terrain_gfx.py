@@ -4,9 +4,16 @@
     python tools/gen_terrain_gfx.py
 
 assets/gfx/terrain/*.png を作る。terrain.def の `image =` から参照される。
-描画側は**六角形の内側にクリップして**貼るので、画像は正方形で全面を塗り、
-六角形からはみ出す四隅は見えなくなる前提で描いてよい。
-差し替えるときは同じサイズ・正方形の PNG を上書きすればよい（再ビルド不要）。
+
+**すべて「真上から見た地面の模様」として描くこと。**
+斜め見下ろし表示では画像が縦0.6倍に潰れる。地面の模様なら潰れても自然に見える
+（奥行きで縮んでいるだけに見える）が、木や建物を横から見た形で描くと上下に
+潰れて不自然になる。森は樹冠を、街は屋根を、山は岩肌を、それぞれ真上から
+見た形で描いている。
+
+描画側は六角形の内側にクリップして貼るので、正方形PNGで全面を塗ればよい。
+基調色は terrain.def の color と合わせてある（タイル側面＝崖はその color で
+塗られるため、ずらすと天面と側面が食い違って見える）。
 """
 import math
 import os
@@ -30,7 +37,7 @@ def save(img, name):
 
 
 def grain(d, col, n, rmin, rmax, seed):
-    """細かい粒を撒いて単色っぽさを消す。"""
+    """細かい粒を撒いて単色っぽさを消す（真上から見た地面のざらつき）。"""
     rnd = random.Random(seed)
     for _ in range(n):
         x, y = rnd.uniform(0, S), rnd.uniform(0, S)
@@ -40,132 +47,186 @@ def grain(d, col, n, rmin, rmax, seed):
 
 def plain():
     img, d = canvas((156, 191, 107))
-    grain(d, (168, 201, 118, 190), 260, 2, 6, 1)
-    grain(d, (140, 176, 96, 150), 180, 2, 5, 2)
+    grain(d, (170, 203, 120, 190), 240, 2, 6, 1)
+    grain(d, (138, 174, 94, 150), 190, 2, 5, 2)
+    grain(d, (182, 210, 132, 120), 90, 1, 3, 3)     # 草の穂
     save(img, "plain")
 
 
 def road():
     img, d = canvas((156, 191, 107))
-    grain(d, (140, 176, 96, 150), 120, 2, 5, 3)
-    d.polygon([(0, S * 0.36), (S, S * 0.30), (S, S * 0.70), (0, S * 0.64)],
-              fill=(201, 183, 156, 255))
-    for i in range(5):                       # センターライン
+    grain(d, (138, 174, 94, 150), 130, 2, 5, 4)
+    d.polygon([(0, S * 0.34), (S, S * 0.28), (S, S * 0.72), (0, S * 0.66)],
+              fill=(201, 183, 156, 255))            # 舗装（真上）
+    grain(d, (188, 170, 144, 120), 60, 2, 5, 5)
+    for i in range(5):                              # センターライン
         x = S * (0.08 + i * 0.2)
-        d.rounded_rectangle([x, S * 0.47, x + S * 0.1, S * 0.52], 4,
-                            fill=(226, 214, 190, 255))
+        d.rounded_rectangle([x, S * 0.46, x + S * 0.1, S * 0.51], 4,
+                            fill=(228, 217, 194, 255))
     save(img, "road")
 
 
 def forest():
-    img, d = canvas((110, 150, 84))
-    grain(d, (98, 138, 74, 160), 140, 3, 7, 4)
-    rnd = random.Random(5)
-    for _ in range(11):                      # 樹冠
-        cx, cy = rnd.uniform(20, S - 20), rnd.uniform(24, S - 16)
-        r = rnd.uniform(18, 27)
-        d.ellipse([cx - r * 0.5, cy - 4, cx + r * 0.5, cy + r * 0.7],
-                  fill=(74, 58, 42, 255))    # 幹
-        d.polygon([(cx, cy - r), (cx + r * 0.8, cy + r * 0.4),
-                   (cx - r * 0.8, cy + r * 0.4)], fill=(85, 136, 79, 255))
-        d.polygon([(cx, cy - r * 0.6), (cx + r * 0.62, cy + r * 0.5),
-                   (cx - r * 0.62, cy + r * 0.5)], fill=(99, 154, 90, 255))
+    """樹冠を真上から見た形。幹は描かない（横から見た形にしないため）。"""
+    img, d = canvas((78, 112, 66))                  # 林床（影）
+    grain(d, (68, 100, 58, 170), 150, 4, 9, 6)
+    rnd = random.Random(7)
+    blobs = []
+    for _ in range(15):
+        blobs.append((rnd.uniform(14, S - 14), rnd.uniform(14, S - 14),
+                      rnd.uniform(22, 34)))
+    for cx, cy, r in blobs:                         # 影を先に（重なりを出す）
+        d.ellipse([cx - r, cy - r * 0.94, cx + r, cy + r], fill=(58, 88, 52, 255))
+    for cx, cy, r in blobs:                         # 樹冠
+        d.ellipse([cx - r * 0.86, cy - r * 0.86, cx + r * 0.78, cy + r * 0.78],
+                  fill=(90, 138, 82, 255))
+        d.ellipse([cx - r * 0.5, cy - r * 0.62, cx + r * 0.24, cy + r * 0.06],
+                  fill=(108, 158, 96, 255))         # 陽の当たる側
     save(img, "forest")
 
 
 def mountain():
+    """岩肌を真上から見た形。稜線は面の色差で表す（横向きの三角は描かない）。"""
     img, d = canvas((141, 133, 120))
-    grain(d, (128, 121, 110, 170), 150, 3, 7, 6)
-    d.polygon([(S * 0.5, 26), (S * 0.94, S - 22), (S * 0.06, S - 22)],
-              fill=(122, 115, 104, 255))
-    d.polygon([(S * 0.5, 26), (S * 0.72, S - 22), (S * 0.28, S - 22)],
-              fill=(158, 150, 137, 255))
-    d.polygon([(S * 0.5, 26), (S * 0.63, S * 0.44), (S * 0.37, S * 0.44)],
-              fill=(232, 232, 228, 255))     # 冠雪
+    rnd = random.Random(8)
+    for _ in range(16):                             # 岩の面（多角形）
+        cx, cy = rnd.uniform(0, S), rnd.uniform(0, S)
+        r = rnd.uniform(26, 52)
+        n = rnd.randint(4, 6)
+        a0 = rnd.uniform(0, 6.28)
+        pts = [(cx + r * math.cos(a0 + 6.283 * i / n) * rnd.uniform(0.6, 1.0),
+                cy + r * math.sin(a0 + 6.283 * i / n) * rnd.uniform(0.6, 1.0))
+               for i in range(n)]
+        g = rnd.randint(-18, 20)
+        d.polygon(pts, fill=(141 + g, 133 + g, 120 + g, 255))
+    for _ in range(5):                              # 残雪（真上から見た斑）
+        cx, cy = rnd.uniform(20, S - 20), rnd.uniform(20, S - 20)
+        r = rnd.uniform(14, 26)
+        n = rnd.randint(5, 7)
+        pts = [(cx + r * math.cos(6.283 * i / n) * rnd.uniform(0.55, 1.0),
+                cy + r * math.sin(6.283 * i / n) * rnd.uniform(0.55, 1.0))
+               for i in range(n)]
+        d.polygon(pts, fill=(228, 230, 230, 235))
+    grain(d, (120, 113, 102, 130), 120, 2, 5, 9)    # 砂礫
     save(img, "mountain")
 
 
 def hill():
+    """乾いた草地を真上から。等高線状のむらで起伏を示す。"""
     img, d = canvas((168, 162, 118))
-    grain(d, (154, 149, 106, 160), 170, 3, 7, 7)
-    d.ellipse([S * 0.02, S * 0.34, S * 0.62, S * 0.98], fill=(182, 176, 130, 255))
-    d.ellipse([S * 0.40, S * 0.46, S * 0.99, S * 1.02], fill=(160, 154, 112, 255))
+    rnd = random.Random(10)
+    for k in range(4):                              # 等高線（同心の崩れた輪）
+        r = S * (0.46 - k * 0.09)
+        pts = []
+        for i in range(24):
+            a = 6.283 * i / 24
+            rr = r * rnd.uniform(0.88, 1.12)
+            pts.append((S / 2 + rr * math.cos(a), S / 2 + rr * math.sin(a) * 0.96))
+        d.polygon(pts, fill=(168 + 8 * (k + 1), 162 + 8 * (k + 1),
+                             118 + 7 * (k + 1), 255))
+    grain(d, (152, 147, 105, 150), 180, 2, 6, 11)
+    grain(d, (190, 184, 138, 110), 90, 1, 4, 12)
     save(img, "hill")
 
 
 def water(base, light, seed, name):
     img, d = canvas(base)
-    grain(d, light + (90,), 120, 6, 16, seed)
+    grain(d, light + (80,), 130, 6, 16, seed)
     rnd = random.Random(seed + 1)
-    for _ in range(16):                      # さざ波
-        x, y = rnd.uniform(8, S - 48), rnd.uniform(8, S - 8)
-        w = rnd.uniform(22, 44)
-        d.arc([x, y, x + w, y + 12], 200, 340, fill=light + (200,), width=3)
-    img = img.filter(ImageFilter.GaussianBlur(0.6))
+    for _ in range(18):                             # さざ波（真上）
+        x, y = rnd.uniform(4, S - 46), rnd.uniform(4, S - 8)
+        w = rnd.uniform(24, 46)
+        d.arc([x, y, x + w, y + 11], 200, 340, fill=light + (190,), width=3)
+    img = img.filter(ImageFilter.GaussianBlur(0.7))
     save(img, name)
 
 
 def city():
-    img, d = canvas((196, 196, 188))
-    grain(d, (182, 182, 174, 150), 120, 3, 7, 9)
-    rnd = random.Random(10)
-    for _ in range(7):                       # 建物ブロック
-        w = rnd.uniform(26, 42)
-        h = rnd.uniform(30, 56)
-        x = rnd.uniform(10, S - w - 10)
-        y = rnd.uniform(20, S - h - 12)
-        d.rectangle([x, y, x + w, y + h], fill=(168, 168, 162, 255))
-        d.rectangle([x, y, x + w, y + 7], fill=(210, 210, 202, 255))
-        for r in range(2):                   # 窓
-            for c in range(2):
-                wx = x + 7 + c * (w * 0.45)
-                wy = y + 14 + r * (h * 0.38)
-                d.rectangle([wx, wy, wx + 8, wy + 9], fill=(120, 126, 134, 255))
+    """屋根を真上から。壁や窓は描かない（横から見た形にしないため）。"""
+    img, d = canvas((150, 148, 142))                # 路面
+    grain(d, (138, 136, 130, 150), 110, 3, 7, 13)
+    rnd = random.Random(14)
+    roofs = [(0.06, 0.06, 0.40, 0.40), (0.52, 0.04, 0.42, 0.34),
+             (0.05, 0.54, 0.34, 0.40), (0.46, 0.46, 0.30, 0.28),
+             (0.80, 0.44, 0.18, 0.50), (0.44, 0.80, 0.34, 0.18)]
+    for rx, ry, rw, rh in roofs:
+        x0, y0 = S * rx, S * ry
+        x1, y1 = x0 + S * rw, y0 + S * rh
+        base = rnd.choice([(196, 194, 186), (208, 206, 198), (182, 180, 174)])
+        d.rectangle([x0, y0, x1, y1], fill=base + (255,))
+        d.rectangle([x0, y0, x1, y1], outline=(126, 124, 120, 255), width=2)
+        for _ in range(2):                          # 屋上の設備
+            ux = rnd.uniform(x0 + 6, max(x0 + 7, x1 - 18))
+            uy = rnd.uniform(y0 + 6, max(y0 + 7, y1 - 18))
+            d.rectangle([ux, uy, ux + 12, uy + 12], fill=(160, 158, 152, 255))
     save(img, "city")
 
 
 def factory():
-    img, d = canvas((176, 162, 148))
-    grain(d, (162, 149, 136, 150), 110, 3, 7, 11)
-    d.rectangle([S * 0.12, S * 0.44, S * 0.88, S * 0.86], fill=(150, 138, 126, 255))
-    for i in range(3):                       # のこぎり屋根
-        x = S * (0.14 + i * 0.25)
-        d.polygon([(x, S * 0.44), (x + S * 0.22, S * 0.44),
-                   (x + S * 0.22, S * 0.28)], fill=(186, 174, 160, 255))
-    d.rectangle([S * 0.70, S * 0.14, S * 0.80, S * 0.46], fill=(132, 120, 110, 255))
+    """のこぎり屋根を真上から見た平行の稜線として描く。"""
+    img, d = canvas((150, 138, 126))
+    grain(d, (138, 127, 116, 150), 100, 3, 7, 15)
+    d.rectangle([S * 0.06, S * 0.16, S * 0.94, S * 0.74], fill=(178, 166, 152, 255))
+    d.rectangle([S * 0.06, S * 0.16, S * 0.94, S * 0.74],
+                outline=(120, 110, 100, 255), width=2)
+    for i in range(6):                              # 屋根の稜線
+        y = S * (0.19 + i * 0.093)
+        d.rectangle([S * 0.07, y, S * 0.93, y + S * 0.028],
+                    fill=(200, 190, 176, 255))
+        d.rectangle([S * 0.07, y + S * 0.028, S * 0.93, y + S * 0.052],
+                    fill=(150, 140, 128, 255))
+    for cx in (0.20, 0.44):                         # タンク（真上＝円）
+        d.ellipse([S * cx, S * 0.80, S * (cx + 0.15), S * 0.95],
+                  fill=(166, 158, 148, 255), outline=(120, 112, 104, 255), width=2)
     save(img, "factory")
 
 
 def airport():
-    img, d = canvas((186, 186, 198))
-    grain(d, (172, 172, 184, 150), 110, 3, 7, 12)
-    d.polygon([(0, S * 0.30), (S, S * 0.24), (S, S * 0.76), (0, S * 0.70)],
-              fill=(160, 160, 172, 255))     # 滑走路
-    for i in range(6):
-        x = S * (0.06 + i * 0.16)
-        d.rectangle([x, S * 0.48, x + S * 0.08, S * 0.53],
-                    fill=(232, 232, 238, 255))
+    img, d = canvas((150, 152, 160))
+    grain(d, (140, 142, 150, 150), 110, 3, 7, 16)
+    d.polygon([(0, S * 0.30), (S, S * 0.25), (S, S * 0.75), (0, S * 0.70)],
+              fill=(178, 180, 190, 255))            # 滑走路（真上）
+    for i in range(6):                              # 中心線
+        x = S * (0.05 + i * 0.16)
+        d.rectangle([x, S * 0.49, x + S * 0.09, S * 0.53],
+                    fill=(236, 238, 244, 255))
+    d.rectangle([0, S * 0.30, S, S * 0.325], fill=(206, 208, 216, 255))
+    d.rectangle([0, S * 0.675, S, S * 0.70], fill=(206, 208, 216, 255))
     save(img, "airport")
 
 
 def port():
-    img, d = canvas((120, 156, 180))
-    grain(d, (108, 144, 168, 150), 110, 4, 10, 13)
-    d.rectangle([0, 0, S, S * 0.46], fill=(168, 178, 186, 255))    # 岸壁
-    d.rectangle([0, S * 0.42, S, S * 0.50], fill=(140, 148, 156, 255))
-    for i in range(4):                        # 係船柱
-        x = S * (0.12 + i * 0.24)
-        d.ellipse([x, S * 0.30, x + 14, S * 0.30 + 14], fill=(96, 102, 110, 255))
+    img, d = canvas((92, 138, 176))                 # 海面
+    grain(d, (120, 164, 200, 110), 90, 5, 13, 17)
+    d.polygon([(0, 0), (S, 0), (S, S * 0.44), (0, S * 0.52)],
+              fill=(168, 172, 178, 255))            # 岸壁（真上）
+    grain(d, (156, 160, 166, 130), 70, 3, 7, 18)
+    d.polygon([(0, S * 0.44), (S, S * 0.37), (S, S * 0.44), (0, S * 0.52)],
+              fill=(132, 136, 142, 255))            # 岸のふち
+    for i in range(4):                              # 係船柱（真上＝円）
+        x = S * (0.10 + i * 0.25)
+        y = S * (0.34 - i * 0.018)
+        d.ellipse([x, y, x + 13, y + 13], fill=(96, 100, 106, 255))
     save(img, "port")
 
 
 def hq():
-    img, d = canvas((214, 199, 102))
-    grain(d, (200, 186, 92, 150), 110, 3, 7, 14)
-    d.rectangle([S * 0.18, S * 0.40, S * 0.82, S * 0.86], fill=(196, 180, 84, 255))
-    d.polygon([(S * 0.5, S * 0.18), (S * 0.86, S * 0.42), (S * 0.14, S * 0.42)],
-              fill=(228, 214, 128, 255))
-    d.rectangle([S * 0.44, S * 0.58, S * 0.56, S * 0.86], fill=(150, 136, 60, 255))
+    """大きな屋根と中庭を真上から。"""
+    img, d = canvas((198, 182, 92))
+    grain(d, (186, 170, 84, 150), 100, 3, 7, 19)
+    d.rectangle([S * 0.10, S * 0.12, S * 0.90, S * 0.88], fill=(224, 208, 118, 255))
+    d.rectangle([S * 0.10, S * 0.12, S * 0.90, S * 0.88],
+                outline=(150, 136, 62, 255), width=3)
+    d.rectangle([S * 0.34, S * 0.36, S * 0.66, S * 0.64],
+                fill=(186, 170, 84, 255))           # 中庭
+    r = S * 0.11                                     # 中庭の星章
+    cx, cy = S * 0.5, S * 0.5
+    pts = []
+    for i in range(10):
+        rr = r if i % 2 == 0 else r * 0.45
+        a = math.radians(-90 + i * 36)
+        pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+    d.polygon(pts, fill=(240, 228, 150, 255))
     save(img, "hq")
 
 

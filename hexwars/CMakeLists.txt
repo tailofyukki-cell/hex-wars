@@ -92,12 +92,23 @@ if(WIN32)
             "${IMG_ROOT}/lib/x64/SDL2_image.dll" "$<TARGET_FILE_DIR:hexwars>"
     )
 endif()
-add_custom_command(TARGET hexwars POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
+# data/ と assets/ は exe の隣に置いたものを実行時に読む。
+# これを POST_BUILD にすると「.def や PNG だけ差し替えた」ときに exe が再リンク
+# されないためコピーが走らず、ビルドし直しても変更が反映されない。
+# 毎回走る専用ターゲットに分けて、データ・画像の差し替えが確実に届くようにする。
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.26)
+    set(HW_COPY_DIR copy_directory_if_different)   # 変わったファイルだけ書く
+else()
+    set(HW_COPY_DIR copy_directory)
+endif()
+add_custom_target(hexwars_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E ${HW_COPY_DIR}
         "${CMAKE_SOURCE_DIR}/data" "$<TARGET_FILE_DIR:hexwars>/data"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    COMMAND ${CMAKE_COMMAND} -E ${HW_COPY_DIR}
         "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:hexwars>/assets"
+    COMMENT "data/ と assets/ を実行フォルダへ同期"
 )
+add_dependencies(hexwars_assets hexwars)
 
 # ---- 単体テスト（SDL不要） ----
 enable_testing()
