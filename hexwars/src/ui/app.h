@@ -186,8 +186,8 @@ struct App {
     int   ulist_n, ulist_idx, ulist_scroll;
     /* セーブメニュー */
     int   smenu_idx;
-    /* 降車先候補 */
-    int   unload_x[6], unload_y[6];
+    /* 降車先候補。隣接6方向 + 空挺降下の「真下」1つで最大7 */
+    int   unload_x[7], unload_y[7];
     int   n_unload;
     int   unload_count;   /* 今回の降車で既に降ろした数（複数降車の確定判定用） */
     /* レイヤー選択ポップアップ（重なりセルの選択・攻撃対象選択） */

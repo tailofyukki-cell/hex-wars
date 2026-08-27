@@ -68,7 +68,7 @@ static void test_data_and_battle(void)
     CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
     CHECK(g->n_terrains == 13);   /* 地形12種 + 圏外(マップ輪郭用) */
-    CHECK(g->n_types == 30);      /* 補給機 + 艦船4種 + 補給艦（陸14/空7/海9） */
+    CHECK(g->n_types == 31);      /* 補給機 + 艦船4種 + 補給艦 + 輸送機（陸14/空8/海9） */
     {
         int land = 0, air = 0, sea = 0;
         for (int i = 0; i < g->n_types; i++) {
@@ -78,7 +78,7 @@ static void test_data_and_battle(void)
             default: land++; break;
             }
         }
-        CHECK(land == 14 && air == 7 && sea == 9);
+        CHECK(land == 14 && air == 8 && sea == 9);
     }
     /* 画像指定（image=）が両陣営分に読めていること */
     {
@@ -324,6 +324,61 @@ static void test_layers(void)
     bool hit0 = false;
     for (int k = 0; k < nt; k++) if (tg[k] == efi2) hit0 = true;
     CHECK(!hit0);                                         /* 間接は自セル直上を撃てない */
+}
+
+/* 空挺降下: 輸送機は「真下（自分と同じヘクス）」へ降ろせる。
+ * 輸送ヘリ等は真下へは降ろせない（従来どおり隣接のみ）。 */
+static void test_paradrop(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    g->fog = false;
+    game_start(g, 1);
+    g->n_units = 0;
+
+    int plane = data_find_unit_type(g, "T_PLANE");
+    int copter = data_find_unit_type(g, "T_COPTER");
+    int inf = data_find_unit_type(g, "INFANTRY");
+    CHECK(plane >= 0 && copter >= 0 && inf >= 0);
+    if (plane < 0 || copter < 0 || inf < 0) return;
+
+    /* データ側のフラグ: 輸送機だけが空挺降下できる */
+    CHECK(g->types[plane].paradrop == 1);
+    CHECK(g->types[copter].paradrop == 0);
+    CHECK(g->types[plane].capacity == 2);
+
+    /* 歩兵が輸送機に乗れること（transport_by に T_PLANE がある） */
+    int pi = game_spawn_unit(g, 0, inf, 3, 3, 10);
+    int ti = game_spawn_unit(g, 0, plane, 3, 3, 10);
+    CHECK(pi >= 0 && ti >= 0);
+    CHECK(game_can_board(g, pi, ti));
+    game_load_unit(g, pi, ti);
+    CHECK((g->units[pi].flags & UF_LOADED) != 0);
+
+    /* 真下（輸送機と同じヘクス）へ降ろせる＝地表レイヤーが空いているため */
+    CHECK(game_can_unload_to(g, ti, g->units[ti].pos.x, g->units[ti].pos.y));
+    CHECK(game_unload_unit(g, ti, g->units[ti].pos.x, g->units[ti].pos.y) == 0);
+    CHECK((g->units[pi].flags & UF_LOADED) == 0);
+    CHECK(g->units[pi].pos.x == g->units[ti].pos.x &&
+          g->units[pi].pos.y == g->units[ti].pos.y);
+    /* 降りた部隊はその手番は行動できない */
+    CHECK((g->units[pi].flags & UF_DONE) != 0);
+
+    /* 同じ地表に既に居るので、もう真下へは降ろせない */
+    int pi2 = game_spawn_unit(g, 0, inf, 5, 5, 10);
+    CHECK(pi2 >= 0);
+    game_load_unit(g, pi2, ti);
+    CHECK(!game_can_unload_to(g, ti, g->units[ti].pos.x, g->units[ti].pos.y));
+
+    /* 輸送ヘリは真下に地表が空いていても paradrop でないので、
+     * UI/AI 側が真下を候補に入れない（フラグで区別できることを確認） */
+    int ci = game_spawn_unit(g, 0, copter, 8, 8, 10);
+    CHECK(ci >= 0);
+    CHECK(g->types[g->units[ci].type].paradrop == 0);
 }
 
 static void test_transport(void)
@@ -2206,6 +2261,7 @@ int main(void)
     test_capture();
     test_layers();
     test_transport();
+    test_paradrop();
     test_supply();
     test_supply_layers();
     test_upkeep_data();

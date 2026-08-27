@@ -517,8 +517,14 @@ static void act_unit(Game *g, AiState *s, int ui)
             if (is_transport && dom != 0 && s->amphib) {
                 int sc;
                 if (has_cargo) {
-                    /* 積荷あり: 上陸目標に最も近い「降ろせる隣接陸地」を探す */
+                    /* 積荷あり: 上陸目標に最も近い「降ろせる陸地」を探す。
+                     * 空挺降下できる輸送機は真下（自分と同じヘクス）も候補になるので、
+                     * 目標のヘクスまで飛んでそのまま降ろせる＝内陸へ直接送り込める。 */
                     int bestu = -1, bux = -1, buy = -1;
+                    if (ut->paradrop && game_can_unload_to(g, ui, x, y)) {
+                        bestu = hex_distance(x, y, s->inv_x, s->inv_y);
+                        bux = x; buy = y;
+                    }
                     for (int d = 0; d < HEX_DIRS; d++) {
                         int nx, ny;
                         hex_neighbor(x, y, d, &nx, &ny);
@@ -729,7 +735,11 @@ static void act_unit(Game *g, AiState *s, int ui)
             any = true;
             /* 同じヘクスには1体しか置けないので、次の降ろし先を探し直す */
             int nx = -1, ny = -1;
-            for (int d = 0; d < HEX_DIRS; d++) {
+            if (g->types[u->type].paradrop &&
+                game_can_unload_to(g, ui, u->pos.x, u->pos.y)) {
+                nx = u->pos.x; ny = u->pos.y;      /* 空挺: 真下へ続けて降ろす */
+            }
+            for (int d = 0; d < HEX_DIRS && nx < 0; d++) {
                 int tx2, ty2;
                 hex_neighbor(u->pos.x, u->pos.y, d, &tx2, &ty2);
                 if (game_in_bounds(g, tx2, ty2) &&
@@ -806,8 +816,11 @@ static int pick_production(Game *g, AiState *s, int x, int y)
         bool ut_unarmed = type_unarmed(ut);
         int ut_dom = domain_from_mclass(ut->mclass);
         if (s->amphib && ut->capacity > 0 && ut_unarmed && ut_dom != 0) {
-            /* 上陸作戦が必要: 輸送艦・輸送ヘリを2隻(機)まで確保（乗せる部隊がいる時だけ） */
-            sc = (n_transport < 2 && n_riders >= 1) ? 12000 - ut->cost : 0;
+            /* 上陸作戦が必要: 輸送艦・輸送ヘリ・輸送機を2隻(機)まで確保
+             * （乗せる部隊がいる時だけ）。空挺降下できる機体は定員が多く内陸へ
+             * 直接降ろせるぶん有利なので、価格差ぶん少しだけ優先する。 */
+            sc = (n_transport < 2 && n_riders >= 1)
+                     ? 12000 - ut->cost + (ut->paradrop ? 200 : 0) : 0;
         } else if (s->amphib && ut->can_capture && n_riders < 4) {
             /* 上陸させる占領要員を優先的に揃える */
             sc = 9500 - ut->cost;

@@ -31,7 +31,7 @@ atk_air   = 5
 atk_sea   = 12
 def       = 30
 can_capture = 1
-transport_by = TRUCK,T_COPTER,T_SHIP
+transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 
 [unit AT_INFANTRY]
 image     = gfx/units/at_infantry.png
@@ -51,7 +51,7 @@ atk_air   = 0
 atk_sea   = 25
 def       = 28
 can_capture = 1
-transport_by = TRUCK,T_COPTER,T_SHIP
+transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 
 [unit RECON]
 image     = gfx/units/recon.png
@@ -380,7 +380,7 @@ atk_air   = 3
 atk_sea   = 8
 def       = 20
 can_capture = 1
-transport_by = TRUCK,T_COPTER,T_SHIP
+transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 
 [unit MECH_INF]
 image     = gfx/units/mech_inf.png
@@ -460,7 +460,7 @@ atk_sea   = 0
 def       = 25
 range_min = 3
 range_max = 4
-transport_by = TRUCK,T_SHIP
+transport_by = TRUCK,T_SHIP,T_PLANE
 
 [unit DIVE_BOMBER]
 image     = gfx/units/dive_bomber.png
@@ -605,3 +605,27 @@ atk_air   = 0
 atk_sea   = 0
 def       = 30
 supply    = 1
+
+# 輸送機（空挺降下）。隣接ではなく「真下のヘクス」へ部隊を降ろせるのが輸送ヘリとの違い。
+# 敵陣の奥へ一気に部隊を送り込める代わりに、降りた部隊はその手番行動できない。
+# 定員2・鈍足だが航続が長い。丸腰なので戦闘機・対空に狙われると脆い。
+# セーブ互換のため末尾に追加すること。
+[unit T_PLANE]
+image     = gfx/units/t_plane.png
+cutin     = gfx/cutin/air.png
+name      = 輸送機「Cd-8型」
+icon      = 挺
+class     = AIR
+armor     = AIR
+cost      = 330
+move      = 8
+fuel      = 75
+ammo      = 0
+vision    = 2
+atk_soft  = 0
+atk_hard  = 0
+atk_air   = 0
+atk_sea   = 0
+def       = 22
+capacity  = 2
+paradrop  = 1

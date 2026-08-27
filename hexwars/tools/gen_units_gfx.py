@@ -342,11 +342,29 @@ def supply_air():
                 outline=OUTLINE, width=4)                                # 物資ハッチ
     save(img, "supply_air")
 
+def t_plane():
+    img, d = canvas()
+    poly(d, [(96, 20), (116, 100), (96, 180), (76, 100)], OLIVE_L)       # 太い胴体
+    poly(d, [(10, 82), (182, 82), (168, 114), (24, 114)], OLIVE_D)       # 高翼
+    rect(d, (40, 82, 60, 120), GUN, 6)                                   # エンジン
+    rect(d, (132, 82, 152, 120), GUN, 6)
+    poly(d, [(64, 158), (128, 158), (112, 182), (80, 182)], OLIVE_D)     # 尾翼
+    d.ellipse((86, 44, 106, 74), fill=GLASS, outline=OUTLINE, width=4)
+    # 後部ランプ（空挺降下の目印）
+    poly(d, [(80, 150), (112, 150), (120, 172), (72, 172)], (196, 186, 156, 255))
+    # 降下傘
+    d.pieslice((116, 116, 168, 156), 180, 360, fill=(226, 226, 214, 255),
+               outline=OUTLINE, width=3)
+    d.line([(122, 138), (142, 160)], fill=OUTLINE, width=3)
+    d.line([(162, 138), (142, 160)], fill=OUTLINE, width=3)
+    d.ellipse((134, 158, 150, 174), fill=OLIVE, outline=OUTLINE, width=3)
+    save(img, "t_plane")
+
 for fn in (infantry, at_infantry, recon, tank, htank, artillery, aa_tank,
            truck, supply, fighter, bomber, heli, t_copter,
            destroyer, cruiser, submarine, t_ship,
            militia, mech_inf, ltank, rocket, aa_gun, dive_bomber, scout_plane,
            supply_air, battleship, carrier, gunboat, missile_boat,
-           supply_ship):
+           supply_ship, t_plane):
     fn()
 print("OK")

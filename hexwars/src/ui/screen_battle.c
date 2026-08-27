@@ -291,13 +291,21 @@ static bool unit_has_moved_pending(App *a)
     return u->pos.x != a->undo_x || u->pos.y != a->undo_y;
 }
 
-/* 選択中の輸送ユニットが降車できる隣接ヘクスを列挙する（複数降車で毎回再計算） */
+/* 選択中の輸送ユニットが降車できるヘクスを列挙する（複数降車で毎回再計算）。
+ * 通常は隣接6方向だが、空挺降下できる輸送機だけは「真下（自分と同じヘクス）」も
+ * 候補に入る。輸送機は空レイヤーにいるので地表が空いていれば降ろせる。 */
 static void compute_unload_targets(App *a)
 {
     Game *g = &a->game;
     Unit *u = &g->units[a->sel_unit];
     a->n_unload = 0;
     if (game_first_cargo(g, a->sel_unit) < 0) return;
+    if (g->types[u->type].paradrop &&
+        game_can_unload_to(g, a->sel_unit, u->pos.x, u->pos.y)) {
+        a->unload_x[a->n_unload] = u->pos.x;
+        a->unload_y[a->n_unload] = u->pos.y;
+        a->n_unload++;
+    }
     for (int d = 0; d < HEX_DIRS; d++) {
         int nx, ny;
         hex_neighbor(u->pos.x, u->pos.y, d, &nx, &ny);

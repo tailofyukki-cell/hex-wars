@@ -114,6 +114,9 @@ typedef struct {
     /* 輸送（仕様書 5.9） */
     uint8_t  capacity;              /* 搭載可能数 (0=輸送不可) */
     uint8_t  resupply_cargo;        /* 1=搭載中ユニットをターン開始時に補給（空母） */
+    /* 1=空挺降下できる（輸送機）。隣接ではなく「自分がいるヘクスの真下」へ降ろせる。
+     * 降りた部隊はその手番行動できない（game_unload_unit が UF_DONE を付ける）。 */
+    uint8_t  paradrop;
     char     transport_by[4][24];   /* このユニットを搭載できる輸送手段ID */
     uint8_t  n_transport_by;
     /* スプライト画像（assets/ 相対パス。空=図形描画にフォールバック）
