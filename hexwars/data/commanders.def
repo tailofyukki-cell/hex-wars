@@ -19,10 +19,15 @@
 #                 SCOUT  このターン全マップを視認
 #   power_val   … 必殺技の効果量
 #   unlock_clears … 解禁に必要な作戦クリア数（0=最初から使える）
+#   image       … 指揮官選択の画面に出す顔絵（assets/ からの相対パス）。
+#                 縦横比3:4想定。同じ絵柄のPNGを上書きすれば絵だけ差し替わる。
+#                 同梱は tools/gen_co_art.py（要Pillow）で作った**仮絵**。
+#   cutin       … 攻撃時のカットイン。ユニット側の cutin が無いときに使われる
 
 [commander GRAF]
 name       = グレーフ将軍
 cutin      = gfx/cutin/co_west.png
+image      = gfx/co/graf.png
 title      = 鉄壁
 desc       = 全軍の防御が上がる。守勢に強い。
 domain     = ALL
@@ -36,6 +41,7 @@ power_val  = 3
 [commander LIESE]
 name       = リーゼ中佐
 cutin      = gfx/cutin/co_west.png
+image      = gfx/co/liese.png
 title      = 疾風
 desc       = 全軍の移動力が1増える。機動戦向き。
 domain     = ALL
@@ -49,6 +55,7 @@ power_val  = 1
 [commander BALT]
 name       = バルト大佐
 cutin      = gfx/cutin/co_east.png
+image      = gfx/co/balt.png
 title      = 猛攻
 desc       = 全軍の攻撃力が上がるが、防御はやや下がる。
 domain     = ALL
@@ -64,6 +71,7 @@ power_val  = 40
 unlock_clears = 4
 name       = ヴォルフ提督
 cutin      = gfx/cutin/co_east.png
+image      = gfx/co/wolf.png
 title      = 海の狼
 desc       = 艦船が非常に強い。陸上部隊には補正がない。
 domain     = SEA
@@ -79,6 +87,7 @@ power_val  = 35
 unlock_clears = 2
 name       = カーラ参謀
 cutin      = gfx/cutin/co_east.png
+image      = gfx/co/karla.png
 title      = 策士
 desc       = 収入と視界が増える。長期戦・索敵に強い。
 domain     = ALL
@@ -94,6 +103,7 @@ power_val  = 2000
 unlock_clears = 6
 name       = アドラー中佐
 cutin      = gfx/cutin/co_west.png
+image      = gfx/co/eagle.png
 title      = 蒼空
 desc       = 航空部隊が強力。制空権を握る戦い向き。
 domain     = AIR

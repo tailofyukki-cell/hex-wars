@@ -17,7 +17,7 @@ static int8_t       s_terr_state[MAX_TERRAIN];
 
 /* パス指定の1枚絵（カットイン等）のキャッシュ。読めなかったパスも
  * tex=NULL のまま覚えておき、毎フレーム読み直さないようにする。 */
-#define MAX_PATH_TEX 16
+#define MAX_PATH_TEX 32   /* カットイン + 指揮官の顔絵 + 予備 */
 static struct {
     char         rel[64];
     SDL_Texture *tex;

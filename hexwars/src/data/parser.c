@@ -507,6 +507,7 @@ int data_load_commanders(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "unlock_clears")) cur->unlock_clears = (int16_t)atoi(val);
         else if (!strcmp(key, "power_val"))    cur->power_val = (int16_t)atoi(val);
         else if (!strcmp(key, "cutin"))        snprintf(cur->cutin, sizeof cur->cutin, "%s", val);
+        else if (!strcmp(key, "image"))        snprintf(cur->image, sizeof cur->image, "%s", val);
         else if (!strcmp(key, "power_type")) {
             if      (!strcmp(val, "HEAL"))   cur->power_type = CO_POW_HEAL;
             else if (!strcmp(val, "RUSH"))   cur->power_type = CO_POW_RUSH;

@@ -297,6 +297,34 @@ static SDL_Rect setup_row_rect(int i)
 }
 
 /* 指揮官名（未読込なら「なし」） */
+/* 指揮官の顔絵を (x,y,w,h) の枠に、縦横比を保って収めて描く。
+ * 画像が無い/読めない指揮官は枠だけ出して名前を添える（データ未整備でも崩れない）。 */
+static void draw_co_portrait(App *a, int ci, int x, int y, int w, int h)
+{
+    fill_rect(a, x, y, w, h, (SDL_Color){ 26, 32, 42, 255 });
+    if (ci < 0 || ci >= a->game.n_cos) {
+        outline_rect(a, x, y, w, h, COL_DIM);
+        draw_text_center(a, a->font_s, x + w / 2, y + h / 2 - 8, COL_DIM,
+                         tx("CO_NONE"));
+        return;
+    }
+    const CommanderType *c = &a->game.cos[ci];
+    int iw = 0, ih = 0;
+    SDL_Texture *tex = sprite_get_path(a, c->image, &iw, &ih);
+    if (tex && iw > 0 && ih > 0) {
+        float k = (float)w / (float)iw;
+        float k2 = (float)h / (float)ih;
+        if (k2 < k) k = k2;                     /* 収まるほうに合わせる */
+        float dw = iw * k, dh = ih * k;
+        SDL_FRect dst = { x + (w - dw) / 2.0f, y + (h - dh) / 2.0f, dw, dh };
+        SDL_RenderCopyF(a->ren, tex, NULL, &dst);
+    } else {
+        draw_text_center(a, a->font_s, x + w / 2, y + h / 2 - 8, COL_DIM,
+                         c->name);
+    }
+    outline_rect(a, x, y, w, h, COL_DIM);
+}
+
 static const char *co_label(App *a, int idx)
 {
     if (a->game.n_cos <= 0 || idx < 0 || idx >= a->game.n_cos)
@@ -433,6 +461,13 @@ static void setup_draw(App *a)
             draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 10,
                              sel ? COL_WHITE : COL_GRAY, labels[i]);
         }
+    }
+    /* 選択中の指揮官の顔絵（右側）。行3=自軍 / 行4=敵軍 に追随する */
+    if (a->game.n_cos > 0) {
+        int ci = (a->setup_row == 4) ? a->sel_co1 : a->sel_co0;
+        draw_co_portrait(a, ci, 985, 246, 264, 352);
+        draw_text_center(a, a->font_s, 985 + 132, 214, COL_GRAY,
+                         tx(a->setup_row == 4 ? "SETUP_CO1" : "SETUP_CO0"));
     }
     /* 選択中の指揮官の説明を下に出す */
     {
@@ -953,6 +988,8 @@ static void cpnmap_draw(App *a)
         SDL_Rect cr = cpnmap_co_rect();
         fill_rect(a, cr.x, cr.y, cr.w, cr.h, (SDL_Color){ 40, 48, 60, 220 });
         outline_rect(a, cr.x, cr.y, cr.w, cr.h, COL_DIM);
+        /* 左端に顔絵の小さなサムネ（誰を選んでいるか一目で分かるように） */
+        draw_co_portrait(a, ci, cr.x + 4, cr.y + 3, 32, 42);
         const CommanderType *co = &a->game.cos[ci];
         char cb[192];
         snprintf(cb, sizeof cb, tx("CPNMAP_CO_FMT"), co->name);

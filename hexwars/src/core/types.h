@@ -197,6 +197,9 @@ typedef struct {
     /* 攻撃時のカットイン1枚絵（assets/ 相対パス）。commanders.def の `cutin =`。
      * ユニット側に cutin が無いときのフォールバックとして使う。 */
     char     cutin[64];
+    /* 指揮官の顔絵（assets/ 相対パス）。commanders.def の `image =`。
+     * 指揮官選択の画面に出す。空なら名前と説明だけの従来表示になる。 */
+    char     image[64];
 } CommanderType;
 
 /* --- マップイベント（作戦途中で起きる出来事） ---
