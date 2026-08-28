@@ -68,7 +68,31 @@ static void test_data_and_battle(void)
     CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
     CHECK(g->n_terrains == 13);   /* 地形12種 + 圏外(マップ輪郭用) */
-    CHECK(g->n_types == 31);      /* 補給機 + 艦船4種 + 補給艦 + 輸送機（陸14/空8/海9） */
+    /* 生産できる31種 + 進化先31種。進化先は no_produce なので生産に出ない。 */
+    CHECK(g->n_types == 62);
+    {
+        int producible = 0, evo = 0;
+        for (int i = 0; i < g->n_types; i++) {
+            if (g->types[i].no_produce) evo++;
+            else producible++;
+        }
+        CHECK(producible == 31 && evo == 31);
+        /* 進化先を持つ種は、その進化先が実在し、生産不可であること */
+        for (int i = 0; i < g->n_types; i++) {
+            if (!g->types[i].evolve_to[0]) continue;
+            int to = -1;
+            for (int k = 0; k < g->n_types; k++)
+                if (!strcmp(g->types[k].id, g->types[i].evolve_to)) to = k;
+            CHECK(to >= 0);
+            if (to >= 0) {
+                CHECK(g->types[to].no_produce == 1);
+                /* 進化は片道1段（進化先はさらに進化しない） */
+                CHECK(g->types[to].evolve_to[0] == 0);
+                /* 移動クラスは変わらない（陸が空になったりしない） */
+                CHECK(g->types[to].mclass == g->types[i].mclass);
+            }
+        }
+    }
     {
         int land = 0, air = 0, sea = 0;
         for (int i = 0; i < g->n_types; i++) {
@@ -78,7 +102,8 @@ static void test_data_and_battle(void)
             default: land++; break;
             }
         }
-        CHECK(land == 14 && air == 8 && sea == 9);
+        /* 進化先も同じ内訳で増えるので倍になる */
+        CHECK(land == 28 && air == 16 && sea == 18);
     }
     /* 画像指定（image=）が両陣営分に読めていること */
     {
@@ -437,6 +462,86 @@ static void test_produce_layers(void)
     int si = game_spawn_unit(g, 0, sub, 4, 4, 10);
     CHECK(si >= 0);
     CHECK(!game_can_produce_at(g, 0, 4, 4));
+}
+
+/* 進化（docs/evolution_spec.md）: 経験値満タン＋自軍の補給拠点の上でのみ。
+ * 進化すると経験値は0に戻り、進化先は生産できない。 */
+static void test_evolve(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    g->fog = false;
+    game_start(g, 1);
+    g->n_units = 0;
+
+    int inf = data_find_unit_type(g, "INFANTRY");
+    CHECK(inf >= 0);
+    if (inf < 0) return;
+    int to = -1;
+    for (int i = 0; i < g->n_types; i++)
+        if (!strcmp(g->types[i].id, g->types[inf].evolve_to)) to = i;
+    CHECK(g->types[inf].evolve_to[0] != 0);   /* 歩兵に進化先が定義されている */
+    CHECK(to >= 0);
+    if (to < 0) return;
+    CHECK(g->types[to].no_produce == 1);      /* 進化先は生産できない */
+
+    /* 街（LANDを補給できる拠点）を用意して自軍のものにする */
+    int t_city = -1;
+    for (int i = 0; i < g->n_terrains; i++)
+        if (g->terrains[i].supplies & (1u << MC_FOOT)) { t_city = i; break; }
+    CHECK(t_city >= 0);
+    if (t_city < 0) return;
+
+    int ui = game_spawn_unit(g, 0, inf, 3, 3, 8);
+    CHECK(ui >= 0);
+    if (ui < 0) return;
+
+    /* 経験値が足りない間は進化できない */
+    g->tiles[3][3].terrain = (uint8_t)t_city;
+    g->tiles[3][3].owner = 0;
+    g->units[ui].exp = 99;
+    CHECK(!game_can_evolve(g, ui));
+    g->units[ui].exp = 100;
+    CHECK(game_can_evolve(g, ui));
+
+    /* 拠点の外／敵の拠点では進化できない */
+    g->tiles[3][3].owner = 1;
+    CHECK(!game_can_evolve(g, ui));
+    g->tiles[3][3].owner = 0;
+    g->tiles[3][3].terrain = 0;               /* 平地に戻す */
+    CHECK(!game_can_evolve(g, ui));
+    g->tiles[3][3].terrain = (uint8_t)t_city;
+    CHECK(game_can_evolve(g, ui));
+
+    /* 進化を実行 */
+    int hp_before = g->units[ui].hp;
+    CHECK(game_evolve_unit(g, ui) == 0);
+    CHECK(g->units[ui].type == to);
+    CHECK(g->units[ui].exp == 0);                     /* 経験値はリセット */
+    CHECK(g->units[ui].hp == hp_before);              /* HPは据え置き */
+    CHECK(g->units[ui].fuel == g->types[to].fuel);    /* 燃料・弾薬は満タン */
+    CHECK(g->units[ui].ammo == g->types[to].ammo);
+    CHECK((g->units[ui].flags & UF_DONE) != 0);       /* そのターンは行動終了 */
+
+    /* 進化先はさらに進化しない（片道・1段だけ） */
+    g->units[ui].exp = 100;
+    CHECK(!game_can_evolve(g, ui));
+
+    /* 生産メニューに進化先が出ないこと */
+    int t_fac = -1;
+    for (int i = 0; i < g->n_terrains; i++)
+        if (g->terrains[i].produces == PROD_LAND && !g->terrains[i].is_hq) t_fac = i;
+    CHECK(t_fac >= 0);
+    if (t_fac >= 0) {
+        g->tiles[6][6].terrain = (uint8_t)t_fac;
+        g->tiles[6][6].owner = 0;
+        CHECK(game_type_buildable_at(g, 6, 6, inf));
+        CHECK(!game_type_buildable_at(g, 6, 6, to));
+    }
 }
 
 static void test_transport(void)
@@ -2066,31 +2171,31 @@ static void test_save_v6_compat(void)
     save_ensure_dir("saves");
     CHECK(save_game(g, &cs, "saves/_v6test.sav", err, sizeof err) == 0);
 
-    /* ヘッダの版を 6 に書き換えて v6 相当にする。
-     * v7 で増えたイベント欄は本体に残るが、読み飛ばされることを見る
-     * （実際の v6 ファイルではその欄が無いが、受け入れ判定を確かめるのが目的）。 */
-    {
-        FILE *f = fopen("saves/_v6test.sav", "r+b");
-        CHECK(f != NULL);
-        if (f) {
-            unsigned char v6[4] = { 6, 0, 0, 0 };
-            fseek(f, 4, SEEK_SET);
-            fwrite(v6, 1, 4, f);
-            fclose(f);
-        }
-    }
-
-    /* CRC は本体のみのチェックサムなのでヘッダ変更では壊れない。
-     * 版不一致で拒否されず、イベント無しとして復元されれば良い。 */
+    /* 現行版の往復。搭載枠が2→4になった v8 でも壊れないことを見る。
+     * かつては「ヘッダの版だけ 6 に書き換えて読めるか」を見ていたが、
+     * v8 で本体の並び（搭載枠の数）が版によって変わるようになったため、
+     * ヘッダだけ古く偽装したファイルは実在しない組み合わせになってしまう。
+     * 実ファイルの後方互換は deserialize の `ver >= 8 ? 4 : 2` が担う。 */
     Game *g2 = &s_game2;
     CampaignState cs2;
     memset(g2, 0, sizeof *g2);
     CHECK(data_load_terrain(g2, "data/terrain.def", err, sizeof err) == 0);
     CHECK(data_load_units(g2, "data/units.def", err, sizeof err) == 0);
     CHECK(load_game(g2, &cs2, "saves/_v6test.sav", err, sizeof err) == 0);
-    CHECK(g2->n_events == 0);
-    CHECK(g2->events_fired == 0);
     CHECK(g2->turn == g->turn);
+
+    /* 版が範囲外なら弾く（古すぎ・新しすぎ） */
+    for (unsigned char bad = 0; bad <= 200; bad += 200) {
+        FILE *f = fopen("saves/_v6test.sav", "r+b");
+        CHECK(f != NULL);
+        if (f) {
+            unsigned char v[4] = { bad, 0, 0, 0 };
+            fseek(f, 4, SEEK_SET);
+            fwrite(v, 1, 4, f);
+            fclose(f);
+        }
+        CHECK(load_game(g2, &cs2, "saves/_v6test.sav", err, sizeof err) != 0);
+    }
     remove("saves/_v6test.sav");
 
     /* 対応範囲外の古い版はこれまで通り拒否される */
@@ -2321,6 +2426,7 @@ int main(void)
     test_transport();
     test_paradrop();
     test_produce_layers();
+    test_evolve();
     test_supply();
     test_supply_layers();
     test_upkeep_data();

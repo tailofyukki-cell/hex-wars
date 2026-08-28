@@ -125,6 +125,16 @@ int  game_supply_heal(Game *g, int ui);
 /* --- 輸送（仕様書 5.9） --- */
 bool game_can_board(const Game *g, int passenger, int transport);
 
+/* --- 進化（docs/evolution_spec.md） ---
+ * 経験値が満タン(rank5)の部隊を、特性を伸ばした上位種へ任意で作り替える。
+ * 進化先は生産できず（no_produce）、元には戻せない。経験値は0に戻る。
+ * 自軍の「補給できる拠点」の上でのみ行える（陸=街/工場/首都、空=飛行場、海=港）。 */
+bool game_can_evolve(const Game *g, int ui);
+/* 進化先のユニット型 index / -1（条件を満たさない・進化先が無い） */
+int  game_evolve_target(const Game *g, int ui);
+/* 進化を実行する。戻り値 0=成功 */
+int  game_evolve_unit(Game *g, int ui);
+
 /* --- 合流（同種の傷ついた味方2部隊を1部隊に統合） --- */
 /* mover を target に合流できるか（同陣営・同種別・target が損傷・双方とも非搭載/非搭載中） */
 bool game_can_join(const Game *g, int mover, int target);

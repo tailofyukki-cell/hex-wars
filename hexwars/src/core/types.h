@@ -23,6 +23,10 @@
  * 敵にも「実際に持ち込んだ数」に応じた増援を出して戦力差を埋める。
  * 2 なら敵は最大で元の2倍まで。 */
 #define CAMPAIGN_ENEMY_MAX_RATIO 2
+/* 1ユニットが搭載できる最大数。capacity はこれを超えられない。
+ * 大型空母（進化後）が4機積むために2→4へ広げた。セーブ形式に出るので
+ * 変えるときは SAVE_VERSION も上げること。 */
+#define MAX_CARGO 4
 #define MAX_EVENTS 16     /* 1作戦に仕込めるイベント数（events_fired が32bitなので32が上限） */
 
 /* 移動タイプ（仕様書 5.2） */
@@ -128,6 +132,14 @@ typedef struct {
     /* 攻撃時のカットイン1枚絵（assets/ 相対パス）。units.def の `cutin =`。
      * 空なら指揮官の cutin にフォールバックし、それも無ければ出さない。 */
     char     cutin[64];
+    /* 1=偵察部隊。移動して新しい土地を明かすと経験値が入る（戦えない偵察機の
+     * 唯一の成長手段。戦える偵察車には戦闘ぶんへの上乗せになる）。 */
+    uint8_t  recon;
+    /* 進化（docs/evolution_spec.md）。
+     * evolve_to … 経験値満タンで進化できる相手のユニットID。空=進化しない
+     * no_produce … 1=生産メニューに出さない（進化でのみ入手できる） */
+    char     evolve_to[24];
+    uint8_t  no_produce;
 } UnitType;
 
 /* 地形定義（terrain.def の1エントリ） */
@@ -253,7 +265,7 @@ typedef struct {
     uint8_t  ammo;
     uint8_t  exp;         /* 0..100 */
     uint8_t  flags;
-    int16_t  cargo[2];    /* 搭載ユニットの index、-1で空 */
+    int16_t  cargo[MAX_CARGO];  /* 搭載ユニットの index、-1で空 */
 } Unit;
 
 #endif /* HW_TYPES_H */

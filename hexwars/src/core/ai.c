@@ -439,6 +439,17 @@ static void act_unit(Game *g, AiState *s, int ui)
     bool easy = g->ctrl[me] == CTRL_CPU_EASY;
     bool hard = g->ctrl[me] == CTRL_CPU_HARD;
 
+    /* 進化: できるなら進化する（rank5 は上限で、貯め続けても無駄になるため）。
+     * ただし HP が高いときだけ。瀕死のまま進化すると熟練度を失って即撃破される。
+     * EASY は半分の確率で見送る（弱さの演出）。 */
+    if (game_can_evolve(g, ui) && u->hp >= 7 &&
+        !(easy && rng_range(&g->rng, 0, 99) < 50)) {
+        game_evolve_unit(g, ui);
+        s->last_unit = ui;
+        s->last_target = -1;
+        return;
+    }
+
     path_move_range(g, ui, &s_mr);
 
     /* このユニットが受ける脅威は「自分の装甲カテゴリ」で引く。
@@ -454,7 +465,7 @@ static void act_unit(Game *g, AiState *s, int ui)
     int dom = move_domain_of(g, u);
     bool is_transport = (ut->capacity > 0 && type_unarmed(ut));
     int cargo_n = 0;
-    for (int cs = 0; cs < 2; cs++) if (u->cargo[cs] >= 0) cargo_n++;
+    for (int cs = 0; cs < MAX_CARGO; cs++) if (u->cargo[cs] >= 0) cargo_n++;
     /* まだ積めるうえに「すぐ乗れる位置」に味方がいるなら、あと1ターンだけ待って
      * 満載にする（1体ずつ運ぶと往復が多くなり上陸戦力が揃わないため）。
      * 待つ条件を隣接圏に絞らないと、母港の味方に釣られて永久に出航しなくなる。 */
@@ -636,7 +647,7 @@ static void act_unit(Game *g, AiState *s, int ui)
             if (is_transport && dom == 0) {
                 int sc;
                 if (has_cargo) {
-                    int cslot = (u->cargo[0] >= 0) ? u->cargo[0] : u->cargo[1];
+                    int cslot = u->cargo[game_first_cargo(g, ui)];
                     const UnitType *put = &g->types[g->units[cslot].type];
                     int here_goal = put->can_capture
                                       ? nearest_capture_goal(g, me, x, y)

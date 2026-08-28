@@ -102,8 +102,8 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
         w_u8(w, u->ammo);
         w_u8(w, u->exp);
         w_u8(w, u->flags);
-        w_i16(w, u->cargo[0]);
-        w_i16(w, u->cargo[1]);
+        for (int k = 0; k < MAX_CARGO; k++)
+            w_i16(w, u->cargo[k]);
     }
     /* 進行 */
     w_i32(w, g->funds[0]);
@@ -203,8 +203,11 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
         u->ammo = r_u8(r);
         u->exp = r_u8(r);
         u->flags = r_u8(r);
-        u->cargo[0] = r_i16(r);
-        u->cargo[1] = r_i16(r);
+        /* v8 で搭載枠が 2→4 になった。v7 以前は2枠しか書かれていないので、
+         * 残りを空にして読み込む（古いセーブもそのまま開ける）。 */
+        int slots = (ver >= 8) ? MAX_CARGO : 2;
+        for (int k = 0; k < MAX_CARGO; k++)
+            u->cargo[k] = (k < slots) ? r_i16(r) : -1;
         if (u->type >= g->n_types) return -1;
     }
     g->funds[0] = r_i32(r);

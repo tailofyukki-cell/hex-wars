@@ -6,10 +6,18 @@
  * base     = ATK(対象カテゴリ別) × 攻撃側HP / 10
  * defmod   = 100 + 地形防御% + 防御側経験ランク×3
  * atkmod   = 100 + 攻撃側経験ランク×3
- * dmg_x10  = base × atkmod / defmod   （ATK値はダメージ×10 スケール）
+ * dmg_x10  = base × atkmod / defmod × 天候% × 射程減衰%
+ * 射程減衰 = 100 - 5 × (距離 - range_min)   （遠いほど当たらない）
  * 乱数     = ±15%
  * 最低保証 = ATK>0 なら 1
  */
+
+/* 射程が最短から1セル伸びるごとに落ちる攻撃力(%)と、その下限。
+ * 間接砲の「遠射は当たりにくい」を表す。射程を伸ばす進化の歯止めでもあり、
+ * 例: 超弩級戦艦(2-7)の最遠射は 75% で、元の戦艦(2-5)の最遠射 85% と
+ * 実威力がほぼ並ぶ＝威力据え置きで射程だけ伸びる、という設計になっている。 */
+#define RANGE_FALLOFF_PCT 5
+#define RANGE_FALLOFF_MIN 50
 
 static int base_damage_x10(const Game *g, const Unit *atk, const Unit *def)
 {
@@ -37,7 +45,16 @@ static int base_damage_x10(const Game *g, const Unit *atk, const Unit *def)
     int wx = game_weather_atk_pct(g, atk, def);
     if (wx <= 0) return 0;
 
-    return base * atkmod / defmod * wx / 100;
+    /* 射程減衰: 最短射程から1セル遠ざかるごとに -5%（命中率が落ちるイメージ）。
+     * 直射(射程1)は差が0なので影響を受けない。同一セル(距離0)は差が負になるため
+     * 0で下限を切る——切らないと近距離ボーナスになってしまう。 */
+    int over = hex_distance(atk->pos.x, atk->pos.y, def->pos.x, def->pos.y)
+               - at->range_min;
+    if (over < 0) over = 0;
+    int rng = 100 - RANGE_FALLOFF_PCT * over;
+    if (rng < RANGE_FALLOFF_MIN) rng = RANGE_FALLOFF_MIN;
+
+    return base * atkmod / defmod * wx / 100 * rng / 100;
 }
 
 int battle_expect_damage_x10(const Game *g, const Unit *atk, const Unit *def)

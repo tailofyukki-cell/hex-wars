@@ -190,7 +190,7 @@ int game_spawn_unit(Game *g, int owner, int type, int x, int y, int hp)
     u->fuel = g->types[type].fuel;
     u->ammo = g->types[type].ammo;
     u->flags = UF_ALIVE;
-    u->cargo[0] = u->cargo[1] = -1;
+    for (int s = 0; s < MAX_CARGO; s++) u->cargo[s] = -1;
     return idx;
 }
 
@@ -252,6 +252,21 @@ static void clear_capture_by(Game *g, int ui)
     }
 }
 
+/* 役割ごとの経験値配点（docs/evolution_spec.md）。
+ * 戦えないユニットには戦闘経験値の代わりに、自分の仕事が経験値になる。
+ * 占領は歩兵が戦闘でも稼げるので「代わり」ではなく上乗せ。 */
+#define EXP_UNLOAD   10   /* 輸送: 1体降ろす */
+#define EXP_SUPPLY    1   /* 補給: 物資1消費 */
+#define EXP_RECON     1   /* 偵察: 新しい土地を明かした移動 */
+#define EXP_CARRIER   2   /* 空母: 艦載機1機を整備 */
+#define EXP_CAPTURE  15   /* 占領完了（戦闘ぶんへの上乗せ） */
+
+static void gain_exp(Unit *u, int amount)
+{
+    int e = u->exp + amount;
+    u->exp = (uint8_t)(e > 100 ? 100 : e);
+}
+
 void game_move_unit(Game *g, int ui, int x, int y, int fuel_cost)
 {
     Unit *u = &g->units[ui];
@@ -263,19 +278,41 @@ void game_move_unit(Game *g, int ui, int x, int y, int fuel_cost)
     u->pos.y = (uint8_t)y;
     u->fuel = (uint8_t)(u->fuel > fuel_cost ? u->fuel - fuel_cost : 0);
     /* 搭載ユニットも一緒に移動 */
-    for (int s = 0; s < 2; s++)
+    for (int s = 0; s < MAX_CARGO; s++)
         if (u->cargo[s] >= 0) {
             g->units[u->cargo[s]].pos.x = (uint8_t)x;
             g->units[u->cargo[s]].pos.y = (uint8_t)y;
         }
+
+    /* 偵察部隊は「今まで見えなかった土地を明かした移動」で経験値を得る。
+     * 戦えない偵察機にとっては唯一の成長手段。visible[] は今見えているかだけを
+     * 持つので、往復すると同じ土地で何度も稼げる——現状はそれを許容している
+     * （偵察の仕事は見えない場所を見ることなので、遊んでみて問題なら見直す）。 */
+    bool was_visible[MAX_MAP_H][MAX_MAP_W];
+    const UnitType *mt = unit_type(g, u);
+    bool count_recon = mt->recon && g->fog;
+    if (count_recon)
+        for (int yy = 0; yy < g->h; yy++)
+            for (int xx = 0; xx < g->w; xx++)
+                was_visible[yy][xx] = g->visible[u->owner][yy][xx] != 0;
+
     game_update_vision(g);
+
+    if (count_recon) {
+        for (int yy = 0; yy < g->h; yy++)
+            for (int xx = 0; xx < g->w; xx++)
+                if (!was_visible[yy][xx] && g->visible[u->owner][yy][xx]) {
+                    gain_exp(u, EXP_RECON);
+                    return;                  /* 1回の移動につき1回だけ */
+                }
+    }
 }
 
 static void kill_unit(Game *g, int ui)
 {
     Unit *u = &g->units[ui];
     /* 輸送ユニット撃破時、搭載ユニットも喪失（仕様書 5.9） */
-    for (int s = 0; s < 2; s++)
+    for (int s = 0; s < MAX_CARGO; s++)
         if (u->cargo[s] >= 0) {
             Unit *c = &g->units[u->cargo[s]];
             g->lost_units[c->owner]++;
@@ -452,12 +489,6 @@ bool game_co_activate(Game *g, int p)
     return true;
 }
 
-static void gain_exp(Unit *u, int amount)
-{
-    int e = u->exp + amount;
-    u->exp = (uint8_t)(e > 100 ? 100 : e);
-}
-
 int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
                 bool *def_killed, bool *atk_killed)
 {
@@ -533,6 +564,7 @@ int game_capture(Game *g, int ui)
         t->cap_hp = CAPTURE_HP;
         t->capturer = -1;
         t->owner = (int8_t)u->owner;
+        gain_exp(u, EXP_CAPTURE);        /* 拠点を取るのも歩兵の手柄 */
         game_update_vision(g);
         game_check_victory(g);
         return 1;
@@ -558,6 +590,7 @@ bool game_type_buildable_at(const Game *g, int x, int y, int type)
     default:        return false;
     }
     if (!cat_ok) return false;
+    if (g->types[type].no_produce) return false;   /* 進化でのみ入手できる */
     /* 立体化: 出てくるユニットのレイヤーさえ空いていれば生産できる。
      * 上空を飛んでいる航空機が工場の戦車生産を塞ぐ、といったことが起きないようにする。
      * 港では海面が塞がっていても海中（潜水艦）は出せる、という判定にもなる。 */
@@ -694,6 +727,7 @@ int game_supply_adjacent(Game *g, int ui)
         v->fuel = t->fuel;
         if (!t->supply) v->ammo = t->ammo;       /* 補給ユニットの物資は補充しない */
         u->ammo--;                               /* 物資-1 */
+        gain_exp(u, EXP_SUPPLY);
         done++;
     }
     u->flags |= UF_DONE;
@@ -755,6 +789,7 @@ int game_supply_heal(Game *g, int ui)
     if (best < 0) return 0;                       /* 回復対象なし */
     g->units[best].hp++;                          /* 1回につきHP1のみ */
     u->ammo -= SUPPLY_HEAL_COST;
+    gain_exp(u, EXP_SUPPLY * SUPPLY_HEAL_COST);   /* 消費した物資ぶん */
     return 1;
 }
 
@@ -765,10 +800,62 @@ int game_supply_heal(Game *g, int ui)
 int game_first_cargo(const Game *g, int transport)
 {
     const Unit *t = &g->units[transport];
-    for (int s = 0; s < 2; s++)
+    for (int s = 0; s < MAX_CARGO; s++)
         if (t->cargo[s] >= 0) return s;
     (void)g;
     return -1;
+}
+
+/* ------------------------------------------------------------------ */
+/* 進化（docs/evolution_spec.md）                                      */
+/* ------------------------------------------------------------------ */
+int game_evolve_target(const Game *g, int ui)
+{
+    if (ui < 0 || ui >= g->n_units) return -1;
+    const Unit *u = &g->units[ui];
+    if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) return -1;
+    if (u->exp < 100) return -1;                  /* rank5 になってから */
+    const UnitType *t = unit_type(g, u);
+    if (!t->evolve_to[0]) return -1;
+    /* 輸送中のユニットを抱えたままの進化は不可（積荷の扱いが曖昧になる） */
+    for (int s = 0; s < MAX_CARGO; s++)
+        if (u->cargo[s] >= 0) return -1;
+
+    /* 自軍の補給拠点の上でのみ。terrain.def の supplies をそのまま使うので、
+     * 陸は街/工場/首都、空は飛行場、海は港（と潜水艦の港）になる。 */
+    const Tile *tile = &g->tiles[u->pos.y][u->pos.x];
+    const TerrainType *terr = &g->terrains[tile->terrain];
+    if (tile->owner != (int8_t)u->owner) return -1;
+    if (!(terr->supplies & (1u << t->mclass))) return -1;
+
+    for (int i = 0; i < g->n_types; i++)
+        if (!strcmp(g->types[i].id, t->evolve_to)) return i;
+    return -1;                                     /* 進化先が見つからない */
+}
+
+bool game_can_evolve(const Game *g, int ui)
+{
+    return game_evolve_target(g, ui) >= 0;
+}
+
+int game_evolve_unit(Game *g, int ui)
+{
+    int nt = game_evolve_target(g, ui);
+    if (nt < 0) return -1;
+    Unit *u = &g->units[ui];
+    const UnitType *t = &g->types[nt];
+
+    u->type = (uint8_t)nt;
+    u->exp = 0;                    /* 熟練度は振り出しに戻る＝これが進化の代償 */
+    /* HP は据え置き（満タンにすると前線での回復手段になってしまう）。
+     * 燃料・弾薬は新しい上限で満タン（上位種は上限が上がることが多く、
+     * 比率のままだと進化した瞬間に息切れするため）。 */
+    u->fuel = t->fuel;
+    u->ammo = t->ammo;
+    if (u->hp > 10) u->hp = 10;
+    u->flags |= UF_DONE;           /* 移動＋進化＋攻撃を1手番でやらせない */
+    game_update_vision(g);         /* 視界が変わる進化先があるため */
+    return 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -786,7 +873,7 @@ bool game_can_join(const Game *g, int mover, int target)
     /* 満タンの部隊に重ねても得がない（誤操作で部隊数だけ減るのを防ぐ） */
     if (t->hp >= 10) return false;
     /* どちらかが輸送中なら不可（搭載ユニットを巻き添えで消さない） */
-    for (int s = 0; s < 2; s++)
+    for (int s = 0; s < MAX_CARGO; s++)
         if (m->cargo[s] >= 0 || t->cargo[s] >= 0) return false;
     return true;
 }
@@ -834,11 +921,12 @@ bool game_can_board(const Game *g, int passenger, int transport)
     if (tt->capacity == 0) return false;
     /* 空きスロット */
     int used = 0;
-    for (int s = 0; s < 2; s++)
+    for (int s = 0; s < MAX_CARGO; s++)
         if (t->cargo[s] >= 0) used++;
     if (used >= tt->capacity) return false;
     /* 搭載中の輸送ユニットは載せない（入れ子禁止） */
-    if (p->cargo[0] >= 0 || p->cargo[1] >= 0) return false;
+    for (int s = 0; s < MAX_CARGO; s++)
+        if (p->cargo[s] >= 0) return false;
     /* transport_by リストに輸送手段IDが含まれるか */
     for (int i = 0; i < pt->n_transport_by; i++)
         if (!strcmp(pt->transport_by[i], tt->id)) return true;
@@ -849,7 +937,7 @@ void game_load_unit(Game *g, int passenger, int transport)
 {
     Unit *p = &g->units[passenger];
     Unit *t = &g->units[transport];
-    for (int s = 0; s < 2; s++) {
+    for (int s = 0; s < MAX_CARGO; s++) {
         if (t->cargo[s] < 0) {
             t->cargo[s] = (int16_t)passenger;
             break;
@@ -890,6 +978,7 @@ int game_unload_unit(Game *g, int transport, int x, int y)
     p->pos.x = (uint8_t)x;
     p->pos.y = (uint8_t)y;
     t->flags |= UF_DONE;
+    gain_exp(t, EXP_UNLOAD);      /* 部隊を送り届けるのが輸送の仕事 */
     game_update_vision(g);
     return 0;
 }
@@ -949,7 +1038,7 @@ static void begin_player_turn(Game *g)
 
         /* 空母の搭載ユニット（航空機）を空港と同様に補給・修理 */
         if (ut->resupply_cargo) {
-            for (int s = 0; s < 2; s++) {
+            for (int s = 0; s < MAX_CARGO; s++) {
                 if (u->cargo[s] < 0) continue;
                 Unit *c = &g->units[u->cargo[s]];
                 const UnitType *ct = unit_type(g, c);
@@ -961,6 +1050,7 @@ static void begin_player_turn(Game *g)
                     if (g->funds[p] >= cost) {
                         g->funds[p] -= cost;
                         c->hp = (int8_t)(c->hp + heal);
+                        gain_exp(u, EXP_CARRIER);   /* 整備も空母の手柄 */
                     }
                 }
             }

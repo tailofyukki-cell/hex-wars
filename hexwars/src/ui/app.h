@@ -41,6 +41,7 @@ typedef enum {
     BS_UNLOAD,         /* 輸送ユニットから降ろす先の選択 */
     BS_LAYER_PICK,     /* 重なりセルのユニット選択（空/海面/海中） */
     BS_UNITLIST,       /* 未行動ユニット一覧（選ぶとカーソルが飛ぶ） */
+    BS_EVOLVE_CONFIRM, /* 進化の確認（不可逆なので必ず一度止める） */
     BS_BATTLE_ANIM,    /* 戦闘アニメ（仕様書 8.2） */
     BS_CPU_TURN,
     BS_HANDOVER,       /* ホットシート交代画面 */

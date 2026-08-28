@@ -268,6 +268,10 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "anim"))   snprintf(cur->anim, sizeof cur->anim, "%s", val);
         else if (!strcmp(key, "cutin"))  snprintf(cur->cutin, sizeof cur->cutin, "%s", val);
         else if (!strcmp(key, "paradrop")) cur->paradrop = (uint8_t)atoi(val);
+        else if (!strcmp(key, "recon"))    cur->recon = (uint8_t)atoi(val);
+        else if (!strcmp(key, "no_produce")) cur->no_produce = (uint8_t)atoi(val);
+        else if (!strcmp(key, "evolve_to"))
+            snprintf(cur->evolve_to, sizeof cur->evolve_to, "%s", val);
         else if (!strcmp(key, "transport_by")) {
             char buf[128];
             snprintf(buf, sizeof buf, "%s", val);

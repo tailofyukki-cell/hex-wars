@@ -462,8 +462,13 @@ static void draw_unit(App *a, const Unit *u, float cx, float cy)
                   (SDL_Color){ 160, 240, 160, 255 }, st);
     }
     /* 搭載中マーク */
-    if (u->cargo[0] >= 0 || u->cargo[1] >= 0)
-        fill_circle(a, cx, cy + r * 0.85f, s * 0.11f, COL_YELLOW);
+    {
+        bool carrying = false;
+        for (int cs = 0; cs < MAX_CARGO && !carrying; cs++)
+            if (u->cargo[cs] >= 0) carrying = true;
+        if (carrying)
+            fill_circle(a, cx, cy + r * 0.85f, s * 0.11f, COL_YELLOW);
+    }
 }
 
 void render_map(App *a)

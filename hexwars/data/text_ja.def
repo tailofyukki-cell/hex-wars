@@ -122,6 +122,16 @@ ACT_CANCEL      = キャンセル
 ACT_UNLOAD      = 降ろす
 ACT_SUPPLY      = 補給
 ACT_HEAL        = 回復
+ACT_EVOLVE      = 進化
+
+# --- 進化（経験値満タン＋自軍の補給拠点の上でのみ）---
+EVOLVE_TITLE_FMT = %s を %s に進化させますか？
+EVOLVE_WARN1     = 進化すると元には戻せません
+EVOLVE_WARN2     = 経験値は0に戻り、このターンは行動を終了します
+EVOLVE_YES       = 進化する
+EVOLVE_NO        = やめる
+POP_EVOLVE       = 進化！
+HINT_EVOLVE      = ←→:選択  Z:決定  X:やめる
 
 TMENU_UNITLIST  = 未行動ユニット
 TMENU_END       = ターン終了

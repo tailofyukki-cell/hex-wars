@@ -12,11 +12,11 @@
 #include <math.h>
 
 enum { ACT_ATTACK = 0, ACT_CAPTURE, ACT_WAIT, ACT_CANCEL, ACT_UNLOAD,
-       ACT_SUPPLY, ACT_HEAL };
+       ACT_SUPPLY, ACT_HEAL, ACT_EVOLVE };
 enum { LP_SELECT = 0, LP_ATTACK };   /* レイヤー選択ポップアップの用途 */
 static const char *ACT_KEYS[] = {
     "ACT_ATTACK", "ACT_CAPTURE", "ACT_WAIT", "ACT_CANCEL", "ACT_UNLOAD",
-    "ACT_SUPPLY", "ACT_HEAL"
+    "ACT_SUPPLY", "ACT_HEAL", "ACT_EVOLVE"
 };
 
 /* ターンメニューの項目（順番を変えたらここだけ直せば済むように名前を付ける） */
@@ -232,6 +232,13 @@ static void try_co_power(App *a)
     }
 }
 
+/* 進化の確認ボックスの「はい/いいえ」 */
+static SDL_Rect evo_rect(int i)
+{
+    SDL_Rect r = { WIN_W / 2 - 150 + i * 156, WIN_H / 2 + 34, 144, 44 };
+    return r;
+}
+
 static SDL_Rect tmenu_rect(int i)
 {
     SDL_Rect r = { WIN_W / 2 - 130, 260 + i * 52, 260, 44 };
@@ -346,6 +353,9 @@ static void build_action_menu(App *a)
     /* 補給車: 隣接に損傷した味方がいて物資10以上あれば「回復」 */
     if (game_can_heal(g, a->sel_unit))
         a->amenu_items[a->amenu_n++] = ACT_HEAL;
+    /* 経験値が満タンで、自軍の補給拠点の上にいるなら「進化」 */
+    if (game_can_evolve(g, a->sel_unit))
+        a->amenu_items[a->amenu_n++] = ACT_EVOLVE;
     a->amenu_items[a->amenu_n++] = ACT_WAIT;
     a->amenu_items[a->amenu_n++] = ACT_CANCEL;
     a->amenu_idx = 0;
@@ -488,6 +498,11 @@ static void select_action(App *a, int act)
         a->bs = BS_IDLE;
         break;
     }
+    case ACT_EVOLVE:
+        /* 不可逆なので必ず確認を挟む。ここではまだ何も変えない */
+        a->amenu_idx = 1;              /* 既定は「いいえ」に置く */
+        a->bs = BS_EVOLVE_CONFIRM;
+        return;
     case ACT_HEAL: {
         int hp = game_supply_heal(g, a->sel_unit);
         char buf[48];
@@ -879,6 +894,23 @@ static void confirm_at(App *a, int hx, int hy)
     }
 }
 
+/* 進化を実行してポップアップで知らせる */
+static void do_evolve(App *a)
+{
+    Game *g = &a->game;
+    int ui = a->sel_unit;
+    if (ui < 0 || game_evolve_unit(g, ui) != 0) {
+        a->sel_unit = -1;
+        a->bs = BS_IDLE;
+        return;
+    }
+    const Unit *u = &g->units[ui];
+    battle_add_popup(a, u->pos.x, u->pos.y, tx("POP_EVOLVE"), COL_YELLOW);
+    snd_se(SE_CAPTURE);
+    a->sel_unit = -1;
+    a->bs = BS_IDLE;
+}
+
 static void cancel_action(App *a)
 {
     switch (a->bs) {
@@ -910,6 +942,9 @@ static void cancel_action(App *a)
         /* 自軍選択のキャンセルは待機解除、攻撃対象選択のキャンセルは対象選択へ戻す */
         if (a->lpick_mode == LP_ATTACK) a->bs = BS_TARGET_SELECT;
         else { a->sel_unit = -1; a->bs = BS_IDLE; }
+        break;
+    case BS_EVOLVE_CONFIRM:
+        build_action_menu(a);        /* 行動メニューへ戻す（何も変えない） */
         break;
     case BS_PRODUCTION:
     case BS_TURN_MENU:
@@ -1033,6 +1068,12 @@ void battle_event(App *a, const SDL_Event *e)
             }
             /* メニューのホバー */
             SDL_Point p = { e->motion.x, e->motion.y };
+            if (a->bs == BS_EVOLVE_CONFIRM) {
+                for (int i = 0; i < 2; i++) {
+                    SDL_Rect r = evo_rect(i);
+                    if (SDL_PointInRect(&p, &r)) a->amenu_idx = i;
+                }
+            }
             if (a->bs == BS_ACTION_MENU) {
                 for (int i = 0; i < a->amenu_n; i++) {
                     SDL_Rect r = amenu_rect(a, i);
@@ -1131,6 +1172,18 @@ void battle_event(App *a, const SDL_Event *e)
             cancel_action(a);   /* 一覧の外をクリックしたら閉じる */
             return;
         }
+        if (a->bs == BS_EVOLVE_CONFIRM) {
+            for (int i = 0; i < 2; i++) {
+                SDL_Rect r = evo_rect(i);
+                if (SDL_PointInRect(&p, &r)) {
+                    a->amenu_idx = i;
+                    if (i == 0) do_evolve(a); else cancel_action(a);
+                    return;
+                }
+            }
+            cancel_action(a);   /* 外をクリックしたら閉じる（詰まらせない） */
+            return;
+        }
         if (a->bs == BS_LAYER_PICK) {
             for (int i = 0; i < a->lpick_n; i++) {
                 SDL_Rect r = lpick_rect(a, i);
@@ -1179,6 +1232,16 @@ void battle_event(App *a, const SDL_Event *e)
             a->sel_unit = -1;
             a->tmenu_idx = 0;
             a->bs = BS_TURN_MENU;
+            return;
+        }
+        if (a->bs == BS_EVOLVE_CONFIRM) {
+            if (k == SDLK_LEFT)  a->amenu_idx = 0;
+            if (k == SDLK_RIGHT) a->amenu_idx = 1;
+            if (k == SDLK_z || k == SDLK_RETURN) {
+                if (a->amenu_idx == 0) do_evolve(a);
+                else cancel_action(a);
+            }
+            if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
             return;
         }
         if (a->bs == BS_UNITLIST) {
@@ -1513,7 +1576,7 @@ static void draw_cargo_detail(App *a, int ui, int py)
     Game *g = &a->game;
     const Unit *u = &g->units[ui];
     int n = 0;
-    for (int s = 0; s < 2; s++)
+    for (int s = 0; s < MAX_CARGO; s++)
         if (u->cargo[s] >= 0) n++;
     if (n == 0) return;
 
@@ -1656,6 +1719,7 @@ static void draw_panels(App *a)
     case BS_TARGET_SELECT: hint = tx("HINT_TARGET"); break;
     case BS_UNLOAD:        hint = tx("HINT_UNLOAD"); break;
     case BS_LAYER_PICK:    hint = tx("HINT_LAYER_PICK"); break;
+    case BS_EVOLVE_CONFIRM: hint = tx("HINT_EVOLVE"); break;
     case BS_UNITLIST:      hint = tx("HINT_UNITLIST"); break;
     case BS_PRODUCTION:    hint = tx("HINT_PROD"); break;
     case BS_SAVE_MENU:     hint = tx("HINT_SAVE"); break;
@@ -1852,6 +1916,36 @@ static void draw_menus(App *a)
                 draw_text(a, a->font_s, r.x + r.w - 300, r.y + 9,
                           u->hp < 10 ? COL_YELLOW : (sel ? COL_WHITE : COL_GRAY), buf);
             }
+        }
+    }
+    /* 進化の確認。不可逆なので「何になるか」と「経験値が0に戻る」ことを明示する */
+    if (a->bs == BS_EVOLVE_CONFIRM && a->sel_unit >= 0) {
+        int to = game_evolve_target(g, a->sel_unit);
+        const char *from = g->types[g->units[a->sel_unit].type].name;
+        const char *toname = (to >= 0) ? g->types[to].name : "";
+        int bw = 480, bh = 190;
+        int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 100;
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 130 });
+        fill_rect(a, bx, by, bw, bh, (SDL_Color){ 28, 32, 38, 248 });
+        outline_rect(a, bx, by, bw, bh, COL_YELLOW);
+
+        char buf[192];
+        snprintf(buf, sizeof buf, tx("EVOLVE_TITLE_FMT"), from, toname);
+        draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 52, COL_YELLOW,
+                         tx("EVOLVE_WARN1"));
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 74, COL_GRAY,
+                         tx("EVOLVE_WARN2"));
+        for (int i = 0; i < 2; i++) {
+            SDL_Rect r = evo_rect(i);
+            bool sel = (a->amenu_idx == i);
+            fill_rect(a, r.x, r.y, r.w, r.h,
+                      sel ? (SDL_Color){ 80, 110, 160, 255 }
+                          : (SDL_Color){ 40, 48, 60, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
+                             sel ? COL_WHITE : COL_GRAY,
+                             tx(i == 0 ? "EVOLVE_YES" : "EVOLVE_NO"));
         }
     }
     if (a->bs == BS_TURN_MENU) {
