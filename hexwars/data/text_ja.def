@@ -131,7 +131,17 @@ EVOLVE_WARN2     = 経験値は0に戻り、このターンは行動を終了し
 EVOLVE_YES       = 進化する
 EVOLVE_NO        = やめる
 POP_EVOLVE       = 進化！
+EVOLVE_COST_FMT  = 必要な資金 %dG（所持 %dG）
 HINT_EVOLVE      = ←→:選択  Z:決定  X:やめる
+
+# --- 合流（同種の傷ついた味方を1部隊にまとめる）---
+JOIN_TITLE_FMT   = %s を合流させますか？
+JOIN_HP_FMT      = HP %d ＋ %d  →  %d
+JOIN_REFUND_FMT  = はみ出したぶんを払い戻し +%dG
+JOIN_WARN        = 合流すると片方の部隊は盤上から消えます
+JOIN_YES         = 合流する
+JOIN_NO          = やめる
+HINT_JOIN        = ←→:選択  Z:決定  X:やめる
 
 TMENU_UNITLIST  = 未行動ユニット
 TMENU_END       = ターン終了

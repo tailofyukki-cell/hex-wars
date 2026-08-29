@@ -579,17 +579,12 @@ static void try_move_to(App *a, int hx, int hy)
         return;
     }
     if (join_t >= 0 && fx == hx && fy == hy) {
-        int refund = game_join_units(g, ui, join_t);
-        char msg[48];
-        snprintf(msg, sizeof msg, tx("POP_JOIN_FMT"), g->units[join_t].hp);
-        battle_add_popup(a, hx, hy, msg, COL_WHITE);
-        if (refund > 0) {
-            snprintf(msg, sizeof msg, tx("POP_REFUND_FMT"), refund);
-            battle_add_popup(a, hx, hy, msg, COL_YELLOW);
-        }
-        snd_se(SE_OK);
-        a->sel_unit = -1;
-        a->bs = BS_IDLE;
+        /* 合流は片方が盤上から消えるので、実行前に一度確認する。
+         * ここでは移動だけ済ませた状態（相手と同じセルに重なっている）で止め、
+         * やめたときは ACT_CANCEL と同じように移動を巻き戻す。 */
+        a->join_target = join_t;
+        a->amenu_idx = 0;
+        a->bs = BS_JOIN_CONFIRM;
         return;
     }
     if (boarding && fx == hx && fy == hy) {
@@ -911,6 +906,31 @@ static void do_evolve(App *a)
     a->bs = BS_IDLE;
 }
 
+/* 合流を実行する（確認で「はい」を選んだとき） */
+static void do_join(App *a)
+{
+    Game *g = &a->game;
+    int ui = a->sel_unit, tgt = a->join_target;
+    if (ui < 0 || tgt < 0 || !game_can_join(g, ui, tgt)) {
+        a->sel_unit = -1;
+        a->bs = BS_IDLE;
+        return;
+    }
+    int hx = g->units[tgt].pos.x, hy = g->units[tgt].pos.y;
+    int refund = game_join_units(g, ui, tgt);
+    char msg[48];
+    snprintf(msg, sizeof msg, tx("POP_JOIN_FMT"), g->units[tgt].hp);
+    battle_add_popup(a, hx, hy, msg, COL_WHITE);
+    if (refund > 0) {
+        snprintf(msg, sizeof msg, tx("POP_REFUND_FMT"), refund);
+        battle_add_popup(a, hx, hy, msg, COL_YELLOW);
+    }
+    snd_se(SE_OK);
+    a->sel_unit = -1;
+    a->join_target = -1;
+    a->bs = BS_IDLE;
+}
+
 static void cancel_action(App *a)
 {
     switch (a->bs) {
@@ -946,6 +966,20 @@ static void cancel_action(App *a)
     case BS_EVOLVE_CONFIRM:
         build_action_menu(a);        /* 行動メニューへ戻す（何も変えない） */
         break;
+    case BS_JOIN_CONFIRM: {
+        /* 相手と重なったまま止めているので、移動を巻き戻してから選び直させる */
+        if (a->sel_unit >= 0) {
+            Unit *uu = &a->game.units[a->sel_unit];
+            uu->pos.x = (uint8_t)a->undo_x;
+            uu->pos.y = (uint8_t)a->undo_y;
+            uu->fuel = (uint8_t)a->undo_fuel;
+            uu->flags = a->undo_flags;
+            game_update_vision(&a->game);
+        }
+        a->join_target = -1;
+        a->bs = BS_UNIT_SELECTED;
+        break;
+    }
     case BS_PRODUCTION:
     case BS_TURN_MENU:
         a->bs = BS_IDLE;
@@ -965,6 +999,7 @@ void battle_enter(App *a)
 {
     a->zoom = 1;
     a->sel_unit = -1;
+    a->join_target = -1;
     a->dragging = false;
     memset(a->popups, 0, sizeof a->popups);
     a->cur_x = a->cur_y = 0;
@@ -1068,7 +1103,7 @@ void battle_event(App *a, const SDL_Event *e)
             }
             /* メニューのホバー */
             SDL_Point p = { e->motion.x, e->motion.y };
-            if (a->bs == BS_EVOLVE_CONFIRM) {
+            if (a->bs == BS_EVOLVE_CONFIRM || a->bs == BS_JOIN_CONFIRM) {
                 for (int i = 0; i < 2; i++) {
                     SDL_Rect r = evo_rect(i);
                     if (SDL_PointInRect(&p, &r)) a->amenu_idx = i;
@@ -1172,12 +1207,15 @@ void battle_event(App *a, const SDL_Event *e)
             cancel_action(a);   /* 一覧の外をクリックしたら閉じる */
             return;
         }
-        if (a->bs == BS_EVOLVE_CONFIRM) {
+        if (a->bs == BS_EVOLVE_CONFIRM || a->bs == BS_JOIN_CONFIRM) {
+            bool join = (a->bs == BS_JOIN_CONFIRM);
             for (int i = 0; i < 2; i++) {
                 SDL_Rect r = evo_rect(i);
                 if (SDL_PointInRect(&p, &r)) {
                     a->amenu_idx = i;
-                    if (i == 0) do_evolve(a); else cancel_action(a);
+                    if (i != 0) cancel_action(a);
+                    else if (join) do_join(a);
+                    else do_evolve(a);
                     return;
                 }
             }
@@ -1232,6 +1270,16 @@ void battle_event(App *a, const SDL_Event *e)
             a->sel_unit = -1;
             a->tmenu_idx = 0;
             a->bs = BS_TURN_MENU;
+            return;
+        }
+        if (a->bs == BS_JOIN_CONFIRM) {
+            if (k == SDLK_LEFT)  a->amenu_idx = 0;
+            if (k == SDLK_RIGHT) a->amenu_idx = 1;
+            if (k == SDLK_z || k == SDLK_RETURN) {
+                if (a->amenu_idx == 0) do_join(a);
+                else cancel_action(a);
+            }
+            if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
             return;
         }
         if (a->bs == BS_EVOLVE_CONFIRM) {
@@ -1720,6 +1768,7 @@ static void draw_panels(App *a)
     case BS_UNLOAD:        hint = tx("HINT_UNLOAD"); break;
     case BS_LAYER_PICK:    hint = tx("HINT_LAYER_PICK"); break;
     case BS_EVOLVE_CONFIRM: hint = tx("HINT_EVOLVE"); break;
+    case BS_JOIN_CONFIRM:  hint = tx("HINT_JOIN"); break;
     case BS_UNITLIST:      hint = tx("HINT_UNITLIST"); break;
     case BS_PRODUCTION:    hint = tx("HINT_PROD"); break;
     case BS_SAVE_MENU:     hint = tx("HINT_SAVE"); break;
@@ -1923,8 +1972,8 @@ static void draw_menus(App *a)
         int to = game_evolve_target(g, a->sel_unit);
         const char *from = g->types[g->units[a->sel_unit].type].name;
         const char *toname = (to >= 0) ? g->types[to].name : "";
-        int bw = 480, bh = 190;
-        int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 100;
+        int bw = 500, bh = 208;
+        int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 108;
         fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 130 });
         fill_rect(a, bx, by, bw, bh, (SDL_Color){ 28, 32, 38, 248 });
         outline_rect(a, bx, by, bw, bh, COL_YELLOW);
@@ -1932,9 +1981,12 @@ static void draw_menus(App *a)
         char buf[192];
         snprintf(buf, sizeof buf, tx("EVOLVE_TITLE_FMT"), from, toname);
         draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
-        draw_text_center(a, a->font_s, WIN_W / 2, by + 52, COL_YELLOW,
+        snprintf(buf, sizeof buf, tx("EVOLVE_COST_FMT"),
+                 game_evolve_cost(g, a->sel_unit), g->funds[g->current]);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 50, COL_YELLOW, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 72, COL_GRAY,
                          tx("EVOLVE_WARN1"));
-        draw_text_center(a, a->font_s, WIN_W / 2, by + 74, COL_GRAY,
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 92, COL_GRAY,
                          tx("EVOLVE_WARN2"));
         for (int i = 0; i < 2; i++) {
             SDL_Rect r = evo_rect(i);
@@ -1946,6 +1998,45 @@ static void draw_menus(App *a)
             draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
                              sel ? COL_WHITE : COL_GRAY,
                              tx(i == 0 ? "EVOLVE_YES" : "EVOLVE_NO"));
+        }
+    }
+    /* 合流の確認。合流後のHPと払い戻しを先に見せる（片方は盤上から消えるため） */
+    if (a->bs == BS_JOIN_CONFIRM && a->sel_unit >= 0 && a->join_target >= 0) {
+        const Unit *m = &g->units[a->sel_unit];
+        const Unit *t = &g->units[a->join_target];
+        const UnitType *ut = &g->types[t->type];
+        int sum = m->hp + t->hp;
+        int hp = sum > 10 ? 10 : sum;
+        int over = sum > 10 ? sum - 10 : 0;
+        int refund = over > 0 ? ut->cost * over / 10 : 0;
+
+        int bw = 500, bh = 208;
+        int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 108;
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 130 });
+        fill_rect(a, bx, by, bw, bh, (SDL_Color){ 28, 32, 38, 248 });
+        outline_rect(a, bx, by, bw, bh, COL_YELLOW);
+
+        char buf[192];
+        snprintf(buf, sizeof buf, tx("JOIN_TITLE_FMT"), ut->name);
+        draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
+        snprintf(buf, sizeof buf, tx("JOIN_HP_FMT"), m->hp, t->hp, hp);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 50, COL_YELLOW, buf);
+        if (refund > 0) {
+            snprintf(buf, sizeof buf, tx("JOIN_REFUND_FMT"), refund);
+            draw_text_center(a, a->font_s, WIN_W / 2, by + 72, COL_YELLOW, buf);
+        }
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 92, COL_GRAY,
+                         tx("JOIN_WARN"));
+        for (int i = 0; i < 2; i++) {
+            SDL_Rect r = evo_rect(i);
+            bool sel = (a->amenu_idx == i);
+            fill_rect(a, r.x, r.y, r.w, r.h,
+                      sel ? (SDL_Color){ 80, 110, 160, 255 }
+                          : (SDL_Color){ 40, 48, 60, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
+                             sel ? COL_WHITE : COL_GRAY,
+                             tx(i == 0 ? "JOIN_YES" : "JOIN_NO"));
         }
     }
     if (a->bs == BS_TURN_MENU) {

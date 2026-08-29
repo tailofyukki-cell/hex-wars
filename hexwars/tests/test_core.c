@@ -503,9 +503,18 @@ static void test_evolve(void)
     /* 経験値が足りない間は進化できない */
     g->tiles[3][3].terrain = (uint8_t)t_city;
     g->tiles[3][3].owner = 0;
+    g->funds[0] = 99999;
     g->units[ui].exp = 99;
     CHECK(!game_can_evolve(g, ui));
     g->units[ui].exp = 100;
+    CHECK(game_can_evolve(g, ui));
+
+    /* 資金は元ユニットの価格の2倍。足りなければ進化できない */
+    int cost = game_evolve_cost(g, ui);
+    CHECK(cost == g->types[inf].cost * 2);
+    g->funds[0] = cost - 1;
+    CHECK(!game_can_evolve(g, ui));
+    g->funds[0] = cost;
     CHECK(game_can_evolve(g, ui));
 
     /* 拠点の外／敵の拠点では進化できない */
@@ -517,9 +526,11 @@ static void test_evolve(void)
     g->tiles[3][3].terrain = (uint8_t)t_city;
     CHECK(game_can_evolve(g, ui));
 
-    /* 進化を実行 */
+    /* 進化を実行。資金がちょうど引かれること */
     int hp_before = g->units[ui].hp;
+    g->funds[0] = cost + 500;
     CHECK(game_evolve_unit(g, ui) == 0);
+    CHECK(g->funds[0] == 500);
     CHECK(g->units[ui].type == to);
     CHECK(g->units[ui].exp == 0);                     /* 経験値はリセット */
     CHECK(g->units[ui].hp == hp_before);              /* HPは据え置き */

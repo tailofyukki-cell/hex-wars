@@ -132,6 +132,8 @@ bool game_can_board(const Game *g, int passenger, int transport);
 bool game_can_evolve(const Game *g, int ui);
 /* 進化先のユニット型 index / -1（条件を満たさない・進化先が無い） */
 int  game_evolve_target(const Game *g, int ui);
+/* 進化に必要な資金（元ユニットの価格×EVOLVE_COST_MUL）。進化先が無ければ0 */
+int  game_evolve_cost(const Game *g, int ui);
 /* 進化を実行する。戻り値 0=成功 */
 int  game_evolve_unit(Game *g, int ui);
 

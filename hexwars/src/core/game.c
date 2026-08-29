@@ -809,6 +809,19 @@ int game_first_cargo(const Game *g, int transport)
 /* ------------------------------------------------------------------ */
 /* 進化（docs/evolution_spec.md）                                      */
 /* ------------------------------------------------------------------ */
+/* 進化に要る資金は元ユニットの価格の何倍か。
+ * キャンペーン終盤は資金が余りがちなので、その使い道にもなっている。 */
+#define EVOLVE_COST_MUL 2
+
+int game_evolve_cost(const Game *g, int ui)
+{
+    if (ui < 0 || ui >= g->n_units) return 0;
+    const Unit *u = &g->units[ui];
+    const UnitType *t = unit_type(g, u);
+    if (!t->evolve_to[0]) return 0;
+    return t->cost * EVOLVE_COST_MUL;
+}
+
 int game_evolve_target(const Game *g, int ui)
 {
     if (ui < 0 || ui >= g->n_units) return -1;
@@ -828,6 +841,8 @@ int game_evolve_target(const Game *g, int ui)
     if (tile->owner != (int8_t)u->owner) return -1;
     if (!(terr->supplies & (1u << t->mclass))) return -1;
 
+    if (g->funds[u->owner] < game_evolve_cost(g, ui)) return -1;   /* 資金不足 */
+
     for (int i = 0; i < g->n_types; i++)
         if (!strcmp(g->types[i].id, t->evolve_to)) return i;
     return -1;                                     /* 進化先が見つからない */
@@ -845,6 +860,7 @@ int game_evolve_unit(Game *g, int ui)
     Unit *u = &g->units[ui];
     const UnitType *t = &g->types[nt];
 
+    g->funds[u->owner] -= game_evolve_cost(g, ui);   /* 型を変える前に引く */
     u->type = (uint8_t)nt;
     u->exp = 0;                    /* 熟練度は振り出しに戻る＝これが進化の代償 */
     /* HP は据え置き（満タンにすると前線での回復手段になってしまう）。
