@@ -578,7 +578,7 @@ void game_wait_unit(Game *g, int ui)
     g->units[ui].flags |= UF_DONE;
 }
 
-bool game_type_buildable_at(const Game *g, int x, int y, int type)
+bool game_type_deployable_at(const Game *g, int x, int y, int type)
 {
     const TerrainType *t = game_terrain_at(g, x, y);
     MoveClass mc = (MoveClass)g->types[type].mclass;
@@ -590,11 +590,19 @@ bool game_type_buildable_at(const Game *g, int x, int y, int type)
     default:        return false;
     }
     if (!cat_ok) return false;
-    if (g->types[type].no_produce) return false;   /* 進化でのみ入手できる */
-    /* 立体化: 出てくるユニットのレイヤーさえ空いていれば生産できる。
+    /* 立体化: 出てくるユニットのレイヤーさえ空いていればよい。
      * 上空を飛んでいる航空機が工場の戦車生産を塞ぐ、といったことが起きないようにする。
      * 港では海面が塞がっていても海中（潜水艦）は出せる、という判定にもなる。 */
     return game_unit_at_layer(g, x, y, unit_layer(mc)) < 0;
+}
+
+bool game_type_buildable_at(const Game *g, int x, int y, int type)
+{
+    /* 「買える」かどうか。進化でのみ入手できる種別はここで弾く。
+     * 倉庫から戻すだけの経路は game_type_deployable_at を使うこと
+     * （こちらで弾くと、進化した部隊が倉庫から二度と出せなくなる）。 */
+    if (g->types[type].no_produce) return false;
+    return game_type_deployable_at(g, x, y, type);
 }
 
 bool game_can_produce_at(const Game *g, int player, int x, int y)
@@ -614,6 +622,7 @@ int game_produce(Game *g, int x, int y, int type)
 {
     int p = g->current;
     if (!game_can_produce_at(g, p, x, y)) return -1;
+    /* 有料生産なので buildable（進化専用ユニットは買えない）で見る */
     if (!game_type_buildable_at(g, x, y, type)) return -1;
     if (g->funds[p] < g->types[type].cost) return -1;
 
@@ -630,7 +639,9 @@ int game_deploy_free(Game *g, int x, int y, int type, int exp)
 {
     int p = g->current;
     if (!game_can_produce_at(g, p, x, y)) return -1;
-    if (!game_type_buildable_at(g, x, y, type)) return -1;
+    /* 倉庫から戻すだけなので deployable で見る。buildable だと no_produce に
+     * 弾かれて、進化した部隊が倉庫から二度と出せなくなる。 */
+    if (!game_type_deployable_at(g, x, y, type)) return -1;
     int ui = game_spawn_unit(g, p, type, x, y, 10);
     if (ui < 0) return -1;
     g->units[ui].exp = (uint8_t)exp;

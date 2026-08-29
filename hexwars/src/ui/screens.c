@@ -1555,8 +1555,9 @@ static int deploy_count(const App *a)
 
 static void deploy_enter(App *a)
 {
-    /* 既定は従来どおり「経験値の高い順に上限まで」。
-     * carry[] は経験値降順に並んでいるので先頭から埋めればよい。 */
+    /* 既定は「価値の高い順に上限まで」。
+     * carry[] は価格→経験値→HP の順に並んでいるので先頭から埋めればよい
+     * （経験値だけで並べると、進化直後で経験値0の精鋭が最後尾に沈む）。 */
     memset(a->dep_sel, 0, sizeof a->dep_sel);
     for (int i = 0; i < a->cps.n_carry && i < a->dep_limit; i++)
         a->dep_sel[i] = 1;

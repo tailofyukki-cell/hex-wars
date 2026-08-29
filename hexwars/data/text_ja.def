@@ -261,7 +261,7 @@ DEPLOY_MARK_GO    = ＞ 出撃
 DEPLOY_MARK_KEEP  = 　 倉庫
 DEPLOY_EXP_FMT    = 経験 %d (ランク%d)
 DEPLOY_GO         = この編成で出撃
-DEPLOY_HINT       = ↑↓/ホイール:選択  Z/Space:出撃⇔倉庫  A:経験値順で自動  X:出撃
+DEPLOY_HINT       = ↑↓/ホイール:選択  Z/Space:出撃⇔倉庫  A:価値順で自動  X:出撃
 
 # --- 副目標（サブミッション） ---
 SUB_TITLE_FMT   = ◆ 副目標（各 +%d）

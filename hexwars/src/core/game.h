@@ -111,6 +111,10 @@ int  game_produce(Game *g, int x, int y, int type);
 int  game_deploy_free(Game *g, int x, int y, int type, int exp);
 bool game_can_produce_at(const Game *g, int player, int x, int y);
 bool game_type_buildable_at(const Game *g, int x, int y, int type);
+/* その拠点に「置ける」種別か（種別カテゴリとレイヤーの空きだけを見る）。
+ * game_type_buildable_at と違い no_produce を弾かないので、進化後のユニットも真になる。
+ * 倉庫からの引き出しのように「買うのではなく戻す」経路で使う。 */
+bool game_type_deployable_at(const Game *g, int x, int y, int type);
 
 /* --- 補給ユニット（ammo スロットを「補給物資」として使う） --- */
 /* ui の隣接味方で燃料/弾薬が減っているユニットがあるか（物資1以上必要） */

@@ -570,12 +570,19 @@ int campaign_on_victory(const Game *g, const Campaign *c, CampaignState *s)
         for (int i = 0; i < g->n_units; i++)
             if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 0)
                 idx[n++] = i;
-        /* 経験値降順（同値ならHP降順）の単純選択ソート */
+        /* 「価値の高い順」に並べる: 価格 → 経験値 → HP の順で比較する。
+         * **経験値だけで並べてはいけない。** 進化すると経験値が0に戻るので、
+         * 進化したばかりの精鋭が必ず最後尾に回り、出撃枠から溢れて倉庫に沈む。
+         * 一度沈むと戦えないので経験値も戻らず、永久に控えのままになってしまう。
+         * 価格を第一の物差しにすると、進化後（元より高価）が前に来る。 */
         for (int i = 0; i < n; i++)
             for (int j = i + 1; j < n; j++) {
                 const Unit *uj = &g->units[idx[j]], *ui = &g->units[idx[i]];
-                if (uj->exp > ui->exp ||
-                    (uj->exp == ui->exp && uj->hp > ui->hp)) {
+                int cj = g->types[uj->type].cost, ci = g->types[ui->type].cost;
+                bool better = (cj > ci) ||
+                              (cj == ci && uj->exp > ui->exp) ||
+                              (cj == ci && uj->exp == ui->exp && uj->hp > ui->hp);
+                if (better) {
                     int t = idx[i]; idx[i] = idx[j]; idx[j] = t;
                 }
             }

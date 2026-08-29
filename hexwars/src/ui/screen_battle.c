@@ -616,7 +616,9 @@ static void open_production(App *a, int x, int y)
     if (a->campaign_mode) {
         for (int k = 0; k < a->cps.n_store; k++) {
             int t = a->cps.store[k].type;
-            if (t < g->n_types && game_type_buildable_at(g, x, y, t)) {
+            /* 倉庫は「買う」のではなく「戻す」ので deployable で見る。
+             * buildable だと進化後のユニットが一生引き出せなくなる。 */
+            if (t < g->n_types && game_type_deployable_at(g, x, y, t)) {
                 a->prod_store[a->prod_n] = k;
                 a->prod_items[a->prod_n++] = t;
             }

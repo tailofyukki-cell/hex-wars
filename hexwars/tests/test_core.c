@@ -555,6 +555,73 @@ static void test_evolve(void)
     }
 }
 
+/* 進化したユニットがキャンペーンで失われないこと。
+ * (1) 進化後は経験値0なので、経験値だけで並べると出撃枠から溢れて倉庫に沈む
+ * (2) 倉庫からの引き出しは「買う」ではなく「戻す」なので no_produce でも通る
+ * この2つが揃わないと、進化した精鋭が二度と戦場に出られなくなる。 */
+static void test_evolved_carry(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    g->fog = false;
+    game_start(g, 5);
+    g->n_units = 0;
+
+    int inf = data_find_unit_type(g, "INFANTRY");
+    int evo = -1;
+    for (int i = 0; i < g->n_types; i++)
+        if (!strcmp(g->types[i].id, g->types[inf].evolve_to)) evo = i;
+    CHECK(inf >= 0 && evo >= 0);
+    if (inf < 0 || evo < 0) return;
+
+    /* (2) 倉庫から進化後のユニットを引き出せる（買えはしない） */
+    int t_fac = -1;
+    for (int i = 0; i < g->n_terrains; i++)
+        if (g->terrains[i].produces == PROD_LAND && !g->terrains[i].is_hq) t_fac = i;
+    CHECK(t_fac >= 0);
+    if (t_fac >= 0) {
+        g->tiles[5][5].terrain = (uint8_t)t_fac;
+        g->tiles[5][5].owner = 0;
+        g->current = 0;
+        CHECK(!game_type_buildable_at(g, 5, 5, evo));   /* 生産はできない */
+        CHECK(game_type_deployable_at(g, 5, 5, evo));   /* 倉庫からは戻せる */
+        /* 有料生産では買えないままであること（進化でのみ入手の原則） */
+        g->funds[0] = 99999;
+        CHECK(game_produce(g, 5, 5, evo) < 0);
+        int ui = game_deploy_free(g, 5, 5, evo, 40);
+        CHECK(ui >= 0);
+        if (ui >= 0) {
+            CHECK(g->units[ui].type == evo);
+            CHECK(g->units[ui].exp == 40);              /* 経験値も保たれる */
+        }
+    }
+
+    /* (1) 持越しの並び: 進化後（経験値0）が、未進化の熟練兵より前に来る */
+    g->n_units = 0;
+    Campaign c;
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    for (int i = 0; i < 5; i++) {                       /* 熟練の歩兵たち */
+        int u = game_spawn_unit(g, 0, inf, 1, 1, 10);
+        g->units[u].exp = 90;
+    }
+    int ev = game_spawn_unit(g, 0, evo, 2, 2, 10);      /* 進化直後（経験値0） */
+    CHECK(ev >= 0);
+    if (ev >= 0) g->units[ev].exp = 0;
+
+    CampaignState st;
+    memset(&st, 0, sizeof st);
+    snprintf(st.node, sizeof st.node, "M01");
+    g->winner = 0; g->turn = 40;
+    CHECK(campaign_on_victory(g, &c, &st) == 0);
+    CHECK(st.n_carry == 6);
+    /* 先頭が進化後（価格が高い）＝出撃枠が少なくても真っ先に出る */
+    CHECK(st.carry[0].type == evo);
+}
+
 static void test_transport(void)
 {
     Game *g = &s_game;
@@ -2436,6 +2503,7 @@ int main(void)
     test_paradrop();
     test_produce_layers();
     test_evolve();
+    test_evolved_carry();
     test_supply();
     test_supply_layers();
     test_upkeep_data();
