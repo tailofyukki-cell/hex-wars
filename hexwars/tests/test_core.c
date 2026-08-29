@@ -994,7 +994,8 @@ static void test_campaign(void)
         game_start(&g3, 3);
         g3.n_units = 0;
         int inf3 = data_find_unit_type(&g3, "INFANTRY");
-        int total = MAX_CARRY_UNITS + 8;
+        /* 引き継ぎに上限は無いので、生存した全員が carry に入る */
+        int total = 48;
         for (int i = 0; i < total; i++) {
             int u = game_spawn_unit(&g3, 0, inf3, 1, 1, 10);
             g3.units[u].exp = (uint8_t)(i * 3 % 100);   /* バラバラな経験値 */
@@ -1004,14 +1005,11 @@ static void test_campaign(void)
         snprintf(s3.node, sizeof s3.node, "M01");
         g3.winner = 0; g3.turn = 50;
         CHECK(campaign_on_victory(&g3, &c, &s3) == 0);
-        CHECK(s3.n_carry == MAX_CARRY_UNITS);
-        /* carry[] は経験値降順 */
+        CHECK(s3.n_carry == total);      /* 全員が次の作戦へ */
+        CHECK(s3.n_store == 0);          /* 溢れないので倉庫は使わない */
+        /* carry[] は経験値降順（出撃枠が足りないときに精鋭から並ぶ） */
         for (int i = 1; i < s3.n_carry; i++)
             CHECK(s3.carry[i - 1].exp >= s3.carry[i].exp);
-        /* 倉庫行きは持越し組より経験値が低い（＝精鋭が優先された） */
-        int lowest_carry = s3.carry[s3.n_carry - 1].exp;
-        for (int i = 0; i < s3.n_store; i++)
-            CHECK(s3.store[i].exp <= lowest_carry);
     }
 
     /* 持越しの初期配置はマップ本来の自軍ユニット数の DEPLOY_CARRY_RATIO 倍まで。
@@ -1105,25 +1103,25 @@ static void test_warehouse(void)
     CHECK(g->units[ui].flags & UF_DONE);               /* 生産同様 行動済み */
     CHECK(game_deploy_free(g, fx, fy, inf, 10) < 0);   /* 既にユニットが居るので不可 */
 
-    /* 持越し上限を超えた生存ユニットは倉庫へ保管される */
+    /* 生き残った部隊は上限なく次の作戦へ引き継がれる（倉庫送りにならない） */
     g->n_units = 0;
     Campaign c;
     CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
-    int extra = 5;
-    for (int i = 0; i < MAX_CARRY_UNITS + extra; i++) {
+    int many = 60;                                     /* 旧上限(30)より多く */
+    for (int i = 0; i < many; i++) {
         int u = game_spawn_unit(g, 0, inf, 1, 1, 10);  /* 位置は重複可 */
-        g->units[u].exp = (uint8_t)i;                  /* 0..34 */
+        g->units[u].exp = (uint8_t)i;
     }
     CampaignState s2;
     memset(&s2, 0, sizeof s2);
     snprintf(s2.node, sizeof s2.node, "M01");
     g->winner = 0; g->turn = 50;
     CHECK(campaign_on_victory(g, &c, &s2) == 0);
-    CHECK(s2.n_carry == MAX_CARRY_UNITS);              /* 上限まで持越し */
-    CHECK(s2.n_store == extra);                        /* 超過分が倉庫へ */
-    /* 倉庫に入るのは経験値の低い方（0..4） */
-    for (int i = 0; i < s2.n_store; i++)
-        CHECK(s2.store[i].exp < MAX_CARRY_UNITS);
+    CHECK(s2.n_carry == many);                         /* 全員引き継ぐ */
+    CHECK(s2.n_store == 0);                            /* 倉庫は使われない */
+    /* 経験値降順に並ぶ（出撃枠が足りないとき精鋭から出せるように） */
+    for (int i = 1; i < s2.n_carry; i++)
+        CHECK(s2.carry[i - 1].exp >= s2.carry[i].exp);
 }
 
 /* 指揮官（CO）: 常時効果・ゲージ・必殺技 */

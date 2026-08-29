@@ -13,8 +13,13 @@
 #define MAX_TERRAIN      32   /* 同上。ファンタジー等で地形を増やす余地 */
 #define MAX_COMMANDERS   16
 #define MAX_CAMPAIGN_MAPS 20
-#define MAX_CARRY_UNITS  30
-#define MAX_STORE_UNITS  64   /* 倉庫（持越し不可ユニットの保管庫）容量 */
+/* 次の作戦へ引き継げるユニット数と、倉庫の容量。
+ * 生き残った部隊は上限なく引き継げる方針なので、1マップに存在しうる最大数
+ * （MAX_UNITS）まで取ってある＝実質無制限。セーブは件数を先に書く形式なので、
+ * ここを増やしてもセーブ形式は変わらず、古いセーブもそのまま読める
+ * （件数は u8 で書くので 255 までが上限）。 */
+#define MAX_CARRY_UNITS  MAX_UNITS
+#define MAX_STORE_UNITS  MAX_UNITS   /* 倉庫（出撃枠に入らなかった部隊の保管庫） */
 /* 持越しユニットの初期配置上限 = マップ本来の自軍ユニット数 × この倍率。
  * 超過分は倉庫行き（生産拠点で無料で引き出せる） */
 #define DEPLOY_CARRY_RATIO 2

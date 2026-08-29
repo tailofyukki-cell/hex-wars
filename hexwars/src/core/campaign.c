@@ -558,9 +558,11 @@ int campaign_on_victory(const Game *g, const Campaign *c, CampaignState *s)
         if (&c->nodes[i] == node)
             s->cleared |= 1u << i;
 
-    /* 持越しユニット: 生存P0ユニットを「経験値の高い順」に MAX_CARRY_UNITS 体まで。
+    /* 持越しユニット: 生存P0ユニットを「経験値の高い順」に**全員**引き継ぐ
+     * （MAX_CARRY_UNITS は1マップに置ける最大数＝実質無制限）。
      * 経験値が同じ場合はHPの高い（消耗の少ない）方を優先する。
-     * 溢れた分は倉庫へ回るので、精鋭が確実に次のマップへ引き継がれる。 */
+     * 並び順が意味を持つのは次の作戦の出撃枠が足りないときで、
+     * 先頭から順に出撃し、あぶれた分が倉庫へ回る＝精鋭から戦場に出る。 */
     s->n_carry = 0;
     if (node->carry) {
         int idx[MAX_UNITS];
