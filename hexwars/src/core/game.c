@@ -954,9 +954,22 @@ bool game_can_board(const Game *g, int passenger, int transport)
     /* 搭載中の輸送ユニットは載せない（入れ子禁止） */
     for (int s = 0; s < MAX_CARGO; s++)
         if (p->cargo[s] >= 0) return false;
-    /* transport_by リストに輸送手段IDが含まれるか */
-    for (int i = 0; i < pt->n_transport_by; i++)
+    /* transport_by リストに輸送手段IDが含まれるか。
+     * 進化した輸送手段（CARRIER_V など）は ID が変わるうえ、transport_by には
+     * 進化前のID しか書かれていない。しかも transport_by は4件までで歩兵は既に
+     * 使い切っているため、進化後のIDを書き足すこともできない。
+     * そこで**進化前のIDでも一致する**ようにして、大型空母に艦載機が乗らない、
+     * 装甲兵員輸送車に歩兵が乗らない、といった事故を防ぐ。 */
+    const char *base = NULL;
+    for (int i = 0; i < g->n_types; i++)
+        if (g->types[i].evolve_to[0] && !strcmp(g->types[i].evolve_to, tt->id)) {
+            base = g->types[i].id;
+            break;
+        }
+    for (int i = 0; i < pt->n_transport_by; i++) {
         if (!strcmp(pt->transport_by[i], tt->id)) return true;
+        if (base && !strcmp(pt->transport_by[i], base)) return true;
+    }
     return false;
 }
 

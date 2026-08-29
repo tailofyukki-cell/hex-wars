@@ -622,6 +622,105 @@ static void test_evolved_carry(void)
     CHECK(st.carry[0].type == evo);
 }
 
+/* 進化した輸送手段にも従来どおり搭載できること。
+ * transport_by には進化前のID（CARRIER 等）しか書かれておらず、しかも4件までで
+ * 歩兵は使い切っているため、進化後のIDを書き足すことができない。
+ * 進化前のIDでも一致させていないと、大型空母に艦載機が乗らなくなる。 */
+static void test_evolved_transport(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    g->fog = false;
+    game_start(g, 7);
+    g->n_units = 0;
+
+    /* 進化先を持つ全ての輸送手段について、進化後も同じ客を積めること */
+    int checked = 0;
+    for (int base = 0; base < g->n_types; base++) {
+        if (g->types[base].capacity == 0) continue;
+        if (!g->types[base].evolve_to[0]) continue;
+        int evo = -1;
+        for (int i = 0; i < g->n_types; i++)
+            if (!strcmp(g->types[i].id, g->types[base].evolve_to)) evo = i;
+        CHECK(evo >= 0);
+        if (evo < 0) continue;
+
+        /* この輸送手段に乗れる客を1つ探す */
+        int pass = -1;
+        for (int i = 0; i < g->n_types && pass < 0; i++)
+            for (int k = 0; k < g->types[i].n_transport_by; k++)
+                if (!strcmp(g->types[i].transport_by[k], g->types[base].id)) {
+                    pass = i; break;
+                }
+        CHECK(pass >= 0);
+        if (pass < 0) continue;
+
+        g->n_units = 0;
+        int pi = game_spawn_unit(g, 0, pass, 3, 3, 10);
+        int ti = game_spawn_unit(g, 0, base, 3, 3, 10);
+        int vi = game_spawn_unit(g, 0, evo,  4, 4, 10);
+        CHECK(pi >= 0 && ti >= 0 && vi >= 0);
+        if (pi < 0 || ti < 0 || vi < 0) continue;
+        CHECK(game_can_board(g, pi, ti));   /* 進化前に乗れる */
+        CHECK(game_can_board(g, pi, vi));   /* 進化後にも乗れる（本題） */
+        checked++;
+    }
+    CHECK(checked >= 5);   /* トラック・輸送ヘリ・輸送艦・輸送機・空母 */
+
+    /* 副目標「T_SHIP を生存させる」は、進化させた強襲揚陸艦でも達成できること
+     * （ID一致だけで見ていると、進化した途端に達成不能になってしまう） */
+    {
+        Campaign c;
+        CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+        const CpnNode *node = NULL;
+        int oi = -1;
+        for (int i = 0; i < c.n_nodes && oi < 0; i++)
+            for (int k = 0; k < c.nodes[i].n_subs; k++)
+                if (!strcmp(c.nodes[i].subs[k].unit, "T_SHIP")) {
+                    node = &c.nodes[i]; oi = k; break;
+                }
+        CHECK(node != NULL && oi >= 0);
+        int ts = data_find_unit_type(g, "T_SHIP");
+        int tsv = data_find_unit_type(g, "T_SHIP_V");
+        if (node && oi >= 0 && ts >= 0 && tsv >= 0) {
+            g->n_units = 0;
+            CHECK(!campaign_sub_done(g, node, oi));          /* 1隻も居ない */
+            game_spawn_unit(g, 0, ts, 3, 3, 10);
+            CHECK(campaign_sub_done(g, node, oi));           /* 進化前でOK */
+            g->n_units = 0;
+            game_spawn_unit(g, 0, tsv, 3, 3, 10);
+            CHECK(campaign_sub_done(g, node, oi));           /* 進化後でもOK */
+        }
+    }
+
+    /* 大型空母は4機まで積める */
+    int cv = -1, ft = data_find_unit_type(g, "FIGHTER");
+    for (int i = 0; i < g->n_types; i++)
+        if (!strcmp(g->types[i].id, "CARRIER_V")) cv = i;
+    CHECK(cv >= 0 && ft >= 0);
+    if (cv >= 0 && ft >= 0) {
+        CHECK(g->types[cv].capacity == 4);
+        CHECK(g->types[cv].resupply_cargo == 1);
+        g->n_units = 0;
+        int ci = game_spawn_unit(g, 0, cv, 6, 6, 10);
+        CHECK(ci >= 0);
+        for (int k = 0; k < 4 && ci >= 0; k++) {
+            int ai = game_spawn_unit(g, 0, ft, 6, 6, 10);
+            CHECK(ai >= 0);
+            CHECK(game_can_board(g, ai, ci));
+            if (ai >= 0) game_load_unit(g, ai, ci);
+        }
+        /* 5機目は満載で乗れない */
+        int extra = game_spawn_unit(g, 0, ft, 7, 7, 10);
+        CHECK(extra >= 0);
+        if (extra >= 0 && ci >= 0) CHECK(!game_can_board(g, extra, ci));
+    }
+}
+
 static void test_transport(void)
 {
     Game *g = &s_game;
@@ -2504,6 +2603,7 @@ int main(void)
     test_produce_layers();
     test_evolve();
     test_evolved_carry();
+    test_evolved_transport();
     test_supply();
     test_supply_layers();
     test_upkeep_data();

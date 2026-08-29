@@ -246,6 +246,20 @@ static int clamp100(int v) { return v < 0 ? 0 : (v > 100 ? 100 : v); }
 
 int campaign_sub_bonus(void) { return 800; }
 
+
+/* 種別 type が「name の系統」か。進化すると ID が変わる（T_SHIP → T_SHIP_V）ので、
+ * 進化後も同じ系統として数える。そうしないと
+ * 「輸送艦を1隻以上生存させる」のような副目標が、進化させた途端に達成不能になる。 */
+static bool type_is_kind(const Game *g, int type, const char *name)
+{
+    if (!strcmp(g->types[type].id, name)) return true;
+    for (int i = 0; i < g->n_types; i++)
+        if (!strcmp(g->types[i].id, name))
+            return g->types[i].evolve_to[0] &&
+                   !strcmp(g->types[i].evolve_to, g->types[type].id);
+    return false;
+}
+
 bool campaign_sub_done(const Game *g, const CpnNode *node, int i)
 {
     if (!g || !node || i < 0 || i >= node->n_subs) return false;
@@ -261,7 +275,7 @@ bool campaign_sub_done(const Game *g, const CpnNode *node, int i)
         for (int u = 0; u < g->n_units; u++) {
             const Unit *un = &g->units[u];
             if (!(un->flags & UF_ALIVE) || un->owner != 0) continue;
-            if (o->unit[0] && strcmp(g->types[un->type].id, o->unit) != 0) continue;
+            if (o->unit[0] && !type_is_kind(g, un->type, o->unit)) continue;
             n++;
         }
         return n >= o->param;
