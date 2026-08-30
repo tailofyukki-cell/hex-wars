@@ -485,6 +485,19 @@ static void reinforce_enemy(Game *g, int player_extra)
         place_unit_near(g, 1, types[i % n_types_seen], ox, oy);
 }
 
+/* place_unit_near の BFS は全面をなめる（距離制限なし・進入不可セルも踏む）ので、
+ * 「盤上のどこかに進入できるセルが1つでもあるか」と同じ意味になる。
+ * 占有は見ない（選択時点ではまだ持越しを並べていないため）。 */
+bool campaign_type_placeable(const Game *g, int type)
+{
+    if (type < 0 || type >= g->n_types) return false;
+    MoveClass mc = (MoveClass)g->types[type].mclass;
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++)
+            if (g->terrains[g->tiles[y][x].terrain].mcost[mc] > 0) return true;
+    return false;
+}
+
 int campaign_deploy_limit(const Game *g)
 {
     /* マップ本来の自軍ユニット数 × 倍率（持越し展開の前に数えること） */

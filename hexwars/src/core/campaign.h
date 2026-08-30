@@ -128,6 +128,9 @@ int  campaign_setup_map(Game *g, const Campaign *c, const CampaignState *s,
                         const char *base_path, char *err, int errlen);
 /* (2) このマップに展開できる持越しユニット数の上限（setup_map の後に呼ぶ） */
 int  campaign_deploy_limit(const Game *g);
+/* その兵种をこのマップに置けるか（例: 海の無いマップの艦船は false）。
+ * 出撃選択画面で「選べるけど実は倒庫行き」を防ぐために使う。 */
+bool campaign_type_placeable(const Game *g, int type);
 /* (3) 持越しを展開して開戦する。
  *     sel は s->carry[] と同じ並びの「出撃させる」フラグ（NULL なら経験値順に自動）。
  *     出撃しなかった部隊は倉庫へ送られる（消えない）。 */

@@ -64,7 +64,10 @@ typedef struct Game {
     uint8_t weather_next;   /* 次に変わる天候（予報として表示する） */
     int8_t  weather_left;   /* 残りラウンド数（0で weather_next へ切替） */
     uint8_t weather_on;     /* 0=このマップは天候なし（.map の weather=0） */
-    int16_t wx_pct[WX_COUNT]; /* 抽選確率%（既定 60/30/10。.map で上書き可） */
+    /* 天候の抽選重み（既定 60/30/10。.map の weather_clear/cloudy/rain で上書き可）。
+     * 切り替え時は「今の天候を除いて」この重みで引くので、
+     * 実際の出現率はこの値そのものではなく、差が小さくなる方向になる（実測 48/34/17）。 */
+    int16_t wx_pct[WX_COUNT];
 
     /* 設定 */
     bool  fog;             /* 索敵 ON/OFF */

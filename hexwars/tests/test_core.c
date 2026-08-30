@@ -1106,7 +1106,7 @@ static void test_campaign(void)
     Campaign c;
     CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
-    CHECK(c.n_nodes == 12);   /* M01-M10 + 海戦2ノード(N1/N2) */
+    CHECK(c.n_nodes == 14);   /* M01-M10 + 海戦/複合4ノード(N1/N2/N3/N4) */
     CHECK(!strcmp(c.start, "M01"));
     const CpnNode *n1 = campaign_find_node(&c, "M01");
     CHECK(n1 && !strcmp(n1->next_win, "M02"));
@@ -1118,6 +1118,47 @@ static void test_campaign(void)
         snprintf(path, sizeof path, "data/%s", c.nodes[i].map);
         CHECK(data_load_map(g, path, err, sizeof err) == 0);
         if (s_fail) { printf("  %s\n", err); return; }
+    }
+
+    /* next_win をたどると必ず WIN に着き、全ノードを通ること。
+     * ノードを挿し込んだときに鎖が切れたり孤立したりするのを防ぐ。 */
+    {
+        int visited = 0;
+        char cur[32];
+        snprintf(cur, sizeof cur, "%s", c.start);
+        while (strcmp(cur, "WIN") && visited <= c.n_nodes) {
+            const CpnNode *n = campaign_find_node(&c, cur);
+            CHECK(n != NULL);
+            if (!n) break;
+            visited++;
+            snprintf(cur, sizeof cur, "%s", n->next_win);
+        }
+        CHECK(!strcmp(cur, "WIN"));
+    }
+
+    /* 艦船を置けるマップかどうかの判定（出撃選択画面のグレーアウトに使う）。
+     * 終盤に艦船を出せる作戦があること＝育てた艦隊が死に札にならないこと。 */
+    {
+        int t_ship = data_find_unit_type(g, "BATTLESHIP");
+        int t_tank = data_find_unit_type(g, "TANK");
+        CHECK(t_ship >= 0 && t_tank >= 0);
+
+        CHECK(data_load_map(g, "data/maps/c10_plains.map", err, sizeof err) == 0);
+        CHECK(!campaign_type_placeable(g, t_ship));   /* 海が1マスも無いマップ */
+        CHECK(campaign_type_placeable(g, t_tank));
+
+        int naval_late = 0;
+        const char *late[] = { "N3", "N2", "N4", "M10" };
+        for (int i = 0; i < (int)(sizeof late / sizeof late[0]); i++) {
+            const CpnNode *n = campaign_find_node(&c, late[i]);
+            CHECK(n != NULL);
+            if (!n) continue;
+            char path[128];
+            snprintf(path, sizeof path, "data/%s", n->map);
+            CHECK(data_load_map(g, path, err, sizeof err) == 0);
+            if (campaign_type_placeable(g, t_ship)) naval_late++;
+        }
+        CHECK(naval_late >= 3);   /* 終盤4作戦のうち3つ以上で艦隊が使える */
     }
 
     /* 開戦セットアップ + 持越し展開 */

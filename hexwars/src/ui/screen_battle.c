@@ -1475,6 +1475,25 @@ static void draw_overlays(App *a)
     float s = hex_size(a);
 
     if (a->bs == BS_UNIT_SELECTED) {
+        const Unit *su = &g->units[a->sel_unit];
+        const UnitType *st = &g->types[su->type];
+        /* 間接攻撃ユニット（射程2以上）は、どこまで撃てるかを先に見せる。
+         * 大半は move_and_fire=0（移動したら撃てない）なので、いま居る場所からの
+         * 射程を赤で示せばそのまま「今ターンの射界」になる。
+         * 高射砲のように移動後も撃てる機種だけは「ここからなら」の目安という位置づけ。
+         * 移動範囲（白）より先に塗って、白が上に来るようにする。 */
+        if (st->range_min >= 2) {
+            for (int y = 0; y < g->h; y++)
+                for (int x = 0; x < g->w; x++) {
+                    int d = hex_distance(su->pos.x, su->pos.y, x, y);
+                    if (d < st->range_min || d > st->range_max) continue;
+                    if (g->terrains[g->tiles[y][x].terrain].chr == 'x') continue;
+                    float cx, cy;
+                    hex_center_px(a, x, y, &cx, &cy);
+                    render_fill_hex_map(a, cx, cy, s - 1.5f,
+                                        (SDL_Color){ 220, 70, 50, 58 });
+                }
+        }
         for (int y = 0; y < g->h; y++)
             for (int x = 0; x < g->w; x++) {
                 if (a->mr.cost[y][x] < 0 || !a->mr.stop[y][x]) continue;
@@ -1571,7 +1590,12 @@ static void draw_topbar(App *a)
         SDL_Color wc = (w == WX_RAIN)   ? (SDL_Color){ 120, 180, 255, 255 }
                      : (w == WX_CLOUDY) ? (SDL_Color){ 200, 200, 205, 255 }
                                         : (SDL_Color){ 250, 220, 120, 255 };
-        snprintf(buf, sizeof buf, tx("TOP_WEATHER_FMT"), tx(WXK[w]), tx(WXK[nx]));
+        /* 「次」は「次のターン」ではなく「今の天候が終わったあと」。
+         * 残りターン数を出さないと「次は晴なのに雨が続く」と誤読される。
+         * weather_left は「この先何回 continue するか」なので、今ターンを含めて +1。 */
+        int wleft = g->weather_left + 1;
+        snprintf(buf, sizeof buf, tx("TOP_WEATHER_FMT"),
+                 tx(WXK[w]), wleft, tx(WXK[nx]));
         draw_text(a, a->font_s, 620, 9, wc, buf);
     }
 
@@ -1637,7 +1661,7 @@ static void draw_cargo_detail(App *a, int ui, int py)
     draw_text(a, a->font_s, bx + 12, by + 5, COL_YELLOW, tx("CARGO_TITLE"));
 
     int row = 0;
-    for (int s = 0; s < 2; s++) {
+    for (int s = 0; s < MAX_CARGO; s++) {
         if (u->cargo[s] < 0) continue;
         const Unit *c = &g->units[u->cargo[s]];
         const UnitType *ct = &g->types[c->type];

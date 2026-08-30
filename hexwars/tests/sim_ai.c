@@ -178,6 +178,8 @@ int main(void)
     if (run_match("data/maps/c08_airfields.map", 88, CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     if (run_match("data/maps/c09_cities.map", 99, CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     if (run_match("data/maps/c10_plains.map", 110, CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/c13_delta.map", 130, CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/c14_bastion.map", 140, CTRL_CPU_NORMAL, CTRL_CPU_HARD) == -100) fail++;
 
     if (fail == 0) { printf("SIMULATION OK\n"); return 0; }
     printf("%d FAILURE(S)\n", fail);

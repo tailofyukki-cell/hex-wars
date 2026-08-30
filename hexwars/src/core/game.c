@@ -371,22 +371,38 @@ int game_weather_move_mod(const Game *g, const Unit *u)
 }
 
 /* ラウンド開始時に天候を進める（両陣営で同じ天候・数ターン継続） */
+/* 天候を wx_pct の重みで引く。ただし except だけは選ばない。
+ * 今の天候と同じものを予報に出してしまうと「晴（次:晴）」のような
+ * 意味のない表示になり、切り替わっても見た目が変わらないので除外する。 */
+static uint8_t weather_pick(Game *g, int except)
+{
+    int total = 0;
+    for (int i = 0; i < WX_COUNT; i++)
+        if (i != except) total += g->wx_pct[i];
+    if (total <= 0) return (uint8_t)(except == WX_CLEAR ? WX_CLOUDY : WX_CLEAR);
+    int r = rng_range(&g->rng, 0, total - 1), acc = 0;
+    for (int i = 0; i < WX_COUNT; i++) {
+        if (i == except) continue;
+        acc += g->wx_pct[i];
+        if (r < acc) return (uint8_t)i;
+    }
+    return (uint8_t)(except == WX_CLEAR ? WX_CLOUDY : WX_CLEAR);  /* 保険 */
+}
+
 static void weather_advance(Game *g)
 {
     if (!g->weather_on) return;
     if (g->weather_left > 0) { g->weather_left--; return; }
-    /* 予報していた天候へ切り替え、次の予報を引く */
+    /* 予報していた天候へ切り替え、次の予報を引く。
+     * **次の予報は今の天候と別のものにする。** 同じ天候を引き直せてしまうと
+     * 「切り替わったのに見た目が変わらない」が頻発し（晴が60%なので特に）、
+     * 天候が止まって見える。重みは維持したまま、今の天候だけ除いて引く。 */
     g->weather = g->weather_next;
-    int total = 0;
-    for (int i = 0; i < WX_COUNT; i++) total += g->wx_pct[i];
-    if (total <= 0) { g->weather_next = WX_CLEAR; g->weather_left = 2; return; }
-    int r = rng_range(&g->rng, 0, total - 1), acc = 0, pick = WX_CLEAR;
-    for (int i = 0; i < WX_COUNT; i++) {
-        acc += g->wx_pct[i];
-        if (r < acc) { pick = i; break; }
-    }
-    g->weather_next = (uint8_t)pick;
-    g->weather_left = (int8_t)rng_range(&g->rng, 2, 4);  /* 2〜4ラウンド継続 */
+    g->weather_next = weather_pick(g, g->weather);
+    /* この先 2〜4 回は切り替えを見送る。今ラウンドを含めるので
+     * 同じ天候が続くのは **3〜5ラウンド**（実測でも 3R/4R/5R のほぼ均等）。
+     * 3ラウンド連続は最短ケースであって、珍しい事象ではない。 */
+    g->weather_left = (int8_t)rng_range(&g->rng, 2, 4);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1170,16 +1186,8 @@ void game_start(Game *g, uint32_t seed)
     }
     g->weather = WX_CLEAR;
     g->weather_left = (int8_t)(g->weather_on ? rng_range(&g->rng, 2, 4) : 0);
-    {   /* 最初の予報を引いておく */
-        int total = 0;
-        for (int i = 0; i < WX_COUNT; i++) total += g->wx_pct[i];
-        int r = total > 0 ? rng_range(&g->rng, 0, total - 1) : 0, acc = 0;
-        g->weather_next = WX_CLEAR;
-        for (int i = 0; i < WX_COUNT; i++) {
-            acc += g->wx_pct[i];
-            if (r < acc) { g->weather_next = (uint8_t)i; break; }
-        }
-    }
+    /* 最初の予報も晴以外から引く（開幕から「晴（次:晴）」では予報の意味がない） */
+    g->weather_next = weather_pick(g, WX_CLEAR);
     for (int y = 0; y < g->h; y++)
         for (int x = 0; x < g->w; x++) {
             g->tiles[y][x].cap_hp = CAPTURE_HP;

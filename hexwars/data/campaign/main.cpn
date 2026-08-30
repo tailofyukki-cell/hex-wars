@@ -1,4 +1,5 @@
-﻿# main.cpn - キャンペーン「西方の反攻」全12作戦（うち海戦4: M04/M05/N1/N2）
+# main.cpn - キャンペーン「西方の反攻」全14作戦（うち海戦6: M04/M05/N1/N2/N3/N4）
+# 終盤の N3/N4 は陸・海・空をすべて使う複合兵科マップ
 # 西方同盟の一師団司令官として東方連邦の侵攻を押し返し、敵首都へ進撃する
 
 [campaign]
@@ -187,7 +188,7 @@ map   = maps/c10_plains.map
 brief = 敵野戦軍の主力が平原に展開した。これを撃滅すれば
 brief = 首都への道が開ける。大戦車戦になるだろう。
 brief = 自走砲の支援射撃と対空防御を怠るな。
-next_win  = N2
+next_win  = N3
 next_lose = LOSE
 carry  = 1
 bonus  = 1200
@@ -201,13 +202,13 @@ event = LOSS:1:12 | FUNDS:0:1500 | 戦果が本国に伝わり、追加予算が
 [node N2]
 art   = gfx/brief/m02.png
 reward = gfx/reward/m02.png
-title = 第11作戦「敵首都上陸」
+title = 第12作戦「敵首都上陸」
 map   = maps/c12_dday.map
 brief = 敵首都は東岸の海に面している。西の海から史上最大の上陸作戦を敢行する。
 brief = 戦艦の艦砲と艦載機で海岸の敵防御を叩き、輸送艦の上陸部隊を海岸へ送り込め。
 brief = 敵は海岸砲・対空砲・機甲部隊で固めている。護衛の駆逐艦で沿岸の敵艦を排除し、
 brief = 橋頭堡を築いてから内陸の敵司令部へ進撃せよ。
-next_win  = M10
+next_win  = N4
 next_lose = LOSE
 carry  = 1
 bonus  = 1500
@@ -217,10 +218,52 @@ sub = SURVIVE:1:T_SHIP:輸送艦を1隻以上生存させ橋頭堡を築く
 sub = MAX_TURNS:50:50ターン以内に上陸を成功させる
 event = AREA:0:43,15:8 | SPAWN:1:AT_INFANTRY:43,15:3 | 水際の防衛隊が展開した！
 
+[node N3]
+art   = gfx/brief/m03.png
+reward = gfx/reward/m03.png
+title = 第11作戦「三角州の攻防」
+map   = maps/c13_delta.map
+brief = 敵本土の手前に、内海を抱いた広大な三角州が横たわる。
+brief = 内海は東西に深く食い込み、艦砲は両岸の陸戦を直接支援できる。
+brief = 南北の陸橋は狭く、機甲部隊はそこを通るしかない。
+brief = 湾内の島を輸送艦で獲れば、艦隊と航空隊の前進基地になる。
+brief = 陸・海・空を噛み合わせて進め。どれか一つでは抜けない。
+next_win  = N2
+next_lose = LOSE
+carry  = 1
+bonus  = 1300
+enemy  = HARD
+enemy_co = KARLA  # 三角州: 島と陸橋を絡めた粘り強い防御
+sub = CAPTURE:16:拠点を16個以上確保する（開始12＝湾内と陸橋の中立を4個獲る）
+sub = MAX_TURNS:45:45ターン以内に勝利する
+event = TURN:14 | SPAWN:1:DESTROYER:35,15:2 | 敵増援艦隊が内海に進入した！
+event = LOSS:1:10 | FUNDS:0:1200 | 内海の制海権が傾き、追加予算が下りた
+
+[node N4]
+art   = gfx/brief/m09.png
+reward = gfx/reward/m09.png
+title = 第13作戦「湾岸の要塞」
+map   = maps/c14_bastion.map
+brief = 首都の手前に最後の障壁がある。半島に築かれた湾岸要塞だ。
+brief = 中央の山稜は隘路が二本、川を渡れる橋も二本しかない。
+brief = 陸路だけでは押し切れない。北の湾から艦砲で要塞北岸を叩き、
+brief = 制空権を取ってから上陸部隊を送り込め。
+brief = ここを抜けば、あとは敵首都のみだ。
+next_win  = M10
+next_lose = LOSE
+carry  = 1
+bonus  = 1600
+enemy  = HARD
+enemy_co = WOLF   # 湾岸要塞: 要塞に籠もって削ってくる
+sub = MAX_TURNS:55:55ターン以内に要塞を陥落させる
+sub = MIN_KILLS:14:敵を14部隊以上撃破する
+event = TURN:16 | SPAWN:1:AA_GUN:44,22:2 | 要塞の対空砲台が増強された！
+event = AREA:0:42,21:6 | SPAWN:1:HTANK:45,25:2 | 要塞守備隊の重戦車が出撃した！
+
 [node M10]
 art   = gfx/brief/m10.png
 reward = gfx/reward/m10.png
-title = 最終作戦「首都攻略」（第12作戦）
+title = 最終作戦「首都攻略」（第14作戦）
 map   = maps/c04_capital.map
 brief = 敵本土に橋頭堡を確保した。残るは敵首都のみ。
 brief = 敵は精鋭部隊で首都を固めている。総力を挙げて攻略せよ。

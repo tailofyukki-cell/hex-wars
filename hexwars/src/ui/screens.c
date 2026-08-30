@@ -1546,6 +1546,14 @@ static SDL_Rect deploy_row_rect(App *a, int i)
     return r;
 }
 
+/* このマップでは出撃させられない部隊（例: 海の無いマップの艦船）。
+ * 選んでも deploy_carry で倒庫に戻されるだけなので、最初から選べなくする。 */
+static bool deploy_row_blocked(const App *a, int i)
+{
+    if (i < 0 || i >= a->cps.n_carry) return true;
+    return !campaign_type_placeable(&a->game, a->cps.carry[i].type);
+}
+
 static int deploy_count(const App *a)
 {
     int n = 0;
@@ -1559,8 +1567,12 @@ static void deploy_enter(App *a)
      * carry[] は価格→経験値→HP の順に並んでいるので先頭から埋めればよい
      * （経験値だけで並べると、進化直後で経験値0の精鋭が最後尾に沈む）。 */
     memset(a->dep_sel, 0, sizeof a->dep_sel);
-    for (int i = 0; i < a->cps.n_carry && i < a->dep_limit; i++)
+    int n = 0;
+    for (int i = 0; i < a->cps.n_carry && n < a->dep_limit; i++) {
+        if (deploy_row_blocked(a, i)) continue;   /* 配置先が無い兵种は飛ばす */
         a->dep_sel[i] = 1;
+        n++;
+    }
     a->dep_idx = 0;
     a->dep_scroll = 0;
 }
@@ -1580,6 +1592,7 @@ static void deploy_keep_visible(App *a)
 static void deploy_toggle(App *a, int i)
 {
     if (i < 0 || i >= a->cps.n_carry) return;
+    if (deploy_row_blocked(a, i)) { snd_se(SE_CANCEL); return; }
     if (a->dep_sel[i]) {
         a->dep_sel[i] = 0;
         snd_se(SE_CURSOR);
@@ -1660,17 +1673,23 @@ static void deploy_draw(App *a)
         SDL_Rect r = deploy_row_rect(a, i);
         bool sel = (a->dep_idx == i);
         bool go = a->dep_sel[i] != 0;
+        bool blocked = deploy_row_blocked(a, i);
         fill_rect(a, r.x, r.y, r.w, r.h,
-                  sel ? (SDL_Color){ 80, 110, 160, 255 }
-                      : (go ? (SDL_Color){ 46, 62, 54, 255 }
-                            : (SDL_Color){ 44, 46, 52, 255 }));
+                  blocked ? (SDL_Color){ 38, 34, 34, 255 }
+                          : (sel ? (SDL_Color){ 80, 110, 160, 255 }
+                                 : (go ? (SDL_Color){ 46, 62, 54, 255 }
+                                       : (SDL_Color){ 44, 46, 52, 255 })));
         outline_rect(a, r.x, r.y, r.w, r.h,
-                     sel ? COL_YELLOW : (go ? (SDL_Color){ 120, 200, 130, 255 }
-                                            : COL_DIM));
-        /* 出撃するかのマーク */
+                     blocked ? (SDL_Color){ 90, 70, 70, 255 }
+                             : (sel ? COL_YELLOW
+                                    : (go ? (SDL_Color){ 120, 200, 130, 255 }
+                                          : COL_DIM)));
+        /* 出撃するかのマーク（配置先が無い場合は理由を出す） */
         draw_text(a, a->font_s, r.x + 12, r.y + 8,
-                  go ? (SDL_Color){ 150, 240, 150, 255 } : COL_DIM,
-                  tx(go ? "DEPLOY_MARK_GO" : "DEPLOY_MARK_KEEP"));
+                  blocked ? (SDL_Color){ 200, 120, 120, 255 }
+                          : (go ? (SDL_Color){ 150, 240, 150, 255 } : COL_DIM),
+                  blocked ? tx("DEPLOY_MARK_NA")
+                          : tx(go ? "DEPLOY_MARK_GO" : "DEPLOY_MARK_KEEP"));
 
         int t = a->cps.carry[i].type;
         const char *nm = (t < a->game.n_types) ? a->game.types[t].name : "?";
@@ -1678,11 +1697,12 @@ static void deploy_draw(App *a)
         int rank = exp / 20; if (rank > 5) rank = 5;
         snprintf(buf, sizeof buf, "%s", nm);
         draw_text(a, a->font_s, r.x + 110, r.y + 8,
-                  go ? COL_WHITE : COL_GRAY, buf);
+                  blocked ? COL_DIM : (go ? COL_WHITE : COL_GRAY), buf);
         snprintf(buf, sizeof buf, tx("DEPLOY_EXP_FMT"), exp, rank);
         draw_text(a, a->font_s, r.x + r.w - 220, r.y + 8,
-                  rank > 0 ? (SDL_Color){ 160, 240, 160, 255 }
-                           : (go ? COL_WHITE : COL_GRAY), buf);
+                  blocked ? COL_DIM
+                          : (rank > 0 ? (SDL_Color){ 160, 240, 160, 255 }
+                                      : (go ? COL_WHITE : COL_GRAY)), buf);
     }
     if (a->dep_scroll > 0)
         draw_text_center(a, a->font_s, WIN_W / 2 + 300, 148, COL_YELLOW, "▲");
