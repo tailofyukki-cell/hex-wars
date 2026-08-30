@@ -599,3 +599,156 @@ void battle_add_popup(App *a, int hx, int hy, const char *text, SDL_Color c)
         return;
     }
 }
+
+/* --- 天候の見た目（仕様書外の演出。ルールには一切影響しない） ---
+ * 天候は上のバーの文字だけだと見落とすので、画面全体の色味と
+ * 動く要素で「パッと見て分かる」ようにする。
+ *   晴  … 暖色の淡いウォッシュ＋右上の陽光
+ *   曇り… 寒色の淡いウォッシュ＋ゆっくり流れる雲の影
+ *   雨  … さらに暗い寒色＋濃い雲の影＋斜めに降る雨
+ * 雲と雨は乱数を持たずに index から決めるので、状態を持たず毎フレーム同じ
+ * 見た目を再現できる（セーブ・ロードでも破綻しない）。 */
+
+static uint32_t wx_hash(uint32_t x)
+{
+    x ^= x >> 16; x *= 0x7feb352dU;
+    x ^= x >> 15; x *= 0x846ca68bU;
+    x ^= x >> 16;
+    return x;
+}
+
+/* 中心が濃く外周が透明になる円のテクスチャ。雲の影と陽光に使い回す。 */
+static SDL_Texture *wx_blob_tex(App *a)
+{
+    if (a->wx_blob) return a->wx_blob;
+    const int N = 128;
+    SDL_Surface *sf = SDL_CreateRGBSurfaceWithFormat(0, N, N, 32,
+                                                     SDL_PIXELFORMAT_RGBA32);
+    if (!sf) return NULL;
+    Uint32 *px = (Uint32 *)sf->pixels;
+    int pitch = sf->pitch / 4;
+    for (int y = 0; y < N; y++)
+        for (int x = 0; x < N; x++) {
+            float dx = (x - N / 2.0f) / (N / 2.0f);
+            float dy = (y - N / 2.0f) / (N / 2.0f);
+            float d = sqrtf(dx * dx + dy * dy);
+            /* 中心付近は濃いまま、外周だけなだらかに消す。
+             * (1-d)^2 だと平均の濃さが足りず、画面上でほぼ見えなかった。 */
+            float v = d >= 1.0f ? 0.0f : (1.0f - d) * 1.7f;
+            if (v > 1.0f) v = 1.0f;
+            Uint8 al = (Uint8)(v * 255.0f);
+            px[y * pitch + x] = ((Uint32)al << 24) | 0x00ffffffU;
+        }
+    a->wx_blob = SDL_CreateTextureFromSurface(a->ren, sf);
+    SDL_FreeSurface(sf);
+    if (a->wx_blob) SDL_SetTextureBlendMode(a->wx_blob, SDL_BLENDMODE_BLEND);
+    return a->wx_blob;
+}
+
+static void wx_blob(App *a, float cx, float cy, float rx, float ry, SDL_Color c)
+{
+    SDL_Texture *t = wx_blob_tex(a);
+    if (!t) return;
+    SDL_SetTextureColorMod(t, c.r, c.g, c.b);
+    SDL_SetTextureAlphaMod(t, c.a);
+    SDL_FRect d = { cx - rx, cy - ry, rx * 2, ry * 2 };
+    SDL_RenderCopyF(a->ren, t, NULL, &d);
+}
+
+/* 雲の影を横に流す。n を増やすほど厚い雲になる。 */
+static void wx_clouds(App *a, int n, SDL_Color c, uint32_t frame)
+{
+    for (int i = 0; i < n; i++) {
+        uint32_t h = wx_hash((uint32_t)i * 2654435761U);
+        float rx = 120.0f + (float)(h % 170);
+        float ry = rx * 0.40f;
+        float sp = 0.20f + (float)((h >> 8) % 100) / 260.0f;   /* 大きい雲ほど遅くはしない */
+        float span = WIN_W + rx * 2;
+        float x = fmodf((float)frame * sp + (float)((h >> 4) % 4096), span) - rx;
+        float y = (float)(TOPBAR_FX + (int)((h >> 16) % (uint32_t)(WIN_H - TOPBAR_FX)));
+        wx_blob(a, x, y, rx, ry, c);
+    }
+}
+
+/* 画面全体の色調を乗算で変える。
+ * 半透明の板を重ねるだけだと色が浅くなるだけで暗くならず、
+ * 晴と曇りの区別がつかなかった。乗算なら地形の緑が実際にくすむ。 */
+static void wx_grade(App *a, SDL_Rect v, Uint8 r, Uint8 g, Uint8 b)
+{
+    SDL_SetRenderDrawBlendMode(a->ren, SDL_BLENDMODE_MOD);
+    SDL_SetRenderDrawColor(a->ren, r, g, b, 255);
+    SDL_RenderFillRect(a->ren, &v);
+    SDL_SetRenderDrawBlendMode(a->ren, SDL_BLENDMODE_BLEND);
+}
+
+void render_weather_fx(App *a, int weather, uint32_t frame)
+{
+    if (!a->game.weather_on || !a->opt_weather_fx) return;
+    SDL_Rect view = { 0, TOPBAR_FX, WIN_W, WIN_H - TOPBAR_FX };
+
+    if (weather == WX_CLEAR) {
+        wx_grade(a, view, 255, 247, 232);          /* ほんのわずか暖色寄り */
+        wx_blob(a, WIN_W - 170.0f, TOPBAR_FX + 40.0f, 340.0f, 260.0f,
+                (SDL_Color){ 255, 238, 180, 46 }); /* 右上の陽光 */
+        return;
+    }
+
+    if (weather == WX_CLOUDY) {
+        wx_grade(a, view, 172, 180, 198);          /* 寒色へ寄せて一段暗く */
+        wx_clouds(a, 9, (SDL_Color){ 46, 54, 70, 96 }, frame);
+        return;
+    }
+
+    /* 雨: はっきり暗く青い + 濃い雲の影 + 斜めの雨脚 */
+    wx_grade(a, view, 112, 134, 176);
+    wx_clouds(a, 12, (SDL_Color){ 22, 28, 42, 120 }, frame);
+
+    SDL_SetRenderDrawBlendMode(a->ren, SDL_BLENDMODE_BLEND);
+    const int SPAN = WIN_H - TOPBAR_FX + 140;
+    for (int i = 0; i < 300; i++) {
+        uint32_t h = wx_hash((uint32_t)i * 40503U + 17U);
+        int speed = 16 + (int)((h >> 8) % 12);
+        int len   = 11 + (int)((h >> 20) % 12);
+        int y = TOPBAR_FX - 70
+              + (int)(((uint32_t)frame * (uint32_t)speed + (h >> 3) % (uint32_t)SPAN)
+                      % (uint32_t)SPAN);
+        int x = (int)(((h % (uint32_t)WIN_W) + (uint32_t)frame * 4U)
+                      % (uint32_t)(WIN_W + 60)) - 30;
+        Uint8 al = (Uint8)(70 + (h >> 26) % 70);
+        SDL_SetRenderDrawColor(a->ren, 190, 215, 245, al);
+        SDL_RenderDrawLine(a->ren, x, y, x - len / 3, y + len);
+    }
+}
+
+/* 上のバーに出す天候アイコン。文字だけだと目に入らないので絵も添える。 */
+void render_weather_icon(App *a, int x, int y, int weather)
+{
+    const SDL_Color SUN   = { 250, 205,  90, 255 };
+    const SDL_Color CLOUD = { 205, 210, 218, 255 };
+    const SDL_Color DROP  = { 120, 180, 250, 255 };
+    float cx = (float)x + 9.0f, cy = (float)y + 9.0f;
+
+    if (weather == WX_CLEAR) {
+        for (int i = 0; i < 8; i++) {          /* 光条 */
+            float an = (float)i * 3.14159f / 4.0f;
+            fill_circle(a, cx + cosf(an) * 8.0f, cy + sinf(an) * 8.0f, 1.6f, SUN);
+        }
+        fill_circle(a, cx, cy, 5.0f, SUN);
+        return;
+    }
+    if (weather == WX_CLOUDY) {
+        fill_circle(a, cx - 4.0f, cy + 1.0f, 4.5f, CLOUD);
+        fill_circle(a, cx + 1.0f, cy - 2.0f, 5.5f, CLOUD);
+        fill_circle(a, cx + 6.0f, cy + 1.0f, 4.0f, CLOUD);
+        return;
+    }
+    fill_circle(a, cx - 4.0f, cy - 2.0f, 4.0f, CLOUD);
+    fill_circle(a, cx + 1.0f, cy - 4.0f, 5.0f, CLOUD);
+    fill_circle(a, cx + 6.0f, cy - 2.0f, 3.5f, CLOUD);
+    for (int i = 0; i < 3; i++) {              /* 雨脚 */
+        float dx = cx - 4.0f + (float)i * 5.0f;
+        SDL_SetRenderDrawColor(a->ren, DROP.r, DROP.g, DROP.b, DROP.a);
+        SDL_RenderDrawLine(a->ren, (int)dx, (int)(cy + 4.0f),
+                           (int)(dx - 2.0f), (int)(cy + 10.0f));
+    }
+}

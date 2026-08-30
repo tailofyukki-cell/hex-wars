@@ -77,11 +77,11 @@ desc       = 艦船が非常に強い。陸上部隊には補正がない。
 domain     = SEA
 atk_pct    = 25
 def_pct    = 10
-power_name = 艦隊決戦
-power_desc = このターン、攻撃力が35%上がる
+power_name = 艦砲射撃
+power_desc = 自軍に隣接する敵すべてに3ダメージ（HP1までは削らない）
 power_cost = 160
-power_type = STRIKE
-power_val  = 35
+power_type = BARRAGE
+power_val  = 3
 
 [commander KARLA]
 unlock_clears = 2
@@ -110,7 +110,58 @@ domain     = AIR
 atk_pct    = 25
 def_pct    = 10
 power_name = 制空掌握
-power_desc = このターン、攻撃力が35%上がる
+power_desc = このターン、航空部隊の攻撃力が60%上がる
 power_cost = 160
 power_type = STRIKE
-power_val  = 35
+power_val  = 60
+
+# --- ここから下は必殺技の種類を増やすために足した指揮官 ---
+# 顔絵（image）はまだ用意していない。ファイルが無ければ名前が表示されるだけなので、
+# assets/gfx/co/ に置いて image= を書けばそのまま差し替わる。
+
+[commander HERTA]
+unlock_clears = 3
+name       = ヘルタ主計大尉
+cutin      = gfx/cutin/co_west.png
+image      = gfx/co/herta.png
+title      = 兵站
+desc       = 収入が増える。補給が切れても戦い続けられる。
+domain     = ALL
+income_pct = 25
+power_name = 緊急補給
+power_desc = 全軍の燃料と弾薬を、その場で全回復する
+power_cost = 150
+power_type = RESUPPLY
+power_val  = 0
+
+[commander NOEL]
+unlock_clears = 5
+name       = ノエル教官
+cutin      = gfx/cutin/co_west.png
+image      = gfx/co/noel.png
+title      = 練兵
+desc       = 部隊が育ちやすい。長い作戦ほど強くなる。
+domain     = ALL
+atk_pct    = 5
+def_pct    = 5
+power_name = 実戦教練
+power_desc = 全軍の経験値+40（進化を一気に手繰り寄せる）
+power_cost = 170
+power_type = VETERAN
+power_val  = 40
+
+[commander DIETER]
+unlock_clears = 7
+name       = ディーター大尉
+cutin      = gfx/cutin/co_east.png
+image      = gfx/co/dieter.png
+title      = 疾風
+desc       = 地上部隊の足が速い。包囲と迂回を得意とする。
+domain     = LAND
+move_bonus = 1
+def_pct    = 5
+power_name = 強行軍
+power_desc = このターン、地上部隊の移動力が+3される
+power_cost = 150
+power_type = ADVANCE
+power_val  = 3

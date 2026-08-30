@@ -396,6 +396,91 @@ static bool ai_try_co_power(Game *g, AiState *s, int phase)
         fire = (n >= 3);
         break;
     }
+    /* --- 後から追加した必殺技。
+     * ここを書かないと default に落ちて CPU が一度も撃たなくなり、
+     * その指揮官を選んだ CPU が一方的に弱くなってしまう。 --- */
+    case CO_POW_SHIELD: {
+        if (phase != 0) break;
+        /* 敵の間合いに入っている自軍が3体以上＝この手番に叩かれる */
+        int n = 0;
+        for (int i = 0; i < g->n_units; i++) {
+            const Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+            if (u->owner != me) continue;
+            for (int j = 0; j < g->n_units; j++) {
+                const Unit *e = &g->units[j];
+                if (!(e->flags & UF_ALIVE) || (e->flags & UF_LOADED)) continue;
+                if (e->owner == me) continue;
+                const UnitType *et = &g->types[e->type];
+                if (hex_distance(e->pos.x, e->pos.y, u->pos.x, u->pos.y)
+                    <= et->move + et->range_max) { n++; break; }
+            }
+        }
+        fire = (n >= 3);
+        break;
+    }
+    case CO_POW_ADVANCE: {
+        if (phase != 0) break;      /* 動く前に撃つことに意味がある */
+        /* まだ進軍途中の部隊が3体以上いるとき */
+        int n = 0;
+        for (int i = 0; i < g->n_units; i++) {
+            const Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+            if (u->owner != me || !game_co_affects(g, me, u)) continue;
+            const UnitType *t = &g->types[u->type];
+            if (advance_goal(g, me, u, u->pos.x, u->pos.y) > t->move + t->range_max)
+                n++;
+        }
+        fire = (n >= 3);
+        break;
+    }
+    case CO_POW_RESUPPLY: {
+        if (phase != 1) break;
+        /* 燃料か弾薬が半分以下の部隊が3体以上 */
+        int n = 0;
+        for (int i = 0; i < g->n_units; i++) {
+            const Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || u->owner != me) continue;
+            const UnitType *t = &g->types[u->type];
+            if ((t->fuel > 0 && u->fuel * 2 <= t->fuel) ||
+                (t->ammo > 0 && u->ammo * 2 <= t->ammo)) n++;
+        }
+        fire = (n >= 3);
+        break;
+    }
+    case CO_POW_VETERAN: {
+        if (phase != 1) break;
+        /* これで進化のしきい値（経験100）に届く部隊が2体以上。
+         * 届かなくても大軍なら経験の総量で元が取れるので保険を入れる */
+        int ready = 0, gain = 0;
+        for (int i = 0; i < g->n_units; i++) {
+            const Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || u->owner != me) continue;
+            if (u->exp < 100 && u->exp + c->power_val >= 100) ready++;
+            int room = 100 - u->exp;
+            gain += room < c->power_val ? room : c->power_val;
+        }
+        fire = (ready >= 2 || gain >= c->power_val * 5);
+        break;
+    }
+    case CO_POW_BARRAGE: {
+        if (phase != 1) break;      /* 接触してから撃つ */
+        int n = 0;
+        for (int i = 0; i < g->n_units; i++) {
+            const Unit *e = &g->units[i];
+            if (!(e->flags & UF_ALIVE) || (e->flags & UF_LOADED)) continue;
+            if (e->owner == me || e->hp <= 1) continue;
+            for (int j = 0; j < g->n_units; j++) {
+                const Unit *u = &g->units[j];
+                if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+                if (u->owner != me) continue;
+                if (hex_distance(u->pos.x, u->pos.y, e->pos.x, e->pos.y) == 1)
+                    { n++; break; }
+            }
+        }
+        fire = (n >= 3);
+        break;
+    }
     default:
         break;
     }

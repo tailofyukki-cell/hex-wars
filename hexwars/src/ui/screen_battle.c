@@ -34,7 +34,7 @@ static void snd_move_se(const Game *g, int ui)
     snd_se(se);
 }
 
-#define TOPBAR_H 36
+#define TOPBAR_H TOPBAR_FX   /* 天候演出と共有（app.h） */
 #define PANEL_H 116
 
 /* ------------------------------------------------------------------ */
@@ -1596,7 +1596,8 @@ static void draw_topbar(App *a)
         int wleft = g->weather_left + 1;
         snprintf(buf, sizeof buf, tx("TOP_WEATHER_FMT"),
                  tx(WXK[w]), wleft, tx(WXK[nx]));
-        draw_text(a, a->font_s, 620, 9, wc, buf);
+        render_weather_icon(a, 620, 9, (int)w);
+        draw_text(a, a->font_s, 644, 9, wc, buf);
     }
 
     /* 拠点確保条件（仕様書 5.10） */
@@ -1605,7 +1606,8 @@ static void draw_topbar(App *a)
                  faction_name(g->objective_player),
                  game_count_buildings(g, g->objective_player),
                  g->objective_count);
-        draw_text(a, a->font_s, 700, 9, COL_P[g->objective_player], buf);
+        /* 700 だと天候表示（残りターン数を足して長くなった）と重なる */
+        draw_text(a, a->font_s, 880, 9, COL_P[g->objective_player], buf);
     }
 
     /* 指揮官ゲージ（手番プレイヤーのもの）。満タンなら光らせて P で発動できる */
@@ -2283,6 +2285,8 @@ void battle_draw(App *a)
     }
 
     render_map(a);
+    /* マップの上、選択表示やUIの下に天候を重ねる */
+    render_weather_fx(a, (int)game_weather(g), a->frame);
     draw_overlays(a);
     draw_popups(a);
     draw_topbar(a);

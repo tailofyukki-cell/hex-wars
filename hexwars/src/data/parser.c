@@ -518,6 +518,11 @@ int data_load_commanders(Game *g, const char *path, char *err, int errlen)
             else if (!strcmp(val, "STRIKE")) cur->power_type = CO_POW_STRIKE;
             else if (!strcmp(val, "FUNDS"))  cur->power_type = CO_POW_FUNDS;
             else if (!strcmp(val, "SCOUT"))  cur->power_type = CO_POW_SCOUT;
+            else if (!strcmp(val, "SHIELD"))   cur->power_type = CO_POW_SHIELD;
+            else if (!strcmp(val, "ADVANCE"))  cur->power_type = CO_POW_ADVANCE;
+            else if (!strcmp(val, "RESUPPLY")) cur->power_type = CO_POW_RESUPPLY;
+            else if (!strcmp(val, "VETERAN"))  cur->power_type = CO_POW_VETERAN;
+            else if (!strcmp(val, "BARRAGE"))  cur->power_type = CO_POW_BARRAGE;
             else { set_err(err, errlen, path, ln, "不明な power_type");
                    fclose(f); return -1; }
         }

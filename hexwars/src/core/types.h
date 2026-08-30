@@ -185,7 +185,14 @@ typedef enum {
     CO_POW_RUSH,       /* 全軍が再行動 */
     CO_POW_STRIKE,     /* このターン攻撃+val% */
     CO_POW_FUNDS,      /* 資金+val */
-    CO_POW_SCOUT       /* このターン全マップ視認 + 資金val */
+    CO_POW_SCOUT,      /* このターン全マップ視認 + 資金val */
+    /* --- ここからは後から追加した種類。
+     * STRIKE だけだと「攻撃力が上がる」の値違いで指揮官が似通ってしまうため。 --- */
+    CO_POW_SHIELD,     /* このターン防御+val% */
+    CO_POW_ADVANCE,    /* このターン移動力+val */
+    CO_POW_RESUPPLY,   /* 全軍の燃料・弾薬を全回復（位置を問わない） */
+    CO_POW_VETERAN,    /* 全軍の経験値+val（進化を前倒しする） */
+    CO_POW_BARRAGE     /* 自軍に隣接する敵全部に val ダメージ（狙いを選ばない形） */
 } CoPowerType;
 
 /* 常時効果の対象ドメイン（0=全部 / 以降は move_domain()+1 と対応） */

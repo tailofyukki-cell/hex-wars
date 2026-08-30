@@ -62,9 +62,8 @@ void path_move_range(const Game *g, int ui, MoveRange *out)
     /* 指揮官の移動力ボーナス（対象ドメインのみ）。燃料は超えられない */
     int base_move = ut->move;
     {
-        const CommanderType *c = game_co(g, owner);
-        if (c && c->move_bonus && game_co_affects(g, owner, u))
-            base_move += c->move_bonus;
+        /* 常時の move_bonus に加えて、ADVANCE 発動中の上乗せも含む */
+        base_move += game_co_move_bonus(g, owner, u);
         /* 天候: 雨は地上部隊の移動を1減らす（下限1） */
         base_move += game_weather_move_mod(g, u);
         if (base_move < 1) base_move = 1;

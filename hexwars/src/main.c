@@ -148,9 +148,91 @@ int main(int argc, char *argv[])
                 a->game.ctrl[1] = CTRL_CPU_NORMAL;
                 a->game.co_id[0] = a->game.co_id[1] = -1;
                 game_start(&a->game, 12345u);
+                /* 天候の見た目確認用: --screen battle <map> <0=晴 1=曇 2=雨> */
+                if (argc >= 5) {
+                    int wx = atoi(argv[4]);
+                    if (wx >= 0 && wx < WX_COUNT) {
+                        a->game.weather_on = true;
+                        a->game.weather = (uint8_t)wx;
+                        a->game.weather_left = 3;
+                    }
+                }
                 a->next_screen = SCREEN_BATTLE;
             } else {
                 SDL_Log("マップ読込失敗: %s", err);
+            }
+        }
+        else if (!strcmp(argv[2], "cpn")) {
+            /* キャンペーンの任意の作戦をその場から始める（デバッグ用）。
+             *   --screen cpn <ノードID> [持越し数]
+             *   例) --screen cpn M10 30
+             * 終盤の作戦を確認するのに13回勝ち上がるのは現実的でないため、
+             * 「そこまで進んだ状態」を作ってブリーフィングから入る。
+             * 持越し部隊・資金・クリア記録・指揮官の解禁もそれらしく埋める。 */
+            char path[600], err[256];
+            snprintf(path, sizeof path, "%sdata/campaign/main.cpn", a->base_path);
+            if (campaign_load(&a->cpn, path, err, sizeof err) != 0) {
+                SDL_Log("キャンペーン読込失敗: %s", err);
+            } else {
+                const char *want = (argc >= 4) ? argv[3] : a->cpn.start;
+                int n_carry = (argc >= 5) ? atoi(argv[4]) : 24;
+                memset(&a->cps, 0, sizeof a->cps);
+                a->cps.active = true;
+                a->campaign_mode = true;
+                snprintf(a->cps.file, sizeof a->cps.file, "campaign/main.cpn");
+                snprintf(a->cps.node, sizeof a->cps.node, "%s", want);
+                /* 本線をたどり、目的のノードより手前を「制圧済み」にする */
+                {
+                    char cur[24];
+                    snprintf(cur, sizeof cur, "%s", a->cpn.start);
+                    for (int step = 0; step < a->cpn.n_nodes; step++) {
+                        int idx = -1;
+                        for (int i = 0; i < a->cpn.n_nodes; i++)
+                            if (!strcmp(a->cpn.nodes[i].id, cur)) { idx = i; break; }
+                        if (idx < 0 || !strcmp(cur, want)) break;
+                        a->cps.cleared |= 1u << idx;
+                        if (idx < MAX_CAMPAIGN_MAPS) a->cps.rank[idx] = RANK_A;
+                        snprintf(cur, sizeof cur, "%s", a->cpn.nodes[idx].next_win);
+                    }
+                }
+                /* 持越し部隊: 陸・海・空をひと通り、経験値もばらけさせる。
+                 * 進化済みが混ざるよう、一部は経験値100にしておく。 */
+                {
+                    static const char *ROSTER[] = {
+                        "INFANTRY", "INFANTRY", "AT_INFANTRY", "MECH_INF",
+                        "TANK", "TANK", "HTANK", "ARTILLERY", "ROCKET",
+                        "AA_TANK", "RECON", "TRUCK", "SUPPLY",
+                        "FIGHTER", "BOMBER", "DIVE_BOMBER", "HELI",
+                        "DESTROYER", "CRUISER", "BATTLESHIP", "CARRIER",
+                        "T_SHIP", "SUPPLY_SHIP", "SUBMARINE",
+                    };
+                    int n_roster = (int)(sizeof ROSTER / sizeof ROSTER[0]);
+                    if (n_carry > MAX_CARRY_UNITS) n_carry = MAX_CARRY_UNITS;
+                    for (int i = 0; i < n_carry; i++) {
+                        int t = data_find_unit_type(&a->game, ROSTER[i % n_roster]);
+                        if (t < 0) continue;
+                        a->cps.carry[a->cps.n_carry].type = (uint8_t)t;
+                        a->cps.carry[a->cps.n_carry].exp =
+                            (uint8_t)((i % 5 == 0) ? 100 : (i * 17) % 100);
+                        a->cps.n_carry++;
+                    }
+                    a->cps.funds_carry = 6000;
+                }
+                a->next_screen = SCREEN_BRIEFING;
+            }
+        }
+        else if (!strcmp(argv[2], "cpnmap")) {
+            /* 作戦全体図の確認用: --screen cpnmap [現在ノードID] */
+            char path[600], err[256];
+            snprintf(path, sizeof path, "%sdata/campaign/main.cpn", a->base_path);
+            if (campaign_load(&a->cpn, path, err, sizeof err) == 0) {
+                memset(&a->cps, 0, sizeof a->cps);
+                a->cps.active = true;
+                a->campaign_mode = true;
+                snprintf(a->cps.node, sizeof a->cps.node, "%s",
+                         (argc >= 4) ? argv[3] : a->cpn.start);
+                a->cps.cleared = 0x3f;    /* 途中まで制圧済みの見た目にする */
+                a->next_screen = SCREEN_CPNMAP;
             }
         }
         else if (!strcmp(argv[2], "reward")) {

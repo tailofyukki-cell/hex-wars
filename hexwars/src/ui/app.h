@@ -136,6 +136,8 @@ struct App {
     int opt_se_set;     /* 効果音セット: 0=標準 1=レトロ 2=重厚 */
     int opt_tilt;       /* 0=平面(真上) / 1=斜め見下ろし（Y圧縮＋地形の起伏）。見た目のみ */
     int opt_cutin;      /* 攻撃時カットイン: 0=出さない / 1=毎回 / 2=撃破時のみ */
+    int opt_weather_fx; /* 天候の画面演出: 0=切る / 1=出す。見た目のみ */
+    int cpn_scroll;     /* 作戦全体図の縦スクロールpx */
     /* 進捗（progress.cfg に永続化。指揮官の解禁条件に使う） */
     int progress_clears;   /* これまでにクリアした作戦の総数 */
     int progress_best[MAX_CAMPAIGN_MAPS]; /* ノード毎の最高ランク（CpnRank） */
@@ -145,6 +147,7 @@ struct App {
     BattleAnim anim;
 
     /* ブリーフィング1枚絵（enter時に読込、exit相当で破棄） */
+    SDL_Texture *wx_blob;      /* 天候演出のやわらかい円（雲の影・陽光） */
     SDL_Texture *brief_tex;
     int brief_tex_w, brief_tex_h;
     /* クリア報酬画像（enter時に読込） */
@@ -214,6 +217,10 @@ struct App {
 int  assets_init(App *a);
 void assets_quit(App *a);
 void draw_text(App *a, TTF_Font *f, int x, int y, SDL_Color c, const char *s);
+/* 天候の見た目（マップの上に重ねる層）。ルールには影響しない */
+#define TOPBAR_FX 36        /* 上のバーの高さ（ここより下だけに演出をかける） */
+void render_weather_fx(App *a, int weather, uint32_t frame);
+void render_weather_icon(App *a, int x, int y, int weather);
 void draw_text_center(App *a, TTF_Font *f, int cx, int y, SDL_Color c, const char *s);
 int  text_width(App *a, TTF_Font *f, const char *s);
 

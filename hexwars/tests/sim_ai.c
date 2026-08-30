@@ -153,6 +153,13 @@ int main(void)
                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "BALT", "KARLA") == -100) fail++;
     if (run_match_co("data/maps/c09_cities.map", 5103,
                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "GRAF", "BALT") == -100) fail++;
+    /* 後から追加した技も CPU が撃てることを見る（回数 0 なら発動条件が厳すぎ） */
+    if (run_match_co("data/maps/c13_delta.map", 5104,
+                     CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "WOLF", "HERTA") == -100) fail++;
+    if (run_match_co("data/maps/m01_border_hills.map", 5105,
+                     CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "DIETER", "NOEL") == -100) fail++;
+    if (run_match_co("data/maps/c09_cities.map", 5106,
+                     CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "EAGLE", "GRAF") == -100) fail++;
 
     printf("== キャンペーン実戦（マップイベントの発火） ==\n");
     {

@@ -122,6 +122,7 @@ void assets_quit(App *a)
 {
     for (int i = 0; i < TC_SIZE; i++)
         if (s_cache[i].tex) { SDL_DestroyTexture(s_cache[i].tex); s_cache[i].tex = NULL; }
+    if (a->wx_blob) { SDL_DestroyTexture(a->wx_blob); a->wx_blob = NULL; }
     if (a->font_s)  TTF_CloseFont(a->font_s);
     if (a->font_m)  TTF_CloseFont(a->font_m);
     if (a->font_l)  TTF_CloseFont(a->font_l);

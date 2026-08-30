@@ -67,7 +67,23 @@ static void test_data_and_battle(void)
     if (s_fail) { printf("  %s\n", err); return; }
     CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
-    CHECK(g->n_terrains == 13);   /* 地形12種 + 圏外(マップ輪郭用) */
+    CHECK(g->n_terrains == 15);   /* 地形12種 + 圏外 + 生産できない飛行場/泊地 */
+    {   /* 野戦飛行場・泊地は「都市の空・海版」。
+         * 補給（回復・進化）はできるが生産はできないことを固める。 */
+        int as_ = -1, an_ = -1;
+        for (int i = 0; i < g->n_terrains; i++) {
+            if (!strcmp(g->terrains[i].id, "AIRSTRIP"))  as_ = i;
+            if (!strcmp(g->terrains[i].id, "ANCHORAGE")) an_ = i;
+        }
+        CHECK(as_ >= 0 && an_ >= 0);
+        if (as_ >= 0 && an_ >= 0) {
+            CHECK(g->terrains[as_].produces == PROD_NONE);
+            CHECK(g->terrains[an_].produces == PROD_NONE);
+            CHECK(g->terrains[as_].supplies & (1u << MC_AIR));
+            CHECK(g->terrains[an_].supplies & (1u << MC_SEA));
+            CHECK(g->terrains[as_].capturable && g->terrains[an_].capturable);
+        }
+    }
     /* 生産できる31種 + 進化先31種。進化先は no_produce なので生産に出ない。 */
     CHECK(g->n_types == 62);
     {
@@ -1352,11 +1368,16 @@ static void test_commanders(void)
         CHECK(g->cos[data_find_commander(g, "KARLA")].unlock_clears == 2);
         CHECK(g->cos[data_find_commander(g, "WOLF")].unlock_clears == 4);
         CHECK(g->cos[data_find_commander(g, "EAGLE")].unlock_clears == 6);
-        /* クリア5回時点で解禁されるのは5人（EAGLE はまだ） */
-        int at5 = 0;
-        for (int i = 0; i < g->n_cos; i++)
+        /* 段階的に増えることを見る。人数を直書きすると指揮官を
+         * 追加するたびに失敗するので、「増える」こと自体を確かめる。 */
+        int at0 = 0, at5 = 0;
+        for (int i = 0; i < g->n_cos; i++) {
+            if (g->cos[i].unlock_clears <= 0) at0++;
             if (g->cos[i].unlock_clears <= 5) at5++;
-        CHECK(at5 == 5);
+        }
+        CHECK(at0 == free_now);
+        CHECK(at5 > free_now);              /* 進めると選択肢が増える */
+        CHECK(at5 < g->n_cos);              /* だが全員ではない（終盤用が残る） */
     }
 
     int graf = data_find_commander(g, "GRAF");    /* 防御+15 / HEAL */
@@ -1452,6 +1473,81 @@ static void test_commanders(void)
     g->current = 0;
     game_end_turn(g);                                  /* 手番終了で効果切れ */
     CHECK(g->co_power_turns[0] == 0);
+
+    /* --- ここからは後から追加した必殺技 --- */
+
+    /* STRIKE はドメインを見ること。
+     * 以前は見ておらず、海専門の WOLF の技で陸上部隊まで強化されていた。 */
+    {
+        int eagle = data_find_commander(g, "EAGLE");   /* AIR 限定の STRIKE */
+        CHECK(eagle >= 0);
+        g->co_id[0] = (int8_t)eagle;
+        g->co_power_turns[0] = 0;
+        int flat = battle_expect_damage_x10(g, &g->units[ha], &g->units[hb]);
+        g->co_power_turns[0] = 1;                      /* 発動中にする */
+        /* ha は歩兵（陸）なので、航空限定の技では変わらない */
+        CHECK(battle_expect_damage_x10(g, &g->units[ha], &g->units[hb]) == flat);
+        g->co_power_turns[0] = 0;
+    }
+
+    /* RESUPPLY: 拠点の外でも燃料・弾薬が満タンに戻る */
+    {
+        int herta = data_find_commander(g, "HERTA");
+        CHECK(herta >= 0);
+        g->co_id[0] = (int8_t)herta;
+        g->units[ha].fuel = 1;
+        g->units[ha].ammo = 0;
+        g->co_gauge[0] = g->cos[herta].power_cost;
+        CHECK(game_co_activate(g, 0));
+        const UnitType *ut = &g->types[g->units[ha].type];
+        CHECK(g->units[ha].fuel == ut->fuel);
+        CHECK(g->units[ha].ammo == ut->ammo);
+    }
+
+    /* VETERAN: 経験値が上がり、上限100を超えない */
+    {
+        int noel = data_find_commander(g, "NOEL");
+        CHECK(noel >= 0);
+        g->co_id[0] = (int8_t)noel;
+        g->units[ha].exp = 10;
+        g->co_gauge[0] = g->cos[noel].power_cost;
+        CHECK(game_co_activate(g, 0));
+        CHECK(g->units[ha].exp == 50);                 /* 10 + power_val(40) */
+        g->units[ha].exp = 90;
+        g->co_gauge[0] = g->cos[noel].power_cost;
+        CHECK(game_co_activate(g, 0));
+        CHECK(g->units[ha].exp == 100);                /* 上限で止まる */
+    }
+
+    /* BARRAGE: 隣接している敵だけ削る。HP1 を下回らない */
+    {
+        int wolf2 = data_find_commander(g, "WOLF");
+        g->co_id[0] = (int8_t)wolf2;
+        int far_enemy = game_spawn_unit(g, 1, inf, 20, 14, 10);
+        CHECK(far_enemy >= 0);
+        g->units[hb].hp = 10;                          /* ha に隣接している */
+        g->co_gauge[0] = g->cos[wolf2].power_cost;
+        CHECK(game_co_activate(g, 0));
+        CHECK(g->units[hb].hp == 7);                   /* 10 - power_val(3) */
+        CHECK(g->units[far_enemy].hp == 10);           /* 離れている敌は無事 */
+        g->units[hb].hp = 2;
+        g->co_gauge[0] = g->cos[wolf2].power_cost;
+        CHECK(game_co_activate(g, 0));
+        CHECK(g->units[hb].hp == 1);                   /* とどめは刷さない */
+    }
+
+    /* ADVANCE: このターンだけ移動力が伸びる */
+    {
+        int dieter = data_find_commander(g, "DIETER");
+        CHECK(dieter >= 0);
+        g->co_id[0] = (int8_t)dieter;
+        g->co_power_turns[0] = 0;
+        int base_b = game_co_move_bonus(g, 0, &g->units[ha]);
+        g->co_gauge[0] = g->cos[dieter].power_cost;
+        CHECK(game_co_activate(g, 0));
+        CHECK(game_co_move_bonus(g, 0, &g->units[ha])
+              == base_b + g->cos[dieter].power_val);
+    }
 }
 
 /* 天候: 曇=空↔地上の攻撃半減 / 雨=同攻撃不可・視界-2・地上移動-1 */

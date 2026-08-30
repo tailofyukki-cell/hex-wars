@@ -49,6 +49,9 @@ OPT_CUTIN       = 攻撃時のカットイン
 OPT_CUTIN_OFF   = 出さない
 OPT_CUTIN_ALWAYS= 毎回出す
 OPT_CUTIN_KILL  = 撃破したときだけ
+OPT_WEATHER_FX  = 天候の演出
+OPT_WXFX_ON     = 出す（雨・雲の影・色味）
+OPT_WXFX_OFF    = 切る
 OPT_BACK        = タイトルへ戻る
 OPT_HINT        = ←→:変更  Z/Enter:決定  X/Esc:戻る
 
@@ -66,7 +69,7 @@ SAVE_EMPTY_FMT  = スロット%2d  （空き）
 CPNMAP_TITLE    = 作戦全体図
 CPNMAP_DONE     = 制圧
 CPNMAP_NEXT_FMT = 次の作戦: %s
-CPNMAP_HINT     = Z:出撃準備へ  C:指揮官変更  X:タイトルへ
+CPNMAP_HINT     = Z:出撃準備へ  C:指揮官変更  ↑↓/ホイール:スクロール  X:タイトルへ
 
 # --- ブリーフィング ---
 BRIEF_CARRY_FMT = 持越し部隊: %d ユニット   持越し資金: +%dG

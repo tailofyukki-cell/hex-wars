@@ -436,9 +436,13 @@ int game_co_atk_pct(const Game *g, int p, const Unit *u)
 {
     const CommanderType *c = game_co(g, p);
     if (!c) return 0;
-    int pct = game_co_affects(g, p, u) ? c->atk_pct : 0;
-    /* STRIKE 発動中はこのターンだけ上乗せ */
-    if (g->co_power_turns[p] > 0 && c->power_type == CO_POW_STRIKE)
+    bool mine = game_co_affects(g, p, u);
+    int pct = mine ? c->atk_pct : 0;
+    /* STRIKE 発動中はこのターンだけ上乗せ。
+     * **常時効果と同じくドメインを見る。** 以前は見ていなかったため、
+     * 「陸上部隊には補正がない」はずの海専門指揮官の必殺技が
+     * 陸上部隊まで強化してしまっていた。 */
+    if (mine && g->co_power_turns[p] > 0 && c->power_type == CO_POW_STRIKE)
         pct += c->power_val;
     return pct;
 }
@@ -447,7 +451,24 @@ int game_co_def_pct(const Game *g, int p, const Unit *u)
 {
     const CommanderType *c = game_co(g, p);
     if (!c) return 0;
-    return game_co_affects(g, p, u) ? c->def_pct : 0;
+    bool mine = game_co_affects(g, p, u);
+    int pct = mine ? c->def_pct : 0;
+    /* SHIELD 発動中はこのターンだけ上乗せ（STRIKE の防御版） */
+    if (mine && g->co_power_turns[p] > 0 && c->power_type == CO_POW_SHIELD)
+        pct += c->power_val;
+    return pct;
+}
+
+/* このターンだけの移動力加算（ADVANCE）。
+ * 常時効果の move_bonus とは別に乗せる。 */
+int game_co_move_bonus(const Game *g, int p, const Unit *u)
+{
+    const CommanderType *c = game_co(g, p);
+    if (!c) return 0;
+    int b = game_co_affects(g, p, u) ? c->move_bonus : 0;
+    if (g->co_power_turns[p] > 0 && c->power_type == CO_POW_ADVANCE)
+        b += c->power_val;
+    return b;
 }
 
 void game_co_add_gauge(Game *g, int p, int amount)
@@ -498,6 +519,50 @@ bool game_co_activate(Game *g, int p)
         g->co_power_turns[p] = 1;
         g->funds[p] += c->power_val;
         break;
+    case CO_POW_SHIELD:
+    case CO_POW_ADVANCE:
+        g->co_power_turns[p] = 1;      /* このターンのみ防御/移動補正 */
+        break;
+    case CO_POW_RESUPPLY:
+        /* 拠点に戻らなくても全軍が満タンになる。前線を維持するための技 */
+        for (int i = 0; i < g->n_units; i++) {
+            Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || u->owner != p) continue;
+            const UnitType *ut = unit_type(g, u);
+            u->fuel = ut->fuel;
+            u->ammo = ut->ammo;
+        }
+        break;
+    case CO_POW_VETERAN:
+        /* 経験値を一気に上げて進化を前倒しする */
+        for (int i = 0; i < g->n_units; i++) {
+            Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || u->owner != p) continue;
+            gain_exp(u, c->power_val);      /* 上限100の丸めを共通化する */
+        }
+        break;
+    case CO_POW_BARRAGE: {
+        /* 自軍に隣接している敵全部にダメージ。
+         * 目標を選ばせるとUIが増えるので、「接触している所を叩く」形にした。
+         * 抜き手ではなく、自ら切り込んでから使う技になる。 */
+        for (int i = 0; i < g->n_units; i++) {
+            Unit *e = &g->units[i];
+            if (!(e->flags & UF_ALIVE) || (e->flags & UF_LOADED)) continue;
+            if (e->owner == p) continue;
+            bool adjacent = false;
+            for (int j = 0; j < g->n_units && !adjacent; j++) {
+                const Unit *m = &g->units[j];
+                if (!(m->flags & UF_ALIVE) || (m->flags & UF_LOADED)) continue;
+                if (m->owner != p) continue;
+                if (hex_distance(m->pos.x, m->pos.y, e->pos.x, e->pos.y) == 1)
+                    adjacent = true;
+            }
+            if (!adjacent) continue;
+            int hp = e->hp - c->power_val;
+            e->hp = (int8_t)(hp < 1 ? 1 : hp);   /* とどめは刷す。直接の撃破はさせない */
+        }
+        break;
+    }
     default:
         break;
     }

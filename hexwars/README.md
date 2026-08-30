@@ -134,6 +134,31 @@ cmake --build build
 ctest --test-dir build          :: core単体テスト + AI自動対戦シミュレーション
 ```
 
+### 任意の画面から起動する（デバッグ用）
+
+`--screen` で目的の画面を直接開ける。**終盤のキャンペーン作戦を確認するのに
+最初から勝ち上がる必要がない**ようにするためのもの。
+
+```bat
+hexwars.exe --screen cpn M10 30   :: 最終作戦のブリーフィングから開始（持越し30部隊）
+hexwars.exe --screen cpn N3        :: 第11作戦「三角州の攻防」から開始（持越しは既定24）
+hexwars.exe --screen cpnmap M09    :: 作戦全体図をその進行度で表示
+hexwars.exe --screen battle 12 2   :: maplist の12番目を雨で開く（0=晴 1=曇 2=雨）
+hexwars.exe --screen options       :: オプション画面
+hexwars.exe --screen result        :: 作戦結果画面（レイアウト確認用）
+hexwars.exe --screen reward        :: ご褒美画面
+```
+
+`cpn` は指定ノードまでを「制圧済み」にし、持越し部隊（陸・海・空を一通り、
+一部は経験値100で進化可能）・持越し資金・指揮官の解禁もそれらしく埋めるので、
+出撃選択画面やマップイベントまで含めて実戦と同じ流れで確認できる。
+
+画面の絵を1枚だけ保存して終了したいときは環境変数 `HWSHOT` を使う。
+
+```bat
+set HWSHOT=shot.png && hexwars.exe --screen cpn M10
+```
+
 ## 操作方法
 
 | 操作 | マウス | キー |

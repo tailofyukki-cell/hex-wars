@@ -193,6 +193,7 @@ bool game_co_affects(const Game *g, int p, const Unit *u);
 /* 攻撃/防御の補正％（指揮官なし・対象外なら0） */
 int  game_co_atk_pct(const Game *g, int p, const Unit *u);
 int  game_co_def_pct(const Game *g, int p, const Unit *u);
+int  game_co_move_bonus(const Game *g, int p, const Unit *u);
 /* 必殺技が使えるか（ゲージ満タン） */
 bool game_co_power_ready(const Game *g, int p);
 /* 必殺技を発動。成功=true（ゲージを消費し効果を適用） */

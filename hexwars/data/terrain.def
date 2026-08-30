@@ -187,3 +187,41 @@ char       = x
 def        = 0
 color      = 161A20
 height     = 0
+
+# --- 生産できない飛行場・泊地 ---
+# 「都市」が supplies=LAND だけ持ち produces を持たないのと同じ形の、空版・海版。
+# 地上部隊は首都か工場でしか作れないのに、空港と港は本国から遠くても部隊を
+# 増やせてしまい釣り合いが悪かったため、補給・回復・進化だけできる拠点を用意した。
+# 新規追加は必ず末尾に足すこと（既存マップのセーブは地形を添字で持っているため）。
+
+[terrain AIRSTRIP]
+name       = 野戦飛行場
+image      = gfx/terrain/airstrip.png
+char       = A
+def        = 20
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+income     = 80
+capturable = 1
+supplies   = AIR
+color      = A6AEB0
+height     = 2
+
+[terrain ANCHORAGE]
+name       = 泊地
+image      = gfx/terrain/anchorage.png
+char       = P
+def        = 20
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+cost_sea   = 2
+cost_sub   = 2
+income     = 80
+capturable = 1
+supplies   = SEA,SUB
+color      = 8FA0AC
+height     = 1

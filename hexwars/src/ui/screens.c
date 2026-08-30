@@ -42,6 +42,7 @@ void options_load(App *a)
     a->opt_anim_video = 0;   /* 既定OFF（同梱の動画がまだ無いため） */
     a->opt_tilt = 1;         /* 既定は斜め見下ろし。平面に戻せる */
     a->opt_cutin = 1;        /* 既定は毎回。設定で「撃破時のみ」「出さない」に変えられる */
+    a->opt_weather_fx = 1;   /* 既定はON。雨の雨脚が邃しければ切れる */
     char path[600];
     snprintf(path, sizeof path, "%soptions.cfg", a->base_path);
     FILE *f = fopen(path, "rb");
@@ -59,11 +60,13 @@ void options_load(App *a)
             else if (!strcmp(key, "anim_video")) a->opt_anim_video = atoi(val);
             else if (!strcmp(key, "tilt")) a->opt_tilt = atoi(val) ? 1 : 0;
             else if (!strcmp(key, "cutin")) a->opt_cutin = atoi(val);
+            else if (!strcmp(key, "weather_fx")) a->opt_weather_fx = atoi(val) ? 1 : 0;
         }
         fclose(f);
     }
     if (a->opt_bgm < 0) a->opt_bgm = 0;
     if (a->opt_bgm > 10) a->opt_bgm = 10;
+    if (a->opt_cutin < 0 || a->opt_cutin > 2) a->opt_cutin = 1;
     if (a->opt_se < 0) a->opt_se = 0;
     if (a->opt_se > 10) a->opt_se = 10;
     /* 旧設定の引き継ぎ: 線形10段階での聞こえ方を2乗カーブでも保つ。
@@ -91,9 +94,12 @@ void options_save(App *a)
     snprintf(path, sizeof path, "%soptions.cfg", a->base_path);
     FILE *f = fopen(path, "wb");
     if (!f) return;
-    fprintf(f, "bgm = %d\nse = %d\nanim = %d\nanim_video = %d\nbgm_track = %d\nse_set = %d\ntilt = %d\nvolcurve = 2\n",
+    /* cutin は読み込みだけで書き出していなかったため、起動のたびに既定へ戻っていた */
+    fprintf(f, "bgm = %d\nse = %d\nanim = %d\nanim_video = %d\nbgm_track = %d\n"
+               "se_set = %d\ntilt = %d\ncutin = %d\nweather_fx = %d\nvolcurve = 2\n",
             a->opt_bgm, a->opt_se, a->opt_anim, a->opt_anim_video,
-            a->opt_bgm_track, a->opt_se_set, a->opt_tilt);
+            a->opt_bgm_track, a->opt_se_set, a->opt_tilt,
+            a->opt_cutin, a->opt_weather_fx);
     fclose(f);
 }
 
@@ -498,10 +504,11 @@ static void setup_draw(App *a)
 /* ------------------------------------------------------------------ */
 /* オプション画面（仕様書 10章: 音量、8.2: 戦闘アニメOFF）             */
 /* ------------------------------------------------------------------ */
-#define OPT_ROWS 9
+#define OPT_ROWS 10
 #define OPT_BACK_ROW (OPT_ROWS - 1)
 #define OPT_TILT_ROW 6
 #define OPT_CUTIN_ROW 7
+#define OPT_WXFX_ROW 8
 
 static void opt_enter(App *a) { a->opt_row = 0; }
 
@@ -566,6 +573,9 @@ static void opt_change(App *a, int dir)
         a->opt_cutin = v;
         break;
     }
+    case OPT_WXFX_ROW:
+        a->opt_weather_fx = !a->opt_weather_fx;   /* 天候の演出（見た目のみ） */
+        break;
     default:
         return;
     }
@@ -655,7 +665,7 @@ static void opt_draw(App *a)
     const char *labels[OPT_ROWS] = {
         tx("OPT_BGM"), tx("OPT_SE"), tx("OPT_ANIM"), tx("OPT_ANIM_VIDEO"),
         tx("OPT_BGM_TRACK"), tx("OPT_SE_SET"), tx("OPT_TILT"), tx("OPT_CUTIN"),
-        tx("OPT_BACK")
+        tx("OPT_WEATHER_FX"), tx("OPT_BACK")
     };
     for (int i = 0; i < OPT_ROWS; i++) {
         SDL_Rect r = opt_row_rect(i);
@@ -697,6 +707,10 @@ static void opt_draw(App *a)
         if (i == 5)
             draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW,
                       snd_se_set_name(a->opt_se_set));
+        if (i == OPT_WXFX_ROW)
+            draw_text(a, a->font_m, r.x + 320, r.y + 11,
+                      a->opt_weather_fx ? COL_YELLOW : COL_DIM,
+                      tx(a->opt_weather_fx ? "OPT_WXFX_ON" : "OPT_WXFX_OFF"));
         if (i == OPT_TILT_ROW)
             draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW,
                       tx(a->opt_tilt ? "OPT_TILT_ON" : "OPT_TILT_OFF"));
@@ -825,15 +839,6 @@ static void load_draw(App *a)
 /* ------------------------------------------------------------------ */
 /* キャンペーン全体マップ（仕様書 6.2: 進行状況の可視化）              */
 /* ------------------------------------------------------------------ */
-static void cpnmap_node_pos(const Campaign *c, int i, int *x, int *y)
-{
-    /* 5列×2段のジグザグ配置 */
-    int col = i % 5, row = i / 5;
-    (void)c;
-    *x = 160 + col * 240;
-    *y = 240 + row * 260 + ((col % 2) ? 36 : 0);
-}
-
 static int cpnmap_find_index(const Campaign *c, const char *id)
 {
     for (int i = 0; i < c->n_nodes; i++)
@@ -841,16 +846,85 @@ static int cpnmap_find_index(const Campaign *c, const char *id)
     return -1;
 }
 
+/* 作戦を並べる帯。この外（上の題・下の情報欄）にはノードを描かない */
+#define CPNMAP_TOP 136
+#define CPNMAP_BOT (WIN_H - 176)
+
+/* 並べる位置を「ファイルに書いた順」ではなく「作戦の進行順」にする。
+ * 途中にノードを挿し込むと配置が進行順とずれ、接続線が画面を
+ * 横断するような見た目になってしまうため。 */
+static int cpnmap_slot(const Campaign *c, int i)
+{
+    char cur[32];
+    snprintf(cur, sizeof cur, "%s", c->start);
+    for (int slot = 0; slot < c->n_nodes; slot++) {
+        int idx = cpnmap_find_index(c, cur);
+        if (idx < 0) break;
+        if (idx == i) return slot;
+        snprintf(cur, sizeof cur, "%s", c->nodes[idx].next_win);
+    }
+    return c->n_nodes + i;   /* 本線に載らないノードは後ろへ */
+}
+
+/* スクロールを含まない素の位置。高さの計算にも使う */
+static void cpnmap_node_pos(const Campaign *c, int i, int *x, int *y)
+{
+    /* 5列のジグザグ配置。作戦が増えると段が増えて縦に伸びる。
+     * 段ごとに進行方向を反転させる（牛耕式）。全段を左→右にすると
+     * 段の繋ぎ目が「右端→左端」になり、接続線が画面を横断してしまう。 */
+    int slot = cpnmap_slot(c, i);
+    int col = slot % 5, row = slot / 5;
+    if (row % 2) col = 4 - col;
+    *x = 160 + col * 240;
+    *y = 240 + row * 260 + ((col % 2) ? 36 : 0);
+}
+
+/* 全作戦を収めるのに必要な高さと、スクロールできる上限 */
+static int cpnmap_max_scroll(const Campaign *c)
+{
+    int bottom = 0;
+    for (int i = 0; i < c->n_nodes; i++) {
+        int x, y;
+        cpnmap_node_pos(c, i, &x, &y);
+        if (y + 80 > bottom) bottom = y + 80;   /* +80 = ヘクス下の作戦名まで */
+    }
+    int m = bottom - CPNMAP_BOT;
+    return m > 0 ? m : 0;
+}
+
+static void cpnmap_clamp_scroll(App *a)
+{
+    int m = cpnmap_max_scroll(&a->cpn);
+    if (a->cpn_scroll > m) a->cpn_scroll = m;
+    if (a->cpn_scroll < 0) a->cpn_scroll = 0;
+}
+
+/* 画面上の位置（スクロール適用後） */
+static void cpnmap_node_screen(const App *a, int i, int *x, int *y)
+{
+    cpnmap_node_pos(&a->cpn, i, x, y);
+    *y -= a->cpn_scroll;
+}
+
 static void cpnmap_enter(App *a)
 {
-    (void)a;
+    /* 進行中の作戦が帯の真ん中に来るよう送る。
+     * 作戦が増えて縦に伸びたとき、下の段が画面外になって見えなかった。 */
+    int cur = cpnmap_find_index(&a->cpn, a->cps.node);
+    a->cpn_scroll = 0;
+    if (cur >= 0) {
+        int x, y;
+        cpnmap_node_pos(&a->cpn, cur, &x, &y);
+        a->cpn_scroll = y - (CPNMAP_TOP + CPNMAP_BOT) / 2;
+    }
+    cpnmap_clamp_scroll(a);
     snd_music(HWM_TITLE, true);
 }
 
 /* 全体マップ下部の「指揮官」行。クリックでも切り替えられるようにする */
 static SDL_Rect cpnmap_co_rect(void)
 {
-    SDL_Rect r = { WIN_W / 2 - 300, WIN_H - 100, 600, 48 };
+    SDL_Rect r = { WIN_W / 2 - 300, WIN_H - 118, 600, 48 };
     return r;
 }
 
@@ -866,6 +940,20 @@ static void cpnmap_cycle_co(App *a)
 
 static void cpnmap_event(App *a, const SDL_Event *e)
 {
+    /* 縦に長いのでホイールと↑↓で送れるようにする */
+    if (e->type == SDL_MOUSEWHEEL) {
+        a->cpn_scroll -= e->wheel.y * 60;
+        cpnmap_clamp_scroll(a);
+        return;
+    }
+    if (e->type == SDL_KEYDOWN) {
+        SDL_Keycode k = e->key.keysym.sym;
+        if (k == SDLK_UP || k == SDLK_DOWN) {
+            a->cpn_scroll += (k == SDLK_DOWN ? 60 : -60);
+            cpnmap_clamp_scroll(a);
+            return;
+        }
+    }
     if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT) {
         SDL_Point p = { e->button.x, e->button.y };
         SDL_Rect cr = cpnmap_co_rect();
@@ -908,21 +996,26 @@ static void cpnmap_draw(App *a)
 
     int cur = cpnmap_find_index(c, a->cps.node);
 
+    /* 作戦を並べる帯だけに描く。こうしないとスクロールしたときに
+     * ノードが上の題や下の情報欄に重なってしまう。 */
+    SDL_Rect band = { 0, CPNMAP_TOP, WIN_W, CPNMAP_BOT - CPNMAP_TOP };
+    SDL_RenderSetClipRect(a->ren, &band);
+
     /* 接続線（通常ルート=灰、早期勝利ルート=黄） */
     for (int i = 0; i < c->n_nodes; i++) {
         int x0, y0;
-        cpnmap_node_pos(c, i, &x0, &y0);
+        cpnmap_node_screen(a, i, &x0, &y0);
         int j = cpnmap_find_index(c, c->nodes[i].next_win);
         if (j >= 0) {
             int x1, y1;
-            cpnmap_node_pos(c, j, &x1, &y1);
+            cpnmap_node_screen(a, j, &x1, &y1);
             draw_link(a, x0, y0, x1, y1, COL_DIM);
         }
         if (c->nodes[i].next_win_fast[0]) {
             j = cpnmap_find_index(c, c->nodes[i].next_win_fast);
             if (j >= 0) {
                 int x1, y1;
-                cpnmap_node_pos(c, j, &x1, &y1);
+                cpnmap_node_screen(a, j, &x1, &y1);
                 draw_link(a, x0, y0, x1, y1,
                           (SDL_Color){ 200, 180, 80, 200 });
             }
@@ -932,7 +1025,8 @@ static void cpnmap_draw(App *a)
     /* ノード */
     for (int i = 0; i < c->n_nodes; i++) {
         int x, y;
-        cpnmap_node_pos(c, i, &x, &y);
+        cpnmap_node_screen(a, i, &x, &y);
+        if (y < CPNMAP_TOP - 90 || y > CPNMAP_BOT + 90) continue;   /* 帯の外 */
         bool done = (a->cps.cleared >> i) & 1;
         uint8_t nrank = (i < MAX_CAMPAIGN_MAPS) ? a->cps.rank[i] : RANK_NONE;
         bool current = (i == cur);
@@ -967,17 +1061,30 @@ static void cpnmap_draw(App *a)
                          current ? COL_WHITE : COL_DIM, c->nodes[i].title);
     }
 
+    SDL_RenderSetClipRect(a->ren, NULL);
+
+    /* まだ先があることを示す矢印 */
+    {
+        int m = cpnmap_max_scroll(c);
+        if (a->cpn_scroll > 0)
+            draw_text_center(a, a->font_m, WIN_W - 40, CPNMAP_TOP + 4,
+                             COL_YELLOW, "▲");
+        if (a->cpn_scroll < m)
+            draw_text_center(a, a->font_m, WIN_W - 40, CPNMAP_BOT - 30,
+                             COL_YELLOW, "▼");
+    }
+
     /* 現在ノードの情報 */
     if (cur >= 0) {
         char buf[128];
         snprintf(buf, sizeof buf, tx("CPNMAP_NEXT_FMT"), c->nodes[cur].title);
-        draw_text_center(a, a->font_m, WIN_W / 2, WIN_H - 110, COL_WHITE, buf);
+        draw_text_center(a, a->font_m, WIN_W / 2, WIN_H - 172, COL_WHITE, buf);
     }
     if (a->cps.n_carry > 0) {
         char buf[96];
         snprintf(buf, sizeof buf, tx("BRIEF_CARRY_FMT"),
                  a->cps.n_carry, a->cps.funds_carry);
-        draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 76, COL_YELLOW, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 146, COL_YELLOW, buf);
     }
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 34, COL_YELLOW,
                      tx("CPNMAP_HINT"));
@@ -993,9 +1100,9 @@ static void cpnmap_draw(App *a)
         const CommanderType *co = &a->game.cos[ci];
         char cb[192];
         snprintf(cb, sizeof cb, tx("CPNMAP_CO_FMT"), co->name);
-        draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 94, COL_YELLOW, cb);
+        draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 112, COL_YELLOW, cb);
         snprintf(cb, sizeof cb, "【%s】%s", co->title, co->desc);
-        draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 72, COL_GRAY, cb);
+        draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 90, COL_GRAY, cb);
     }
 }
 
@@ -1086,32 +1193,45 @@ static void brief_draw(App *a)
     draw_text_center(a, a->font_s, WIN_W / 2, 300, COL_DIM, a->cpn.name);
     draw_text_center(a, a->font_xl, WIN_W / 2, 324, COL_WHITE, node->title);
 
+    /* 行数に応じて詰める。作戦説明が長いと副目標が下の
+     * 「Z/クリックで出撃」に重なるので、必要な高さを先に測って
+     * 開始位置と行間を決める。 */
+    int line_h = node->n_brief >= 5 ? 30 : 36;
+    int need = node->n_brief * line_h + 8;
+    if (a->cps.n_carry > 0) need += 24;
+    if (a->cps.n_store > 0) need += 24;
+    if (node->n_subs > 0)   need += 26 + node->n_subs * 22;
+    int y = 410;
+    if (y + need > WIN_H - 100) y = WIN_H - 100 - need;
+    if (y < 382) y = 382;                  /* 題名に被せない */
+
     for (int i = 0; i < node->n_brief; i++)
-        draw_text_center(a, a->font_m, WIN_W / 2, 410 + i * 36, COL_GRAY,
+        draw_text_center(a, a->font_m, WIN_W / 2, y + i * line_h, COL_GRAY,
                          node->brief[i]);
+    y += node->n_brief * line_h + 8;
 
     if (a->cps.n_carry > 0) {
         char buf[96];
         snprintf(buf, sizeof buf, tx("BRIEF_CARRY_FMT"),
                  a->cps.n_carry, a->cps.funds_carry);
-        draw_text_center(a, a->font_s, WIN_W / 2, 410 + node->n_brief * 36 + 24,
-                         COL_YELLOW, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, y, COL_YELLOW, buf);
+        y += 24;
     }
     if (a->cps.n_store > 0) {
         char buf[96];
         snprintf(buf, sizeof buf, tx("BRIEF_STORE_FMT"), a->cps.n_store);
-        draw_text_center(a, a->font_s, WIN_W / 2, 410 + node->n_brief * 36 + 48,
+        draw_text_center(a, a->font_s, WIN_W / 2, y,
                          (SDL_Color){ 130, 220, 130, 255 }, buf);
+        y += 24;
     }
     /* 副目標（達成すると評価ボーナス）。作戦説明の下に並べる */
     if (node->n_subs > 0) {
-        int y0 = 410 + node->n_brief * 36 + 78;
         char buf[128];
         snprintf(buf, sizeof buf, tx("SUB_TITLE_FMT"), campaign_sub_bonus());
-        draw_text_center(a, a->font_s, WIN_W / 2, y0, COL_YELLOW, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, y, COL_YELLOW, buf);
         for (int i = 0; i < node->n_subs; i++) {
             snprintf(buf, sizeof buf, tx("SUB_ROW_FMT"), node->subs[i].desc);
-            draw_text_center(a, a->font_s, WIN_W / 2, y0 + 24 + i * 22,
+            draw_text_center(a, a->font_s, WIN_W / 2, y + 26 + i * 22,
                              COL_WHITE, buf);
         }
     }
