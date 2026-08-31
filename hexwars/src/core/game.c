@@ -1319,6 +1319,11 @@ static bool ev_cond_met(const Game *g, const MapEvent *e)
                 return true;
         }
         return false;
+    case EV_C_CAPTURED:
+        if (!game_in_bounds(g, e->c2, e->c3)) return false;
+        return g->tiles[e->c3][e->c2].owner == (int8_t)e->c1;
+    case EV_C_WEATHER:
+        return g->weather_on && (int)game_weather(g) == e->c1;
     default: return false;
     }
 }
@@ -1365,6 +1370,50 @@ static void ev_run(Game *g, const MapEvent *e)
     }
     case EV_A_FUNDS:
         if (e->a1 >= 0 && e->a1 < MAX_PLAYERS) g->funds[e->a1] += e->a2;
+        break;
+    case EV_A_WEATHER:
+        if (!g->weather_on) break;
+        if (e->a1 < 0 || e->a1 >= WX_COUNT) break;
+        g->weather = (uint8_t)e->a1;
+        g->weather_left = (int8_t)(e->a2 > 0 ? e->a2 : 3);
+        /* この天候が明けたあとの予報も引き直す */
+        g->weather_next = weather_pick(g, g->weather);
+        break;
+    case EV_A_TERRAIN: {
+        if (!game_in_bounds(g, e->a1, e->a2)) break;
+        int nt = -1;
+        for (int i = 0; i < g->n_terrains; i++)
+            if (g->terrains[i].chr == (char)e->a3) { nt = i; break; }
+        if (nt < 0) break;                       /* 未定義の文字は無視 */
+        Tile *t = &g->tiles[e->a2][e->a1];
+        t->terrain = (uint8_t)nt;
+        /* 拠点でなくなったら所有と占領進捗を消す。
+         * 残しておくと「平地なのに所有者がいて収入が入る」になる。 */
+        if (!g->terrains[nt].capturable) {
+            t->owner = -1;
+            t->capturer = -1;
+            t->cap_hp = CAPTURE_HP;
+        }
+        break;
+    }
+    case EV_A_COPOWER:
+        if (e->a1 < 0 || e->a1 >= MAX_PLAYERS) break;
+        if (game_co(g, e->a1)) {
+            /* ゲージを満タンにしてから発動させる（通常の経路を通す） */
+            g->co_gauge[e->a1] = game_co(g, e->a1)->power_cost;
+            game_co_activate(g, e->a1);
+        }
+        break;
+    case EV_A_HP:
+        if (e->a1 < 0 || e->a1 >= MAX_PLAYERS) break;
+        for (int i = 0; i < g->n_units; i++) {
+            Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || u->owner != e->a1) continue;
+            int hp = u->hp + e->a2;
+            if (hp > 10) hp = 10;
+            if (hp < 1) hp = 1;                  /* とどめは刷さない */
+            u->hp = (int8_t)hp;
+        }
         break;
     case EV_A_MSG:
     default:

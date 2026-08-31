@@ -234,14 +234,20 @@ typedef enum {
     EV_C_TURN,      /* c1 ターン目に到達した */
     EV_C_BLD,       /* 陣営 c1 の建物が c2 個以上 */
     EV_C_LOSS,      /* 陣営 c1 の損失が c2 体以上 */
-    EV_C_AREA       /* 陣営 c1 のユニットが (c2,c3) から半径 c4 以内にいる */
+    EV_C_AREA,      /* 陣営 c1 のユニットが (c2,c3) から半径 c4 以内にいる */
+    EV_C_CAPTURED,  /* (c2,c3) の拠点を陣営 c1 が所有している */
+    EV_C_WEATHER    /* 現在の天候が c1（0=晴 1=曇 2=雨） */
 } EvCond;
 
 typedef enum {
     EV_A_NONE = 0,
     EV_A_MSG,       /* メッセージだけ */
     EV_A_SPAWN,     /* 陣営 a1 のユニット種別 a2 を (a3,a4) 付近に a5 体出す */
-    EV_A_FUNDS      /* 陣営 a1 に資金 a2 を与える */
+    EV_A_FUNDS,     /* 陣営 a1 に資金 a2 を与える */
+    EV_A_WEATHER,   /* 天候を a1 に変え、a2 ラウンド固定する */
+    EV_A_TERRAIN,   /* (a1,a2) の地形を文字 a3 の地形に差し替える */
+    EV_A_COPOWER,   /* 陣営 a1 の指揮官の必殺技を強制発動する */
+    EV_A_HP         /* 陣営 a1 の全ユニットの HP を a2 変化させる（負も可） */
 } EvAct;
 
 typedef struct {

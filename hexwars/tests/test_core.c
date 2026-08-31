@@ -2412,6 +2412,109 @@ static void test_map_events(void)
         CHECK(g2->n_units == before);
         remove("saves/_evtest.sav");
     }
+
+    /* --- 後から追加した条件と動作 --- */
+    {
+        const char *msgs[MAX_EVENTS];
+        g->n_events = 0; g->events_fired = 0;
+        g->n_units = 0;
+        int ua = game_spawn_unit(g, 0, inf, 6, 6, 10);
+        int ub = game_spawn_unit(g, 1, inf, 8, 6, 10);
+        CHECK(ua >= 0 && ub >= 0);
+
+        /* WEATHER 動作: 天候を雨に固定する */
+        g->weather_on = 1;
+        g->weather = WX_CLEAR;
+        MapEvent *w = &g->events[g->n_events++];
+        memset(w, 0, sizeof *w);
+        w->cond = EV_C_TURN; w->c1 = 1;
+        w->act = EV_A_WEATHER; w->a1 = WX_RAIN; w->a2 = 5;
+        snprintf(w->msg, sizeof w->msg, "嵐");
+        CHECK(game_check_events(g, msgs, MAX_EVENTS) == 1);
+        CHECK(game_weather(g) == WX_RAIN);
+        CHECK(g->weather_left == 5);
+        CHECK(g->weather_next != WX_RAIN);      /* 明けた先は別の天候 */
+
+        /* WEATHER 条件: 雨になったことを引き金にできる */
+        g->n_events = 0; g->events_fired = 0;
+        g->funds[1] = 0;
+        MapEvent *c = &g->events[g->n_events++];
+        memset(c, 0, sizeof *c);
+        c->cond = EV_C_WEATHER; c->c1 = WX_RAIN;
+        c->act = EV_A_FUNDS; c->a1 = 1; c->a2 = 500;
+        CHECK(game_check_events(g, msgs, MAX_EVENTS) == 1);
+        CHECK(g->funds[1] == 500);
+
+        /* TERRAIN 動作: 拠点を壊すと所有も消える（収入が残らない） */
+        g->n_events = 0; g->events_fired = 0;
+        {
+            int city = -1, plain = -1;
+            for (int i = 0; i < g->n_terrains; i++) {
+                if (!strcmp(g->terrains[i].id, "CITY"))  city = i;
+                if (!strcmp(g->terrains[i].id, "PLAIN")) plain = i;
+            }
+            CHECK(city >= 0 && plain >= 0);
+            g->tiles[7][7].terrain = (uint8_t)city;
+            g->tiles[7][7].owner = 0;
+            MapEvent *t = &g->events[g->n_events++];
+            memset(t, 0, sizeof *t);
+            t->cond = EV_C_TURN; t->c1 = 1;
+            t->act = EV_A_TERRAIN;
+            t->a1 = 7; t->a2 = 7; t->a3 = g->terrains[plain].chr;
+            CHECK(game_check_events(g, msgs, MAX_EVENTS) == 1);
+            CHECK(g->tiles[7][7].terrain == (uint8_t)plain);
+            CHECK(g->tiles[7][7].owner == -1);
+        }
+
+        /* CAPTURED 条件: その拠点を持っている間だけ成立 */
+        g->n_events = 0; g->events_fired = 0;
+        {
+            int city = -1;
+            for (int i = 0; i < g->n_terrains; i++)
+                if (!strcmp(g->terrains[i].id, "CITY")) city = i;
+            g->tiles[9][9].terrain = (uint8_t)city;
+            g->tiles[9][9].owner = -1;
+            MapEvent *cp = &g->events[g->n_events++];
+            memset(cp, 0, sizeof *cp);
+            cp->cond = EV_C_CAPTURED; cp->c1 = 0; cp->c2 = 9; cp->c3 = 9;
+            cp->act = EV_A_FUNDS; cp->a1 = 0; cp->a2 = 700;
+            g->funds[0] = 0;
+            CHECK(game_check_events(g, msgs, MAX_EVENTS) == 0);   /* まだ中立 */
+            g->tiles[9][9].owner = 0;
+            CHECK(game_check_events(g, msgs, MAX_EVENTS) == 1);
+            CHECK(g->funds[0] == 700);
+        }
+
+        /* HP 動作: 全軍を削るが HP1 を下回らない */
+        g->n_events = 0; g->events_fired = 0;
+        g->units[ub].hp = 2;
+        {
+            MapEvent *h = &g->events[g->n_events++];
+            memset(h, 0, sizeof *h);
+            h->cond = EV_C_TURN; h->c1 = 1;
+            h->act = EV_A_HP; h->a1 = 1; h->a2 = -5;
+            CHECK(game_check_events(g, msgs, MAX_EVENTS) == 1);
+            CHECK(g->units[ub].hp == 1);
+            CHECK(g->units[ua].hp == 10);        /* 自軍は無事 */
+        }
+
+        /* COPOWER 動作: 指揮官の技が強制発動される */
+        g->n_events = 0; g->events_fired = 0;
+        CHECK(data_load_commanders(g, "data/commanders.def", err, sizeof err) == 0);
+        {
+            int graf = data_find_commander(g, "GRAF");   /* HEAL +3 */
+            CHECK(graf >= 0);
+            g->co_id[1] = (int8_t)graf;
+            g->co_gauge[1] = 0;
+            g->units[ub].hp = 4;
+            MapEvent *cp = &g->events[g->n_events++];
+            memset(cp, 0, sizeof *cp);
+            cp->cond = EV_C_TURN; cp->c1 = 1;
+            cp->act = EV_A_COPOWER; cp->a1 = 1;
+            CHECK(game_check_events(g, msgs, MAX_EVENTS) == 1);
+            CHECK(g->units[ub].hp == 7);         /* 4 + 3 */
+        }
+    }
 }
 
 /* キャンペーンのイベント定義が実際に動く形になっているか（誤記の検知） */
@@ -2459,6 +2562,37 @@ static void test_campaign_events(void)
             /* AREA の中心座標もマップ内であること */
             if (ev->cond == EV_C_AREA)
                 CHECK(game_in_bounds(g, ev->c2, ev->c3));
+            /* CAPTURED は「占領できるマス」を指していないと永遠に発火しない。
+             * 座標を書き間違えても「たまたま達成しなかった」と見分けがつかないので固める。 */
+            if (ev->cond == EV_C_CAPTURED) {
+                CHECK(game_in_bounds(g, ev->c2, ev->c3));
+                if (game_in_bounds(g, ev->c2, ev->c3))
+                    CHECK(g->terrains[g->tiles[ev->c3][ev->c2].terrain].capturable);
+                CHECK(ev->c1 >= 0 && ev->c1 < MAX_PLAYERS);
+            }
+            /* 天候を条件にしているのに天候が切られているマップだと発火しない */
+            if (ev->cond == EV_C_WEATHER) {
+                CHECK(ev->c1 >= 0 && ev->c1 < WX_COUNT);
+                CHECK(g->weather_on);
+            }
+            if (ev->act == EV_A_WEATHER) {
+                CHECK(ev->a1 >= 0 && ev->a1 < WX_COUNT);
+                CHECK(g->weather_on);
+            }
+            /* TERRAIN の行先が未定義の文字だと黙って無視される */
+            if (ev->act == EV_A_TERRAIN) {
+                CHECK(game_in_bounds(g, ev->a1, ev->a2));
+                int found = 0;
+                for (int t = 0; t < g->n_terrains; t++)
+                    if (g->terrains[t].chr == (char)ev->a3) found = 1;
+                CHECK(found);
+            }
+            /* COPOWER はその陣営に指揮官がいないと何も起きない */
+            if (ev->act == EV_A_COPOWER) {
+                CHECK(ev->a1 >= 0 && ev->a1 < MAX_PLAYERS);
+                if (ev->a1 >= 0 && ev->a1 < MAX_PLAYERS)
+                    CHECK(game_co(g, ev->a1) != NULL);
+            }
             total++;
         }
     }

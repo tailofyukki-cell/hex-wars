@@ -169,8 +169,11 @@ int main(void)
             printf("  CPN LOAD ERROR: %s\n", e2);
             fail++;
         } else {
-            const char *nodes[] = { "M01", "M05", "M09", "M10" };
-            for (int i = 0; i < 4; i++)
+            /* N3/N4 は後から追加したイベント種別（TERRAIN/COPOWER/WEATHER）を
+             * 使っているので、実戦で発火するか見ておく */
+            const char *nodes[] = { "M01", "M05", "M09", "N3", "N4", "M10" };
+            int n_nodes = (int)(sizeof nodes / sizeof nodes[0]);
+            for (int i = 0; i < n_nodes; i++)
                 if (run_campaign_node(&cc, nodes[i], 700 + (uint32_t)i) == -100) fail++;
         }
     }

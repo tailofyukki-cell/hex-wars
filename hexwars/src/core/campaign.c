@@ -68,6 +68,22 @@ static int parse_event(CpnNode *n, const char *val)
         e->c1 = (int16_t)atoi(p);
         e->c2 = (int16_t)atoi(q); e->c3 = (int16_t)atoi(comma);
         e->c4 = (int16_t)atoi(r);
+    } else if (!strcmp(cond, "CAPTURED")) {
+        /* CAPTURED:陣営:x,y — その拠点をその陣営が持ったら */
+        if (!p) return -1;
+        char *q = strchr(p, ':');
+        if (!q) return -1;
+        *q++ = 0;
+        char *comma = strchr(q, ',');
+        if (!comma) return -1;
+        *comma++ = 0;
+        e->cond = EV_C_CAPTURED;
+        e->c1 = (int16_t)atoi(p);
+        e->c2 = (int16_t)atoi(q); e->c3 = (int16_t)atoi(comma);
+    } else if (!strcmp(cond, "WEATHER")) {
+        /* WEATHER:0|1|2 — 雨が降り出したら伏兵が動く、など */
+        if (!p) return -1;
+        e->cond = EV_C_WEATHER; e->c1 = (int16_t)atoi(p);
     } else return -1;
 
     /* --- 動作 --- */
@@ -101,6 +117,38 @@ static int parse_event(CpnNode *n, const char *val)
         snprintf(n->ev_unit[n->n_evs], sizeof n->ev_unit[0], "%s", q);
         e->a3 = (int16_t)atoi(r); e->a4 = (int16_t)atoi(comma);
         e->a5 = (int16_t)(cnt ? atoi(cnt) : 1);
+    } else if (!strcmp(act, "WEATHER")) {
+        /* WEATHER:天候[:ラウンド数] — 「嵐が来た」のような演出 */
+        if (!p) return -1;
+        char *q = strchr(p, ':');
+        if (q) *q++ = 0;
+        e->act = EV_A_WEATHER;
+        e->a1 = (int16_t)atoi(p);
+        e->a2 = (int16_t)(q ? atoi(q) : 3);
+    } else if (!strcmp(act, "TERRAIN")) {
+        /* TERRAIN:x,y:地形文字 — 「敵が橋を落とした」など */
+        if (!p) return -1;
+        char *q = strchr(p, ':');
+        if (!q) return -1;
+        *q++ = 0;
+        char *comma = strchr(p, ',');
+        if (!comma) return -1;
+        *comma++ = 0;
+        e->act = EV_A_TERRAIN;
+        e->a1 = (int16_t)atoi(p); e->a2 = (int16_t)atoi(comma);
+        e->a3 = (int16_t)(unsigned char)q[0];
+    } else if (!strcmp(act, "COPOWER")) {
+        /* COPOWER:陣営 — ボスが必殺技を撃ってくる */
+        if (!p) return -1;
+        e->act = EV_A_COPOWER; e->a1 = (int16_t)atoi(p);
+    } else if (!strcmp(act, "HP")) {
+        /* HP:陣営:変化量 — 負の値で疫病・爆撃の表現にも使える */
+        if (!p) return -1;
+        char *q = strchr(p, ':');
+        if (!q) return -1;
+        *q++ = 0;
+        e->act = EV_A_HP;
+        e->a1 = (int16_t)atoi(p); e->a2 = (int16_t)atoi(q);
     } else return -1;
 
     snprintf(e->msg, sizeof e->msg, "%s", msg);
