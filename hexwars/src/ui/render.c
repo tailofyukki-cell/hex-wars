@@ -686,9 +686,9 @@ void render_weather_fx(App *a, int weather, uint32_t frame)
     if (!a->opt_weather_fx) return;
     SDL_Rect view = { 0, TOPBAR_FX, WIN_W, WIN_H - TOPBAR_FX };
 
-    /* 夜は天候の前に深い青を乗せる。天候の色調もこの上に重なるので
-     * 「雨の夜」はさらに暗くなる。月明かりを左上に置いて真っ黒を避ける。 */
-    if (game_is_night(&a->game)) {
+    /* 夜は深い青を乗せる。月明かりを左上に置いて真っ黒を避ける。 */
+    bool nite = game_is_night(&a->game);
+    if (nite) {
         wx_grade(a, view, 86, 104, 158);
         wx_blob(a, 150.0f, TOPBAR_FX + 40.0f, 300.0f, 220.0f,
                 (SDL_Color){ 150, 175, 235, 26 });
@@ -696,22 +696,29 @@ void render_weather_fx(App *a, int weather, uint32_t frame)
 
     if (!a->game.weather_on) return;
 
+    /* **夜は天候の色調を重ねない**。乗算が二重にかかって
+     * 「雨の夜」がユニットを見失うほど暗くなっていた。
+     * 暗さの上限は夜の分だけにし、天候は雲の影と雨脚で見分ける。 */
     if (weather == WX_CLEAR) {
-        wx_grade(a, view, 255, 247, 232);          /* ほんのわずか暖色寄り */
-        wx_blob(a, WIN_W - 170.0f, TOPBAR_FX + 40.0f, 340.0f, 260.0f,
-                (SDL_Color){ 255, 238, 180, 46 }); /* 右上の陽光 */
+        if (!nite) {
+            wx_grade(a, view, 255, 247, 232);      /* ほんのわずか暖色寄り */
+            wx_blob(a, WIN_W - 170.0f, TOPBAR_FX + 40.0f, 340.0f, 260.0f,
+                    (SDL_Color){ 255, 238, 180, 46 }); /* 右上の陽光 */
+        }
         return;
     }
 
     if (weather == WX_CLOUDY) {
-        wx_grade(a, view, 172, 180, 198);          /* 寒色へ寄せて一段暗く */
-        wx_clouds(a, 9, (SDL_Color){ 46, 54, 70, 96 }, frame);
+        if (!nite) wx_grade(a, view, 172, 180, 198);   /* 寒色へ寄せて一段暗く */
+        wx_clouds(a, 9, nite ? (SDL_Color){ 40, 48, 64, 54 }
+                             : (SDL_Color){ 46, 54, 70, 96 }, frame);
         return;
     }
 
-    /* 雨: はっきり暗く青い + 濃い雲の影 + 斜めの雨脚 */
-    wx_grade(a, view, 112, 134, 176);
-    wx_clouds(a, 12, (SDL_Color){ 22, 28, 42, 120 }, frame);
+    /* 雨: 濃い雲の影 + 斜めの雨脚。昼はさらに暗く青くする */
+    if (!nite) wx_grade(a, view, 112, 134, 176);
+    wx_clouds(a, 12, nite ? (SDL_Color){ 20, 26, 40, 62 }
+                          : (SDL_Color){ 22, 28, 42, 120 }, frame);
 
     SDL_SetRenderDrawBlendMode(a->ren, SDL_BLENDMODE_BLEND);
     const int SPAN = WIN_H - TOPBAR_FX + 140;
