@@ -207,6 +207,13 @@ struct App {
     Popup popups[MAX_POPUPS];
     char  banner[64];
     int   banner_timer;
+    /* 必殺技のカットイン。攻撃時のカットインは戦闘演出（BattleAnim）に
+     * 乗っているが、必殺技は戦闘を伴わないので別に持つ。
+     * co_cutin_p は発動した陣営（0=自軍は左から / 1=敵は右から出す）。 */
+    char  co_cutin[64];
+    int   co_cutin_timer;
+    int   co_cutin_total;
+    int   co_cutin_p;
     /* マウスドラッグスクロール */
     bool  dragging;
     int   drag_sx, drag_sy;

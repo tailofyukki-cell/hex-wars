@@ -1,4 +1,4 @@
-﻿# units.def - ユニット定義（仕様書 3章 / 11章）
+# units.def - ユニット定義（仕様書 3章 / 11章）
 #
 # cutin … 攻撃時に出す1枚絵（assets/ からの相対パス）。オプションの
 #         「攻撃時のカットイン」が「毎回出す」「撃破したときだけ」のときに表示される。
@@ -1298,3 +1298,77 @@ def          = 34
 transport_by = CARRIER
 anti_sub     = 1
 no_produce   = 1
+
+# --- 夜間ユニット ---
+# 夜に真価を発揮する専門部隊。昼は同価格帯の通常ユニットより一段弱い。
+# night=1 のユニットは (1) 夜の攻撃力+50% (2) 夜でも視界が落ちない。
+# 夜は陸VS陸・海VS海・空VS空しか成立しないので、止められるのは
+# 敵の同じ領域の部隊だけになる。
+
+[unit NIGHT_INF]
+name          = 夜間忍兵
+icon          = 忍
+image         = gfx/units/night_inf.png
+class         = LAND_TRACK
+armor         = HARD
+cost          = 240
+move          = 5
+fuel          = 70
+ammo          = 6
+vision        = 3
+atk_soft      = 50
+atk_hard      = 22
+atk_air       = 0
+atk_sea       = 10
+def           = 30
+range_min     = 1
+range_max     = 1
+can_capture   = 1
+move_and_fire = 1
+night         = 1
+transport_by  = T_SHIP
+transport_by  = T_COPTER
+transport_by  = TRUCK
+
+[unit NIGHT_BOAT]
+name          = 夜間突撃艦
+icon          = 襲
+image         = gfx/units/night_boat.png
+class         = SEA
+armor         = SEA
+cost          = 340
+move          = 8
+fuel          = 60
+ammo          = 5
+vision        = 5
+atk_soft      = 26
+atk_hard      = 26
+atk_air       = 0
+atk_sea       = 64
+def           = 22
+range_min     = 1
+range_max     = 1
+move_and_fire = 1
+night         = 1
+
+[unit NIGHT_FIGHTER]
+name          = 夜間迎撃機
+icon          = 迎
+image         = gfx/units/night_fighter.png
+class         = AIR
+armor         = AIR
+cost          = 420
+move          = 9
+fuel          = 60
+ammo          = 6
+vision        = 5
+atk_soft      = 0
+atk_hard      = 0
+atk_air       = 60
+atk_sea       = 0
+def           = 34
+range_min     = 1
+range_max     = 1
+move_and_fire = 1
+night         = 1
+

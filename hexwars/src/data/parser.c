@@ -268,6 +268,7 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "anim"))   snprintf(cur->anim, sizeof cur->anim, "%s", val);
         else if (!strcmp(key, "cutin"))  snprintf(cur->cutin, sizeof cur->cutin, "%s", val);
         else if (!strcmp(key, "paradrop")) cur->paradrop = (uint8_t)atoi(val);
+        else if (!strcmp(key, "night"))    cur->night = (uint8_t)atoi(val);
         else if (!strcmp(key, "recon"))    cur->recon = (uint8_t)atoi(val);
         else if (!strcmp(key, "no_produce")) cur->no_produce = (uint8_t)atoi(val);
         else if (!strcmp(key, "evolve_to"))
@@ -338,6 +339,7 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
     g->objective_count = 0;
     /* 天候は既定で有効・確率60/30/10。マップ側で weather=0 なら無効化できる */
     g->weather_on = 1;
+    g->night_on = 1;      /* 既定で有効。.map で night=0 にできる */
     g->wx_pct[WX_CLEAR] = 60;
     g->wx_pct[WX_CLOUDY] = 30;
     g->wx_pct[WX_RAIN] = 10;
@@ -381,6 +383,7 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
             else if (!strcmp(key, "funds1")) g->funds[1] = atoi(val);
             else if (!strcmp(key, "income_scale")) g->income_scale = atoi(val);
             else if (!strcmp(key, "weather"))        g->weather_on = (uint8_t)(atoi(val) != 0);
+            else if (!strcmp(key, "night"))          g->night_on = (uint8_t)(atoi(val) != 0);
             else if (!strcmp(key, "weather_clear"))  g->wx_pct[WX_CLEAR]  = (int16_t)atoi(val);
             else if (!strcmp(key, "weather_cloudy")) g->wx_pct[WX_CLOUDY] = (int16_t)atoi(val);
             else if (!strcmp(key, "weather_rain"))   g->wx_pct[WX_RAIN]   = (int16_t)atoi(val);

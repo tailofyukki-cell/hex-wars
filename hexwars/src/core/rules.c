@@ -41,7 +41,7 @@ int rules_list_targets(const Game *g, int ui, int fx, int fy,
          * 同一セル・別レイヤー(距離0)は直射(range_min<=1)のみ攻撃可、間接は自セル不可。 */
         if (dist == 0) {
             if (at->range_min > 1) continue;
-        } else if (dist < at->range_min || dist > at->range_max) {
+        } else if (dist < at->range_min || dist > game_range_max(g, at)) {
             continue;
         }
         if (!unit_can_attack_target(g, a, d)) continue;

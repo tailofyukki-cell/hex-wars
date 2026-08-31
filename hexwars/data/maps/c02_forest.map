@@ -8,6 +8,9 @@ timeout_winner = 0
 funds0 = 1250
 funds1 = 2450
 
+# 序盤なので昼夜なし（まず基本を覚えてもらう。M03以降で夜が入る）
+night            = 0
+
 [terrain]
 row = xxxxxxxxxxxxxx....w.....wxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxx....w.c...wxxxxxxxxxxxxx

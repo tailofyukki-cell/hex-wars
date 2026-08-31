@@ -199,6 +199,8 @@ static SDL_Rect co_gauge_rect(void)
     return r;
 }
 
+static void start_co_cutin(App *a, const CommanderType *co, int player);
+
 /* 必殺技を発動する（使えないときは何もしない） */
 /* CPUが必殺技を撃ったらプレイヤーにも見えるようにバナー＋SEで知らせる */
 static void show_ai_co_power(App *a)
@@ -212,6 +214,7 @@ static void show_ai_co_power(App *a)
     snprintf(buf, sizeof buf, tx("CO_POWER_BANNER_FMT"), co->name, co->power_name);
     set_banner(a, buf, 120);
     battle_add_popup(a, a->cur_x, a->cur_y, co->power_name, COL_YELLOW);
+    start_co_cutin(a, co, g->current);
     snd_se(SE_CAPTURE);
 }
 
@@ -228,6 +231,7 @@ static void try_co_power(App *a)
         snprintf(buf, sizeof buf, tx("CO_POWER_BANNER_FMT"), co->name, co->power_name);
         set_banner(a, buf, 100);
         battle_add_popup(a, a->cur_x, a->cur_y, co->power_name, COL_YELLOW);
+        start_co_cutin(a, co, g->current);
         snd_se(SE_CAPTURE);
     }
 }
@@ -1405,6 +1409,7 @@ void battle_update(App *a)
     for (int i = 0; i < MAX_POPUPS; i++)
         if (a->popups[i].timer > 0) a->popups[i].timer--;
     if (a->banner_timer > 0) a->banner_timer--;
+    if (a->co_cutin_timer > 0) a->co_cutin_timer--;
 
     /* カーソルが別のセルへ移ったら、情報パネルの巡回を先頭から始める */
     if (a->cur_x != a->panel_cx || a->cur_y != a->panel_cy) {
@@ -1486,7 +1491,7 @@ static void draw_overlays(App *a)
             for (int y = 0; y < g->h; y++)
                 for (int x = 0; x < g->w; x++) {
                     int d = hex_distance(su->pos.x, su->pos.y, x, y);
-                    if (d < st->range_min || d > st->range_max) continue;
+                    if (d < st->range_min || d > game_range_max(g, st)) continue;
                     if (g->terrains[g->tiles[y][x].terrain].chr == 'x') continue;
                     float cx, cy;
                     hex_center_px(a, x, y, &cx, &cy);
@@ -1582,6 +1587,16 @@ static void draw_topbar(App *a)
     snprintf(buf, sizeof buf, tx("TOP_FUNDS_FMT"), g->funds[g->current]);
     draw_text(a, a->font_m, 500, 6, COL_YELLOW, buf);
 
+    /* 昼夜。周期が固定なので残りターン数を出すと作戦が立てられる */
+    if (g->night_on) {
+        bool nite = game_is_night(g);
+        snprintf(buf, sizeof buf, tx("TOP_PHASE_FMT"),
+                 tx(nite ? "PHASE_NIGHT" : "PHASE_DAY"), game_phase_left(g));
+        draw_text(a, a->font_s, 862, 9,
+                  nite ? (SDL_Color){ 150, 170, 235, 255 }
+                       : (SDL_Color){ 250, 220, 130, 255 }, buf);
+    }
+
     /* 天候と予報（悪天候は色を変えて気づけるように） */
     if (g->weather_on) {
         static const char *WXK[WX_COUNT] = { "WX_CLEAR", "WX_CLOUDY", "WX_RAIN" };
@@ -1606,8 +1621,8 @@ static void draw_topbar(App *a)
                  faction_name(g->objective_player),
                  game_count_buildings(g, g->objective_player),
                  g->objective_count);
-        /* 700 だと天候表示（残りターン数を足して長くなった）と重なる */
-        draw_text(a, a->font_s, 880, 9, COL_P[g->objective_player], buf);
+        /* 天候・昼夜と並ぶのでさらに右へ */
+        draw_text(a, a->font_s, 980, 9, COL_P[g->objective_player], buf);
     }
 
     /* 指揮官ゲージ（手番プレイヤーのもの）。満タンなら光らせて P で発動できる */
@@ -1779,7 +1794,7 @@ static void draw_panels(App *a)
         } else {
             snprintf(buf, sizeof buf, tx("PANEL_ATK_FMT"),
                      ut->atk[0], ut->atk[1], ut->atk[2], ut->atk[3],
-                     ut->range_min, ut->range_max);
+                     ut->range_min, game_range_max(g, ut));
             draw_text(a, a->font_s, ux + 14, py + 88, COL_GRAY, buf);
         }
     } else {
@@ -2185,31 +2200,57 @@ static void draw_battle_anim_video(App *a, UnitAnim *ua)
 
 /* 攻撃時のカットイン1枚絵。左からスライドインし、最後にスライドアウトする。
  * 画像が無い/読めない場合は何も描かない（従来の演出だけになる）。 */
-static void draw_cutin(App *a, BattleAnim *an)
+/* カットインの描画本体。from_right で右から出す（敵の必殺技用）。 */
+static void draw_cutin_img(App *a, const char *path, int total, int timer,
+                           bool from_right)
 {
-    if (!an->cutin[0]) return;
+    if (!path || !path[0]) return;
     int iw = 0, ih = 0;
-    SDL_Texture *tex = sprite_get_path(a, an->cutin, &iw, &ih);
+    SDL_Texture *tex = sprite_get_path(a, path, &iw, &ih);
     if (!tex || iw <= 0 || ih <= 0) return;
 
     const int IN = 10, OUT = 12;          /* スライドイン/アウトのフレーム数 */
-    int t = an->total - an->timer;
+    int t = total - timer;
     float k = 1.0f;                        /* 0=画面外 1=定位置 */
-    if (t < IN)               k = (float)t / (float)IN;
-    else if (an->timer < OUT) k = (float)an->timer / (float)OUT;
+    if (t < IN)            k = (float)t / (float)IN;
+    else if (timer < OUT)  k = (float)timer / (float)OUT;
     if (k < 0.0f) k = 0.0f;
     if (k > 1.0f) k = 1.0f;
     /* 行き過ぎてから戻る動き（イーズアウト）で勢いを出す */
     float e = 1.0f - (1.0f - k) * (1.0f - k);
 
-    /* 画面左下に接地させる（下で切れないよう下端合わせ） */
+    /* 下端に接地させる（下で切れないよう下端合わせ） */
     float dh = (float)WIN_H * 0.78f;
     float dw = dh * (float)iw / (float)ih;
-    float x0 = -dw - 20.0f, x1 = 4.0f;
+    float x0, x1;
+    if (from_right) { x0 = (float)WIN_W + 20.0f; x1 = (float)WIN_W - dw - 4.0f; }
+    else            { x0 = -dw - 20.0f;          x1 = 4.0f; }
     SDL_FRect dst = { x0 + (x1 - x0) * e, (float)WIN_H - dh, dw, dh };
     SDL_SetTextureAlphaMod(tex, (Uint8)(255.0f * e));
-    SDL_RenderCopyF(a->ren, tex, NULL, &dst);
+    if (from_right)   /* 右から出すときは左右反転して盤面を向かせる */
+        SDL_RenderCopyExF(a->ren, tex, NULL, &dst, 0.0, NULL, SDL_FLIP_HORIZONTAL);
+    else
+        SDL_RenderCopyF(a->ren, tex, NULL, &dst);
     SDL_SetTextureAlphaMod(tex, 255);
+}
+
+static void draw_cutin(App *a, BattleAnim *an)
+{
+    draw_cutin_img(a, an->cutin, an->total, an->timer, false);
+}
+
+/* 必殺技のカットインを始める。**敵味方を問わず出す**。
+ * 敵の必殺技は盤面が大きく動くのにバナーだけだと見逃しやすいため。 */
+static void start_co_cutin(App *a, const CommanderType *co, int player)
+{
+    a->co_cutin[0] = 0;
+    a->co_cutin_timer = 0;
+    if (!co || !co->cutin[0]) return;
+    if (a->opt_cutin == 0) return;      /* カットインを切っているなら出さない */
+    snprintf(a->co_cutin, sizeof a->co_cutin, "%s", co->cutin);
+    a->co_cutin_total = 100;
+    a->co_cutin_timer = a->co_cutin_total;
+    a->co_cutin_p = player;
 }
 
 static void draw_battle_anim(App *a)
@@ -2305,6 +2346,12 @@ void battle_draw(App *a)
     /* 戦闘アニメ（仕様書 8.2: HPバー減少 + SE） */
     if (a->bs == BS_BATTLE_ANIM)
         draw_battle_anim(a);
+
+    /* 必殺技のカットイン（自軍は左から、敵は右から）。
+     * バナーの前に描いて、技名の文字が上に乗るようにする。 */
+    if (a->co_cutin_timer > 0 && a->co_cutin[0])
+        draw_cutin_img(a, a->co_cutin, a->co_cutin_total, a->co_cutin_timer,
+                       a->co_cutin_p != 0);
 
     /* バナー */
     if (a->banner_timer > 0 && a->banner[0]) {

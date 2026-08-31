@@ -122,6 +122,7 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
     w_i8(w, g->weather_left);
     w_u8(w, g->weather_on);
     for (int i = 0; i < WX_COUNT; i++) w_i16(w, g->wx_pct[i]);
+    w_u8(w, g->night_on);            /* v9 以降 */
     /* 指揮官（v4） */
     for (int p = 0; p < MAX_PLAYERS; p++) {
         w_u8(w, (uint8_t)(int8_t)g->co_id[p]);
@@ -226,6 +227,8 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
     g->weather_left = r_i8(r);
     g->weather_on = r_u8(r);
     for (int i = 0; i < WX_COUNT; i++) g->wx_pct[i] = r_i16(r);
+    /* v9 で昼夜を追加。古いセーブはマップの既定（有効）のまま読む */
+    if (ver >= 9) g->night_on = r_u8(r);
     /* 指揮官（v4） */
     for (int p = 0; p < MAX_PLAYERS; p++) {
         g->co_id[p] = (int8_t)r_u8(r);

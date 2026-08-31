@@ -84,15 +84,16 @@ static void test_data_and_battle(void)
             CHECK(g->terrains[as_].capturable && g->terrains[an_].capturable);
         }
     }
-    /* 生産できる31種 + 進化先31種。進化先は no_produce なので生産に出ない。 */
-    CHECK(g->n_types == 62);
+    /* 生産できる34種 + 進化先31種。進化先は no_produce なので生産に出ない。
+     * 生産側の34には夜間ユニット3種を含む。 */
+    CHECK(g->n_types == 65);
     {
         int producible = 0, evo = 0;
         for (int i = 0; i < g->n_types; i++) {
             if (g->types[i].no_produce) evo++;
             else producible++;
         }
-        CHECK(producible == 31 && evo == 31);
+        CHECK(producible == 34 && evo == 31);
         /* 進化先を持つ種は、その進化先が実在し、生産不可であること */
         for (int i = 0; i < g->n_types; i++) {
             if (!g->types[i].evolve_to[0]) continue;
@@ -118,8 +119,9 @@ static void test_data_and_battle(void)
             default: land++; break;
             }
         }
-        /* 進化先も同じ内訳で増えるので倍になる */
-        CHECK(land == 28 && air == 16 && sea == 18);
+        /* 進化先も同じ内訳で増えるので倍になる。
+         * 夜間ユニットは陸・空・海に1つずつ。 */
+        CHECK(land == 29 && air == 17 && sea == 19);
     }
     /* 画像指定（image=）が両陣営分に読めていること */
     {
@@ -1530,6 +1532,28 @@ static void test_commanders(void)
         CHECK(game_co_activate(g, 0));
         CHECK(g->units[hb].hp == 7);                   /* 10 - power_val(3) */
         CHECK(g->units[far_enemy].hp == 10);           /* 離れている敌は無事 */
+        /* **必殺技は領域の規則を意図的に無視する**。
+         * 通常の攻撃は夜に陸↔空が成立しないが、艦砲射撃は隣接する敵を
+         * 領域を問わず削る。「バグに見えるが仕様」なのでここで固めておく。 */
+        {
+            int air = data_find_unit_type(g, "FIGHTER");
+            CHECK(air >= 0);
+            /* 自軍の隣のヘクスの上空。真上（距離0）だと隣接判定に入らない */
+            int ea = game_spawn_unit(g, 1, air,
+                                     g->units[hb].pos.x, g->units[hb].pos.y, 10);
+            CHECK(ea >= 0);
+            CHECK(hex_distance(g->units[ha].pos.x, g->units[ha].pos.y,
+                               g->units[ea].pos.x, g->units[ea].pos.y) == 1);
+            g->turn = 4;                               /* 夜にする */
+            CHECK(game_is_night(g));
+            g->units[hb].hp = 10;
+            g->co_gauge[0] = g->cos[wolf2].power_cost;
+            CHECK(game_co_activate(g, 0));
+            CHECK(g->units[hb].hp == 7);               /* 陸の敵 */
+            CHECK(g->units[ea].hp == 7);               /* 空の敵も削れる */
+            g->turn = 1;
+            g->units[ea].flags &= (uint8_t)~UF_ALIVE;
+        }
         g->units[hb].hp = 2;
         g->co_gauge[0] = g->cos[wolf2].power_cost;
         CHECK(game_co_activate(g, 0));
@@ -1547,6 +1571,180 @@ static void test_commanders(void)
         CHECK(game_co_activate(g, 0));
         CHECK(game_co_move_bonus(g, 0, &g->units[ha])
               == base_b + g->cos[dieter].power_val);
+    }
+}
+
+/* 昼夜: 固定周期・領域制限・攻撃補正・視界・射程・地形防御 */
+static void test_daynight(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    if (s_fail) return;
+    CHECK(g->night_on == 1);              /* 既定で有効 */
+    g->fog = false;
+    game_start(g, 3);
+
+    /* 周期: 昼3ターン → 夜2ターン の繰り返し。ターン数から一意に決まる */
+    {
+        static const int NIGHT[12] = { 0,0,0,1,1, 0,0,0,1,1, 0,0 };
+        static const int LEFT[12]  = { 3,2,1,2,1, 3,2,1,2,1, 3,2 };
+        for (int t = 1; t <= 12; t++) {
+            g->turn = t;
+            CHECK(game_is_night(g) == (bool)NIGHT[t - 1]);
+            CHECK(game_phase_left(g) == LEFT[t - 1]);
+        }
+        g->night_on = 0;
+        g->turn = 4;
+        CHECK(!game_is_night(g));         /* 切ってあるマップは常に昼 */
+        g->night_on = 1;
+    }
+
+    int inf   = data_find_unit_type(g, "INFANTRY");
+    int fight = data_find_unit_type(g, "FIGHTER");
+    int aa    = data_find_unit_type(g, "AA_TANK");
+    int ninja = data_find_unit_type(g, "NIGHT_INF");
+    int arty  = data_find_unit_type(g, "ARTILLERY");
+    CHECK(inf >= 0 && fight >= 0 && aa >= 0 && ninja >= 0 && arty >= 0);
+    if (s_fail) return;
+
+    /* 領域制限: 夜は陸VS陸・空VS空だけ。またぐ攻撃は成立しない */
+    {
+        g->n_units = 0;
+        int ga = game_spawn_unit(g, 0, aa,    9, 4, 10);   /* 地上の対空 */
+        int pa = game_spawn_unit(g, 1, fight, 10, 4, 10);  /* 空 */
+        int gb = game_spawn_unit(g, 1, inf,   8, 4, 10);   /* 地上 */
+        game_update_vision(g);
+
+        g->turn = 1;                                       /* 昼 */
+        CHECK(unit_can_attack_target(g, &g->units[ga], &g->units[pa]));
+        CHECK(unit_can_attack_target(g, &g->units[ga], &g->units[gb]));
+
+        g->turn = 4;                                       /* 夜 */
+        CHECK(!unit_can_attack_target(g, &g->units[ga], &g->units[pa]));  /* 地→空 不可 */
+        CHECK(unit_can_attack_target(g, &g->units[ga], &g->units[gb]));   /* 地→地 可 */
+        CHECK(!unit_can_attack_target(g, &g->units[pa], &g->units[gb]));  /* 空→地 不可 */
+    }
+
+    /* 攻撃補正: 夜間ユニット+50% / 通常-20% */
+    {
+        g->n_units = 0;
+        int na = game_spawn_unit(g, 0, ninja, 9, 4, 10);
+        int nb = game_spawn_unit(g, 0, inf,  11, 4, 10);
+        int td = game_spawn_unit(g, 1, inf,  10, 4, 10);
+        game_update_vision(g);
+
+        g->turn = 1;
+        CHECK(game_night_atk_pct(g, &g->units[na]) == 100);
+        CHECK(game_night_atk_pct(g, &g->units[nb]) == 100);
+        int day_night_unit = battle_expect_damage_x10(g, &g->units[na], &g->units[td]);
+        int day_normal     = battle_expect_damage_x10(g, &g->units[nb], &g->units[td]);
+
+        g->turn = 4;
+        CHECK(game_night_atk_pct(g, &g->units[na]) == 150);
+        CHECK(game_night_atk_pct(g, &g->units[nb]) == 80);
+        CHECK(battle_expect_damage_x10(g, &g->units[na], &g->units[td]) > day_night_unit);
+        CHECK(battle_expect_damage_x10(g, &g->units[nb], &g->units[td]) < day_normal);
+    }
+
+    /* 視界: 夜は-2。ただし夜間ユニットは落ちない */
+    {
+        g->turn = 4;
+        CHECK(game_night_vision_mod(g) == -2);
+        g->turn = 1;
+        CHECK(game_night_vision_mod(g) == 0);
+
+        g->fog = true;
+        g->n_units = 0;
+        game_spawn_unit(g, 0, inf, 10, 10, 10);
+        g->turn = 1; game_update_vision(g);
+        int day_seen = 0;
+        for (int y = 0; y < g->h; y++) for (int x = 0; x < g->w; x++)
+            day_seen += g->visible[0][y][x];
+        g->turn = 4; game_update_vision(g);
+        int night_seen = 0;
+        for (int y = 0; y < g->h; y++) for (int x = 0; x < g->w; x++)
+            night_seen += g->visible[0][y][x];
+        CHECK(night_seen < day_seen);          /* 通常兵は夜に見えなくなる */
+
+        g->n_units = 0;
+        game_spawn_unit(g, 0, ninja, 10, 10, 10);
+        g->turn = 1; game_update_vision(g);
+        int nd = 0;
+        for (int y = 0; y < g->h; y++) for (int x = 0; x < g->w; x++)
+            nd += g->visible[0][y][x];
+        g->turn = 4; game_update_vision(g);
+        int nn = 0;
+        for (int y = 0; y < g->h; y++) for (int x = 0; x < g->w; x++)
+            nn += g->visible[0][y][x];
+        CHECK(nn == nd);                       /* 夜間兵は夜でも同じ */
+        g->fog = false;
+    }
+
+    /* 射程: 夜は間接攻撃の最大射程が1減る。直射は変わらない */
+    {
+        const UnitType *at = &g->types[arty];
+        const UnitType *it = &g->types[inf];
+        g->turn = 1;
+        CHECK(game_range_max(g, at) == at->range_max);
+        CHECK(game_range_max(g, it) == it->range_max);
+        g->turn = 4;
+        CHECK(game_range_max(g, at) == at->range_max - 1);
+        CHECK(game_range_max(g, it) == it->range_max);
+    }
+
+    /* 反撃は「反撃する側の残りHP」に比例する。
+     * このため夜は、与ダメージが減って相手が多くHPを残す分、
+     * 反撃が“絶対値で”強くなる。バグに見えやすいので意図した振る舞いとして固める。 */
+    {
+        g->n_units = 0;
+        int ia = game_spawn_unit(g, 0, inf, 9, 4, 10);
+        int ib = game_spawn_unit(g, 1, inf, 10, 4, 10);
+        game_update_vision(g);
+        int d_dmg, d_hp, d_cnt, d_ahp;
+        int n_dmg, n_hp, n_cnt, n_ahp;
+        g->turn = 1;
+        battle_forecast(g, ia, ib, &d_dmg, &d_hp, &d_cnt, &d_ahp);
+        g->turn = 4;
+        battle_forecast(g, ia, ib, &n_dmg, &n_hp, &n_cnt, &n_ahp);
+        CHECK(n_dmg < d_dmg);      /* 夜は与ダメージが減る */
+        CHECK(n_hp  > d_hp);       /* 相手の残りHPは多い */
+        CHECK(n_cnt >= d_cnt);     /* その分反撃は弱くならない */
+    }
+
+    /* 地形防御: 夜は森・都市（hide=1）だけ余分に硬くなる。
+     * 平地と比べて「夜の落ち込み幅」が森のほうが大きいことを見る。 */
+    {
+        int plain = -1, forest = -1;
+        for (int i = 0; i < g->n_terrains; i++) {
+            if (!strcmp(g->terrains[i].id, "PLAIN"))  plain = i;
+            if (!strcmp(g->terrains[i].id, "FOREST")) forest = i;
+        }
+        CHECK(plain >= 0 && forest >= 0);
+        g->n_units = 0;
+        int at2 = game_spawn_unit(g, 0, inf, 9, 4, 10);
+        int df  = game_spawn_unit(g, 1, inf, 10, 4, 10);
+        game_update_vision(g);
+
+        g->tiles[4][10].terrain = (uint8_t)forest;
+        g->turn = 1;
+        int day_forest = battle_expect_damage_x10(g, &g->units[at2], &g->units[df]);
+        g->turn = 4;
+        int night_forest = battle_expect_damage_x10(g, &g->units[at2], &g->units[df]);
+
+        g->tiles[4][10].terrain = (uint8_t)plain;
+        g->turn = 1;
+        int day_plain = battle_expect_damage_x10(g, &g->units[at2], &g->units[df]);
+        g->turn = 4;
+        int night_plain = battle_expect_damage_x10(g, &g->units[at2], &g->units[df]);
+
+        CHECK(night_forest < day_forest);
+        CHECK(night_plain < day_plain);
+        /* night_forest/day_forest < night_plain/day_plain を整数で比較する */
+        CHECK(night_forest * day_plain < night_plain * day_forest);
     }
 }
 
@@ -2415,7 +2613,6 @@ static void test_map_events(void)
 
     /* --- 後から追加した条件と動作 --- */
     {
-        const char *msgs[MAX_EVENTS];
         g->n_events = 0; g->events_fired = 0;
         g->n_units = 0;
         int ua = game_spawn_unit(g, 0, inf, 6, 6, 10);
@@ -2884,6 +3081,7 @@ int main(void)
     test_warehouse();
     test_commanders();
     test_weather();
+    test_daynight();
     test_enemy_reinforce();
     test_join();
     test_ai_co_power();

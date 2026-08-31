@@ -148,7 +148,10 @@ int main(int argc, char *argv[])
                 a->game.ctrl[1] = CTRL_CPU_NORMAL;
                 a->game.co_id[0] = a->game.co_id[1] = -1;
                 game_start(&a->game, 12345u);
-                /* 天候の見た目確認用: --screen battle <map> <0=晴 1=曇 2=雨> */
+                /* 見た目確認用:
+                 *   --screen battle <map> <0=晴 1=曇 2=雨> [ターン]
+                 * ターンを指定すると昼夜を選べる（昼3・夜2の固定周期なので
+                 * 1..3=昼 / 4..5=夜）。 */
                 if (argc >= 5) {
                     int wx = atoi(argv[4]);
                     if (wx >= 0 && wx < WX_COUNT) {
@@ -156,6 +159,10 @@ int main(int argc, char *argv[])
                         a->game.weather = (uint8_t)wx;
                         a->game.weather_left = 3;
                     }
+                }
+                if (argc >= 6) {
+                    int t = atoi(argv[5]);
+                    if (t >= 1) a->game.turn = t;
                 }
                 a->next_screen = SCREEN_BATTLE;
             } else {

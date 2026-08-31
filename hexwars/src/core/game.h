@@ -69,6 +69,10 @@ typedef struct Game {
      * 実際の出現率はこの値そのものではなく、差が小さくなる方向になる（実測 48/34/17）。 */
     int16_t wx_pct[WX_COUNT];
 
+    /* 昼夜。現在が昼か夜かはターン数から決まるので保持しない。
+     * ここにあるのは「そのマップで夜を使うか」の可否だけ。 */
+    uint8_t night_on;       /* 0=このマップは常に昼（.map の night=0） */
+
     /* 設定 */
     bool  fog;             /* 索敵 ON/OFF */
     uint8_t ctrl[MAX_PLAYERS]; /* PlayerCtrl */
@@ -182,6 +186,19 @@ bool game_weather_hits(const Game *g, const Unit *atk, const Unit *def);
 int  game_weather_atk_pct(const Game *g, const Unit *atk, const Unit *def);
 /* 天候による視界の増減（0以下）。ユニット毎に下限1は呼び出し側で担保 */
 int  game_weather_vision_mod(const Game *g);
+
+/* --- 昼夜 --- */
+bool game_is_night(const Game *g);
+int  game_phase_left(const Game *g);      /* 今の昼/夜があと何ターン続くか */
+int  game_night_atk_pct(const Game *g, const Unit *atk);
+int  game_night_vision_mod(const Game *g);
+/* 夜の領域制限でこの組み合わせが成立しないか。
+ * 攻撃の可否とダメージ見積もりの両方がこれを参照する。 */
+int  game_unit_domain(const Game *g, const Unit *u);  /* 0=陸 1=空 2=海 */
+bool game_night_blocks(const Game *g, const Unit *atk, const Unit *def);
+/* 夜は着弾観測ができないので間接攻撃の最大射程が1減る。
+ * 射程を見るところはこの関数を通すこと（UI・AI・命中判定をずらさないため）。 */
+int  game_range_max(const Game *g, const UnitType *t);
 /* 天候による地上ユニットの移動増減（0以下） */
 int  game_weather_move_mod(const Game *g, const Unit *u);
 

@@ -6,9 +6,9 @@
 
 | | 数 |
 |---|---|
-| 参照されているパス | 82 |
+| 参照されているパス | 85 |
 | うち実体あり | 77 |
-| うち**未用意** | **5** |
+| うち**未用意** | **8** |
 
 
 ## 地形（マップのセル）（14本）
@@ -34,7 +34,7 @@
 | `gfx/terrain/airstrip.png` | AIRSTRIP（野戦飛行場） | **未** | - |
 | `gfx/terrain/anchorage.png` | ANCHORAGE（泊地） | **未** | - |
 
-## ユニット（37本）
+## ユニット（40本）
 
 定義場所: `data/units.def` の `image = / image0 = / image1 =`
 
@@ -79,6 +79,9 @@
 | `gfx/units/missile_boat.png` | MISSILE_BOAT ほか1件 | ○ | 96x96 |
 | `gfx/units/supply_ship.png` | SUPPLY_SHIP ほか1件 | ○ | 96x96 |
 | `gfx/units/t_plane.png` | T_PLANE ほか1件 | ○ | 96x96 |
+| `gfx/units/night_inf.png` | NIGHT_INF（夜間忍兵） | **未** | - |
+| `gfx/units/night_boat.png` | NIGHT_BOAT（夜間突撃艦） | **未** | - |
+| `gfx/units/night_fighter.png` | NIGHT_FIGHTER（夜間迎撃機） | **未** | - |
 
 ## 指揮官（11本）
 
@@ -135,6 +138,9 @@
 |---|---|
 | `gfx/terrain/airstrip.png` | AIRSTRIP（野戦飛行場） |
 | `gfx/terrain/anchorage.png` | ANCHORAGE（泊地） |
+| `gfx/units/night_inf.png` | NIGHT_INF（夜間忍兵） |
+| `gfx/units/night_boat.png` | NIGHT_BOAT（夜間突撃艦） |
+| `gfx/units/night_fighter.png` | NIGHT_FIGHTER（夜間迎撃機） |
 | `gfx/co/herta.png` | HERTA（ヘルタ主計大尉） |
 | `gfx/co/noel.png` | NOEL（ノエル教官） |
 | `gfx/co/dieter.png` | DIETER（ディーター大尉） |

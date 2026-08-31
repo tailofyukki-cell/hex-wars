@@ -81,6 +81,8 @@ bool unit_can_attack_target(const Game *g, const Unit *atk, const Unit *def)
     if (at->atk[dt->armor] <= 0) return false;
     if (atk->ammo <= 0) return false;
     if (dt->is_sub && !at->anti_sub) return false;
+    /* 夜: 陸VS陸・海VS海・空VS空だけ。領域をまたぐ攻撃は成立しない */
+    if (game_night_blocks(g, atk, def)) return false;
     /* 天候: 雨は空↔地上の攻撃そのものを不可にする
      * （ここで弾くと対象一覧・AI・実攻撃のすべてに一括で効く） */
     if (game_weather_atk_pct(g, atk, def) <= 0) return false;
@@ -125,6 +127,9 @@ void game_update_vision(Game *g)
                 vb += co->vision_bonus;
             /* 天候による視界低下（下限1は必ず確保する） */
             int vis = unit_type(g, u)->vision + vb + game_weather_vision_mod(g);
+            /* 夜は見えなくなるが、夜間ユニットだけは落ちない。
+             * この非対称が夜間ユニットを「偵察役」にする。 */
+            if (!unit_type(g, u)->night) vis += game_night_vision_mod(g);
             if (vis < 1) vis = 1;
             reveal_around(g, p, u->pos.x, u->pos.y, vis);
         }
@@ -374,6 +379,68 @@ int game_weather_move_mod(const Game *g, const Unit *u)
 /* 天候を wx_pct の重みで引く。ただし except だけは選ばない。
  * 今の天候と同じものを予報に出してしまうと「晴（次:晴）」のような
  * 意味のない表示になり、切り替わっても見た目が変わらないので除外する。 */
+/* --- 昼夜 ---
+ * 周期が固定なのでターン数から引ける。状態を持たないので
+ * セーブ形式も変わらず、ロード後にズレる心配もない。 */
+bool game_is_night(const Game *g)
+{
+    if (!g->night_on) return false;
+    int cyc = DAY_TURNS + NIGHT_TURNS;
+    int pos = (g->turn - 1) % cyc;
+    if (pos < 0) pos += cyc;
+    return pos >= DAY_TURNS;
+}
+
+int game_phase_left(const Game *g)
+{
+    if (!g->night_on) return 0;
+    int cyc = DAY_TURNS + NIGHT_TURNS;
+    int pos = (g->turn - 1) % cyc;
+    if (pos < 0) pos += cyc;
+    return (pos < DAY_TURNS) ? (DAY_TURNS - pos) : (cyc - pos);
+}
+
+/* 夜の攻撃補正。
+ * 夜間ユニットは夜に+50%、通常ユニットは夜に-20%。
+ * 夜を「殺し合いの時間」ではなく「補給と回復の時間」にするため。 */
+int game_night_atk_pct(const Game *g, const Unit *atk)
+{
+    if (!game_is_night(g)) return 100;
+    return unit_type(g, atk)->night ? 150 : 80;
+}
+
+int game_night_vision_mod(const Game *g)
+{
+    if (!game_is_night(g)) return 0;
+    return -2;                       /* 夜間ユニットは呼び出し側で除外する */
+}
+
+/* ユニットの活動領域（0=陸 1=空 2=海）。
+ * 「陸VS陸・海VS海・空VS空」を見るところはこれを使う。 */
+int game_unit_domain(const Game *g, const Unit *u)
+{
+    return move_domain(g->types[u->type].mclass);
+}
+
+/* 夜の領域制限。**この一つだけを見ること**。
+ * 以前は unit_can_attack_target だけに書いていて、ダメージ計算側は
+ * 見ていなかったため、「起こり得ない攻撃」に非0の見積もりが出ていた。 */
+bool game_night_blocks(const Game *g, const Unit *atk, const Unit *def)
+{
+    if (!atk || !def) return false;
+    if (!game_is_night(g)) return false;
+    return game_unit_domain(g, atk) != game_unit_domain(g, def);
+}
+
+int game_range_max(const Game *g, const UnitType *t)
+{
+    int r = t->range_max;
+    /* 夜は着弾を見て修正できないので間接攻撃の射程が縮む。
+     * 直射（range_min<=1）は目視で撃つので影響しない。 */
+    if (game_is_night(g) && t->range_min >= 2 && r > t->range_min) r--;
+    return r;
+}
+
 static uint8_t weather_pick(Game *g, int except)
 {
     int total = 0;
@@ -549,6 +616,10 @@ bool game_co_activate(Game *g, int p)
             Unit *e = &g->units[i];
             if (!(e->flags & UF_ALIVE) || (e->flags & UF_LOADED)) continue;
             if (e->owner == p) continue;
+            /* **領域（陸/海/空）も天候も夜も見ないのは意図的**。
+             * 通常の攻撃は夜に領域をまたげないが、必殺技はその例外として
+             * 隣接する敵を一括で削る。「夜なのに艦砲が飛行機を削った」は
+             * 不具合ではないので、領域判定を足さないこと。 */
             bool adjacent = false;
             for (int j = 0; j < g->n_units && !adjacent; j++) {
                 const Unit *m = &g->units[j];
@@ -581,7 +652,6 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
     if (counter_dmg) *counter_dmg = 0;
     if (def_killed)  *def_killed = false;
     if (atk_killed)  *atk_killed = false;
-
     int dmg = battle_roll_damage(g, a, d);
     a->ammo--;
     gain_exp(a, 2 * dmg);
@@ -603,7 +673,7 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
         bool attacker_indirect = at->range_min >= 2;
         bool in_counter_range = (dist == 0)
             ? (dt->range_min <= 1)
-            : (dist >= dt->range_min && dist <= dt->range_max);
+            : (dist >= dt->range_min && dist <= game_range_max(g, dt));
         if (!attacker_indirect && in_counter_range &&
             unit_can_attack_target(g, d, a)) {
             int c = battle_roll_damage(g, d, a);

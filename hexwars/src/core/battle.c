@@ -25,12 +25,18 @@ static int base_damage_x10(const Game *g, const Unit *atk, const Unit *def)
     const UnitType *dt = unit_type(g, def);
     int a = at->atk[dt->armor];
     if (a <= 0) return 0;
+    /* 夜は領域をまたぐ攻撃が成立しない。雨と同じくここでも0を返す。
+     * 見ないと、実際には撃てない組み合わせに予想ダメージが出てしまう。 */
+    if (game_night_blocks(g, atk, def)) return 0;
 
     int base = a * atk->hp / 10;
     const TerrainType *terr = game_terrain_at(g, def->pos.x, def->pos.y);
     /* 立体化(確定): 地形防御は全レイヤーに適用（空・海中も自セルの防御を受ける） */
     (void)dt;
     int terrain_def = terr->def_bonus;
+    /* 夜は身を隠せる地形（hide=1 の森・都市）の防御が上がる。
+     * 夜を「例えば森に引いて立て直す時間」にするための後押し。 */
+    if (game_is_night(g) && terr->hide) terrain_def += terrain_def / 2;
 
     /* 指揮官（CO）の常時効果。攻撃側の atk_pct と防御側の def_pct を反映 */
     int co_atk = game_co_atk_pct(g, atk->owner, atk);
@@ -44,6 +50,8 @@ static int base_damage_x10(const Game *g, const Unit *atk, const Unit *def)
     /* 天候: 曇=空↔地上の攻撃半減 / 雨=同攻撃不可（0を返す） */
     int wx = game_weather_atk_pct(g, atk, def);
     if (wx <= 0) return 0;
+    /* 夜: 夜間ユニットは+50%、それ以外は-20% */
+    int nt = game_night_atk_pct(g, atk);
 
     /* 射程減衰: 最短射程から1セル遠ざかるごとに -5%（命中率が落ちるイメージ）。
      * 直射(射程1)は差が0なので影響を受けない。同一セル(距離0)は差が負になるため
@@ -54,7 +62,7 @@ static int base_damage_x10(const Game *g, const Unit *atk, const Unit *def)
     int rng = 100 - RANGE_FALLOFF_PCT * over;
     if (rng < RANGE_FALLOFF_MIN) rng = RANGE_FALLOFF_MIN;
 
-    return base * atkmod / defmod * wx / 100 * rng / 100;
+    return base * atkmod / defmod * wx / 100 * rng / 100 * nt / 100;
 }
 
 int battle_expect_damage_x10(const Game *g, const Unit *atk, const Unit *def)
@@ -92,7 +100,7 @@ void battle_forecast(const Game *g, int atk_i, int def_i,
         bool atk_indirect = at->range_min >= 2;
         bool in_range = (dist == 0)
             ? (dt->range_min <= 1)
-            : (dist >= dt->range_min && dist <= dt->range_max);
+            : (dist >= dt->range_min && dist <= game_range_max(g, dt));
         if (!atk_indirect && in_range && unit_can_attack_target(g, d, a)) {
             Unit tmp = *d;                 /* 被弾後のHPで反撃威力を見積もる */
             tmp.hp = (int8_t)dhp;

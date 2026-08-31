@@ -24,7 +24,7 @@ static void build_threat(Game *g, AiState *s)
         if (!(u->flags & UF_ALIVE) || u->owner == me) continue;
         if (!game_unit_visible_to(g, me, u)) continue;
         const UnitType *t = &g->types[u->type];
-        int reach = t->move + t->range_max;
+        int reach = t->move + game_range_max(g, t);   /* 夜は間接の射程が短い */
         if (u->ammo <= 0 && t->ammo > 0) continue;   /* 弾切れは脅威にならない */
         for (int y = 0; y < g->h; y++)
             for (int x = 0; x < g->w; x++) {
@@ -543,7 +543,12 @@ static void act_unit(Game *g, AiState *s, int ui)
     const int (*threat)[MAX_MAP_W] = s->threat[ut->armor];
 
     Plan best = { -1000000, u->pos.x, u->pos.y, 0, -1, -1, -1 };
-    bool retreat = hard && u->hp <= 3; /* HARD: 損傷ユニットは補給地点へ */
+    /* HARD: 損傷ユニットは補給地点へ。
+     * 夜は攻撃力が-20%になり領域をまたぐ攻撃もできないので、
+     * 通常ユニットは夜のうちに戻って立て直すのが合理的。
+     * 夜間ユニットは夜こそ出番なので下がらせない。 */
+    bool retreat = hard && (u->hp <= 3 ||
+                            (game_is_night(g) && !ut->night && u->hp <= 6));
 
     /* このユニットが上陸作戦・輸送任務に関わるか（輸送艦/輸送ヘリ/トラック。
      * 空母は capacity>0 でも武装しているので type_unarmed で除外する） */
@@ -835,8 +840,9 @@ static void act_unit(Game *g, AiState *s, int ui)
                     int loss = 0;
                     int dist = hex_distance(x, y, d->pos.x, d->pos.y);
                     if (ut->range_min < 2 && exp < cap &&
-                        dist >= dt->range_min && dist <= dt->range_max &&
-                        d->ammo > 0 && dt->atk[ut->armor] > 0) {
+                        dist >= dt->range_min && dist <= game_range_max(g, dt) &&
+                        d->ammo > 0 && dt->atk[ut->armor] > 0 &&
+                        !game_night_blocks(g, d, u)) {   /* 夜は反撃されない組み合わせがある */
                         int cx10 = battle_expect_damage_x10(g, d, u);
                         loss = ut->cost * cx10 / 100;
                     }

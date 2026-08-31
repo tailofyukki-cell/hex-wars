@@ -6,7 +6,7 @@
 #include "campaign.h"
 
 #define SAVE_MAGIC   "HXWS"
-#define SAVE_VERSION 8   /* v8: 搭載枠を2→4に拡張（大型空母用）。v7以前も読める */
+#define SAVE_VERSION 9   /* v9: 昼夜の有効/無効を追加。v6以降は引き続き読める */
 /* この版以降は読める（古いセーブは欠けている項目を既定値で埋める）。
  * 進行中のキャンペーンを無駄にしないための下位互換。 */
 #define SAVE_VERSION_MIN 6

@@ -683,8 +683,18 @@ static void wx_grade(App *a, SDL_Rect v, Uint8 r, Uint8 g, Uint8 b)
 
 void render_weather_fx(App *a, int weather, uint32_t frame)
 {
-    if (!a->game.weather_on || !a->opt_weather_fx) return;
+    if (!a->opt_weather_fx) return;
     SDL_Rect view = { 0, TOPBAR_FX, WIN_W, WIN_H - TOPBAR_FX };
+
+    /* 夜は天候の前に深い青を乗せる。天候の色調もこの上に重なるので
+     * 「雨の夜」はさらに暗くなる。月明かりを左上に置いて真っ黒を避ける。 */
+    if (game_is_night(&a->game)) {
+        wx_grade(a, view, 86, 104, 158);
+        wx_blob(a, 150.0f, TOPBAR_FX + 40.0f, 300.0f, 220.0f,
+                (SDL_Color){ 150, 175, 235, 26 });
+    }
+
+    if (!a->game.weather_on) return;
 
     if (weather == WX_CLEAR) {
         wx_grade(a, view, 255, 247, 232);          /* ほんのわずか暖色寄り */
@@ -720,15 +730,25 @@ void render_weather_fx(App *a, int weather, uint32_t frame)
     }
 }
 
-/* 上のバーに出す天候アイコン。文字だけだと目に入らないので絵も添える。 */
+/* 上のバーに出す天候アイコン。文字だけだと目に入らないので絵も添える。
+ * 夜の晴天は太陽ではなく月を描く（夜なのに太陽が出ていると矛盾する）。 */
 void render_weather_icon(App *a, int x, int y, int weather)
 {
     const SDL_Color SUN   = { 250, 205,  90, 255 };
+    const SDL_Color MOON  = { 205, 216, 245, 255 };
     const SDL_Color CLOUD = { 205, 210, 218, 255 };
     const SDL_Color DROP  = { 120, 180, 250, 255 };
     float cx = (float)x + 9.0f, cy = (float)y + 9.0f;
+    bool nite = game_is_night(&a->game);
 
     if (weather == WX_CLEAR) {
+        if (nite) {
+            /* 三日月: 円を描いて背景色の円で削る */
+            fill_circle(a, cx, cy, 6.0f, MOON);
+            fill_circle(a, cx + 3.6f, cy - 2.0f, 5.2f,
+                        (SDL_Color){ 22, 26, 32, 255 });
+            return;
+        }
         for (int i = 0; i < 8; i++) {          /* 光条 */
             float an = (float)i * 3.14159f / 4.0f;
             fill_circle(a, cx + cosf(an) * 8.0f, cy + sinf(an) * 8.0f, 1.6f, SUN);
