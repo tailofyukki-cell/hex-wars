@@ -404,6 +404,13 @@ static void draw_unit(App *a, const Unit *u, float cx, float cy)
     if (done) body = darken(body, 55);
     body.a = alpha;
 
+    /* 自チーム（自軍＋援軍）には明るいリングを付ける。
+     * 陣営色だけだと、5陣営では隣の黄色が援軍か敵か判別できない。
+     * 乱戦（既定）では自軍だけに付くので従来の見た目と矛盾しない。 */
+    int viewer = render_viewer(g);
+    bool friendly = game_same_team(g, viewer, u->owner);
+    const SDL_Color ALLY_RING = { 236, 240, 250, 220 };
+
     SDL_Texture *spr = sprite_get(a, u->type, u->owner);
     if (spr) {
         /* 画像スプライト: 陣営は下部のチップ（色+形状）で判別 */
@@ -414,17 +421,25 @@ static void draw_unit(App *a, const Unit *u, float cx, float cy)
         SDL_SetTextureAlphaMod(spr, alpha);
         SDL_RenderCopyF(a->ren, spr, NULL, &dst);
         SDL_SetTextureAlphaMod(spr, 255);
+        float chx = cx - r * 0.75f, chy = cy + r * 0.7f;
+        /* 下地はチップと同じ形にする。菱形の下に円を敷くと
+         * 菱形が円をほぼ覆ってしまいリングが見えない。 */
+        if (friendly) {
+            if (u->owner == 0) fill_circle(a, chx, chy, s * 0.27f, ALLY_RING);
+            else               fill_diamond(a, chx, chy, s * 0.34f, ALLY_RING);
+        }
         if (u->owner == 0)
-            fill_circle(a, cx - r * 0.75f, cy + r * 0.7f, s * 0.18f, body);
+            fill_circle(a, chx, chy, s * 0.18f, body);
         else
-            fill_diamond(a, cx - r * 0.75f, cy + r * 0.7f, s * 0.24f, body);
+            fill_diamond(a, chx, chy, s * 0.24f, body);
     } else {
-        SDL_Color edge = darken(body, 60); edge.a = alpha;
+        SDL_Color edge = friendly ? ALLY_RING : darken(body, 60);
+        edge.a = alpha;
         if (u->owner == 0) {
-            fill_circle(a, cx, cy, r, edge);
+            fill_circle(a, cx, cy, r + (friendly ? 1.5f : 0.0f), edge);
             fill_circle(a, cx, cy, r - 2.0f, body);
         } else {
-            fill_diamond(a, cx, cy, r + 2.0f, edge);
+            fill_diamond(a, cx, cy, r + (friendly ? 3.5f : 2.0f), edge);
             fill_diamond(a, cx, cy, r, body);
         }
         /* 兵科アイコン文字。2文字以上のアイコンは円からはみ出すので1段小さい

@@ -57,6 +57,14 @@ typedef struct Game {
      * 区別するために必要**。これがないと2陣営マップで
      * 居ない陣営が開幕即敗北と見なされてしまう。 */
     uint8_t in_play[MAX_PLAYERS];
+    /* --- チーム ---
+     * team[p] は陣営 p の所属チーム。既定は team[p]=p で全員独立（乱戦）。
+     * .map の team0..team4 でまとめられる。
+     * team_leader[t] はチーム t の主力陣営。
+     * **主力が倒れたら援軍が残っていてもそのチームは負け**。
+     * 逆に援軍が全滅しても主力が無事なら続行する。 */
+    uint8_t team[MAX_PLAYERS];
+    int8_t  team_leader[MAX_PLAYERS];   /* -1=未指定（最小の所属陣営を使う） */
     Rng   rng;
 
     /* 指揮官（CO）。co_id は cos[] の index（-1 または n_cos 超過で「なし」） */
@@ -172,6 +180,15 @@ void game_end_turn(Game *g);               /* 手番終了→次プレイヤー�
 void game_check_victory(Game *g);
 /* その陣営がこの作戦に参加しているか */
 void game_recompute_in_play(Game *g);
+/* --- チームの問い合わせ ---
+ * **「自分のユニットか」と「敵か」は別物**。
+ * 前者は owner の一致を見る（援軍の部隊は動かせない）。
+ * 後者はここを通す（援軍は撃てない）。 */
+bool game_same_team(const Game *g, int a, int b);
+bool game_is_enemy(const Game *g, int a, int b);
+int  game_team_of(const Game *g, int p);
+int  game_team_leader(const Game *g, int team);
+bool game_team_defeated(const Game *g, int team);
 bool game_player_in_play(const Game *g, int p);
 /* その陣営が既に敗北条件を満たしているか（首都喪失 or 全滅） */
 bool game_player_defeated(const Game *g, int p);

@@ -7,6 +7,9 @@ FACTION2        = 南方連合
 FACTION3        = 北方同盟
 FACTION4        = 自由軍
 NEUTRAL         = 中立
+REL_SELF        = 
+REL_ALLY        = （援軍）
+REL_ENEMY       = （敵）
 ON              = ON
 OFF             = OFF
 

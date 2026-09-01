@@ -78,6 +78,9 @@ bool unit_can_attack_target(const Game *g, const Unit *atk, const Unit *def)
 {
     const UnitType *at = unit_type(g, atk);
     const UnitType *dt = unit_type(g, def);
+    /* 味方・援軍は撃てない。**ここで弾くことで対象一覧・AI・実攻撃・反撃の
+     * すべてに一括で効く**（以前は対象一覧側だけに書いてあった）。 */
+    if (!game_is_enemy(g, atk->owner, def->owner)) return false;
     if (at->atk[dt->armor] <= 0) return false;
     if (atk->ammo <= 0) return false;
     if (dt->is_sub && !at->anti_sub) return false;
@@ -110,21 +113,31 @@ void game_update_vision(Game *g)
         return;
     }
     memset(g->visible, 0, sizeof g->visible);
+    /* **視界はチーム内で共有する**。援軍が偵察した結果も見える。
+     * 乱戦（既定）ではチームが全員別なので従来どおり自軍だけになる。 */
     for (int p = 0; p < MAX_PLAYERS; p++) {
-        int bonus = (g->ctrl[p] == CTRL_CPU_HARD) ? 1 : 0; /* HARDのみ視界+1 */
-        const CommanderType *co = game_co(g, p);
-        /* SCOUT の必殺技発動中はこのターン全マップ視認 */
-        if (co && co->power_type == CO_POW_SCOUT && g->co_power_turns[p] > 0) {
+        /* SCOUT の必殺技発動中はこのターン全マップ視認（チーム付も恩恿にあずかる） */
+        bool scout = false;
+        for (int q = 0; q < MAX_PLAYERS && !scout; q++) {
+            const CommanderType *qc = game_co(g, q);
+            if (qc && qc->power_type == CO_POW_SCOUT && g->co_power_turns[q] > 0 &&
+                game_same_team(g, q, p)) scout = true;
+        }
+        if (scout) {
             memset(g->visible[p], 1, sizeof g->visible[p]);
             continue;
         }
         for (int i = 0; i < g->n_units; i++) {
             const Unit *u = &g->units[i];
-            if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED) ||
-                u->owner != p) continue;
-            int vb = bonus;
-            if (co && co->vision_bonus && game_co_affects(g, p, u))
-                vb += co->vision_bonus;
+            if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+            if (!game_same_team(g, u->owner, p)) continue;
+            /* 視界の広さは**そのユニットの持ち主基準**で決める。
+             * 援軍の部隊にこちらの指揮官効果を乗せるのはおかしいため。 */
+            int o = u->owner;
+            const CommanderType *oco = game_co(g, o);
+            int vb = (g->ctrl[o] == CTRL_CPU_HARD) ? 1 : 0;   /* HARDのみ視界+1 */
+            if (oco && oco->vision_bonus && game_co_affects(g, o, u))
+                vb += oco->vision_bonus;
             /* 天候による視界低下（下限1は必ず確保する） */
             int vis = unit_type(g, u)->vision + vb + game_weather_vision_mod(g);
             /* 夜は見えなくなるが、夜間ユニットだけは落ちない。
@@ -133,12 +146,16 @@ void game_update_vision(Game *g)
             if (vis < 1) vis = 1;
             reveal_around(g, p, u->pos.x, u->pos.y, vis);
         }
-        /* 所有建物: 視界2 */
+        /* チームの所有建物: 視界2 */
+        int bonus = (g->ctrl[p] == CTRL_CPU_HARD) ? 1 : 0;
         for (int y = 0; y < g->h; y++)
-            for (int x = 0; x < g->w; x++)
+            for (int x = 0; x < g->w; x++) {
+                int o = g->tiles[y][x].owner;
+                if (o < 0) continue;
                 if (g->terrains[g->tiles[y][x].terrain].capturable &&
-                    g->tiles[y][x].owner == p)
+                    game_same_team(g, o, p))
                     reveal_around(g, p, x, y, 2 + bonus);
+            }
     }
 }
 
@@ -615,7 +632,7 @@ bool game_co_activate(Game *g, int p)
         for (int i = 0; i < g->n_units; i++) {
             Unit *e = &g->units[i];
             if (!(e->flags & UF_ALIVE) || (e->flags & UF_LOADED)) continue;
-            if (e->owner == p) continue;
+            if (!game_is_enemy(g, p, e->owner)) continue;   /* 援軍は巻き込まない */
             /* **領域（陸/海/空）も天候も夜も見ないのは意図的**。
              * 通常の攻撃は夜に領域をまたげないが、必殺技はその例外として
              * 隣接する敵を一括で削る。「夜なのに艦砲が飛行機を削った」は
@@ -701,7 +718,9 @@ int game_capture(Game *g, int ui)
     Tile *t = &g->tiles[u->pos.y][u->pos.x];
     const TerrainType *tt = &g->terrains[t->terrain];
 
-    if (!tt->capturable || t->owner == u->owner) return 0;
+    /* 中立（owner<0）と敵の拠点だけ占領できる。援軍の拠点は横取りしない。 */
+    if (!tt->capturable) return 0;
+    if (t->owner >= 0 && !game_is_enemy(g, u->owner, t->owner)) return 0;
     if (!unit_type(g, u)->can_capture) return 0;
 
     if (t->capturer != ui) {
@@ -1517,6 +1536,46 @@ int game_check_events(Game *g, const char *msgs[], int max)
     return fired;
 }
 
+/* --- チーム --- */
+int game_team_of(const Game *g, int p)
+{
+    if (p < 0 || p >= MAX_PLAYERS) return -1;
+    return g->team[p];
+}
+
+bool game_same_team(const Game *g, int a, int b)
+{
+    if (a < 0 || b < 0 || a >= MAX_PLAYERS || b >= MAX_PLAYERS) return false;
+    return g->team[a] == g->team[b];
+}
+
+bool game_is_enemy(const Game *g, int a, int b)
+{
+    if (a < 0 || b < 0 || a >= MAX_PLAYERS || b >= MAX_PLAYERS) return false;
+    return g->team[a] != g->team[b];
+}
+
+/* チームの主力陣営。未指定ならそのチームに属する最小の陣営。 */
+int game_team_leader(const Game *g, int team)
+{
+    if (team < 0 || team >= MAX_PLAYERS) return -1;
+    if (g->team_leader[team] >= 0 && g->team_leader[team] < MAX_PLAYERS &&
+        g->team[g->team_leader[team]] == (uint8_t)team)
+        return g->team_leader[team];
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (g->team[p] == (uint8_t)team && game_player_in_play(g, p)) return p;
+    return -1;
+}
+
+/* チームの敗北。**主力陣営が倒れた時点で決着**で、
+ * 援軍の首都や部隊が残っていても関係ない。 */
+bool game_team_defeated(const Game *g, int team)
+{
+    int lead = game_team_leader(g, team);
+    if (lead < 0) return true;              /* このチームは参加していない */
+    return game_player_defeated(g, lead);
+}
+
 /* 参加陣営を算出する。ユニットか建物を一つでも持っていれば参加。
  * 古いセーブを読んだときにも使う（v9以前はこの情報を持たない）。 */
 void game_recompute_in_play(Game *g)
@@ -1600,15 +1659,26 @@ void game_check_victory(Game *g)
         if (game_player_in_play(g, p) && !player_has_units(g, p))
             neutralize_buildings(g, p);
 
-    /* 参加陣営のうち、敗北していないものが1つだけになったらその勝ち。
-     * 参加していない陣営（ユニットも建物も持たずに始まった）は数えない。 */
-    int remaining = 0, last = -1;
+    /* 残っているチームが1つだけになったら決着。
+     * チームの生死は**主力陣営だけ**で決まるので、
+     * 援軍が全滅しても主力が無事ならチームは生きている。
+     * 乱戦（既定）では team[p]=p なので従来どおり陣営単位の判定になる。 */
+    unsigned seen = 0;
+    int remaining = 0, last_team = -1;
     for (int p = 0; p < MAX_PLAYERS; p++) {
         if (!game_player_in_play(g, p)) continue;
-        if (game_player_defeated(g, p)) continue;
+        int t = game_team_of(g, p);
+        if (t < 0 || (seen & (1u << t))) continue;
+        seen |= 1u << t;
+        if (game_team_defeated(g, t)) continue;
         remaining++;
-        last = p;
+        last_team = t;
     }
-    if (remaining == 1)      g->winner = last;
-    else if (remaining == 0) g->winner = WINNER_DRAW;   /* 相打ちの共倒れ */
+    if (remaining == 1) {
+        /* 勝者はそのチームの主力陣営として返す（結果画面が陣営名を出すため） */
+        g->winner = game_team_leader(g, last_team);
+        if (g->winner < 0) g->winner = WINNER_DRAW;
+    } else if (remaining == 0) {
+        g->winner = WINNER_DRAW;                        /* 相打ちの共倒れ */
+    }
 }

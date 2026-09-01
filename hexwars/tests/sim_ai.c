@@ -206,6 +206,11 @@ int main(void)
     for (int s3 = 0; s3 < 3; s3++)
         if (run_match_ffa("data/maps/m05_threeway.map", 900 + (uint32_t)s3,
                           CTRL_CPU_NORMAL) == -100) fail++;
+    /* 完全対称なので、偏りが出れば手番順かAIの振る舞いが原因。
+     * 2シードだと先手有利と区別できないので多めに回す。 */
+    for (int s3 = 0; s3 < 6; s3++)
+        if (run_match_ffa("data/maps/m06_alliance.map", 950 + (uint32_t)s3,
+                          CTRL_CPU_NORMAL) == -100) fail++;
 
     printf("== キャンペーン実戦（マップイベントの発火） ==\n");
     {

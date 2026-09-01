@@ -132,6 +132,9 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
         w_i32(w, g->lost_units[p]);
     }
     for (int p = 0; p < MAX_PLAYERS; p++) w_u8(w, g->in_play[p]);
+    /* v11: チーム */
+    for (int p = 0; p < MAX_PLAYERS; p++) w_u8(w, g->team[p]);
+    for (int p = 0; p < MAX_PLAYERS; p++) w_u8(w, (uint8_t)(int8_t)g->team_leader[p]);
     /* 指揮官（v4） */
     for (int p = 0; p < MAX_PLAYERS; p++) {
         w_u8(w, (uint8_t)(int8_t)g->co_id[p]);
@@ -245,6 +248,16 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
             g->lost_units[p] = r_i32(r);
         }
         for (int p = 0; p < MAX_PLAYERS; p++) g->in_play[p] = r_u8(r);
+    }
+    if (ver >= 11) {
+        for (int p = 0; p < MAX_PLAYERS; p++) g->team[p] = r_u8(r);
+        for (int p = 0; p < MAX_PLAYERS; p++) g->team_leader[p] = (int8_t)r_u8(r);
+    } else {
+        /* v10以前はチームが無いので乱戦扱いに戻す */
+        for (int p = 0; p < MAX_PLAYERS; p++) {
+            g->team[p] = (uint8_t)p;
+            g->team_leader[p] = -1;
+        }
     }
     /* 指揮官（v4）。**旧版は2陣営分しか書いていない**ので長さを分ける。
      * ここを間違えると以降の読み取りがすべてずれる。 */

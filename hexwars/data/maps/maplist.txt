@@ -13,3 +13,4 @@ maps/c13_delta.map|三角州の攻防（52x30・複合兵科）
 maps/c14_bastion.map|湾岸の要塞（56x32・総力戦）
 maps/c04_capital.map|首都攻略（42x29・最終決戦）
 maps/m05_threeway.map|三国志の丘（40x30・3陣営の乱戦）
+maps/m06_alliance.map|連合軍の反攻（46x32・2対2のチーム戦）

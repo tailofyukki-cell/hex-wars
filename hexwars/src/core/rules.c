@@ -35,7 +35,6 @@ int rules_list_targets(const Game *g, int ui, int fx, int fy,
     for (int i = 0; i < g->n_units && n < max_out; i++) {
         const Unit *d = &g->units[i];
         if (!(d->flags & UF_ALIVE) || (d->flags & UF_LOADED)) continue;
-        if (d->owner == a->owner) continue;
         int dist = hex_distance(fx, fy, d->pos.x, d->pos.y);
         /* 立体化(確定): 射程は水平距離のみ。高さ差は無視。
          * 同一セル・別レイヤー(距離0)は直射(range_min<=1)のみ攻撃可、間接は自セル不可。 */

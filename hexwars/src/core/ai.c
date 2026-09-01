@@ -15,13 +15,22 @@
 /* ------------------------------------------------------------------ */
 /* 脅威マップ: 敵ユニットの攻撃到達範囲（移動+射程を距離近似）を加算   */
 /* ------------------------------------------------------------------ */
+/* その拠点を me が欲しがるか（中立か敵のものだけ）。
+ * 味方・援軍の拠点を目標にしないための共通判定。 */
+static bool ai_can_take(const Game *g, int me, int owner)
+{
+    if (owner < 0) return true;               /* 中立 */
+    return game_is_enemy(g, me, owner);
+}
+
 static void build_threat(Game *g, AiState *s)
 {
     int me = g->current;
     memset(s->threat, 0, sizeof s->threat);
     for (int i = 0; i < g->n_units; i++) {
         const Unit *u = &g->units[i];
-        if (!(u->flags & UF_ALIVE) || u->owner == me) continue;
+        /* 援軍は脅威ではないので除外する（味方を怖がって逃げ回らないため） */
+        if (!(u->flags & UF_ALIVE) || !game_is_enemy(g, me, u->owner)) continue;
         if (!game_unit_visible_to(g, me, u)) continue;
         const UnitType *t = &g->types[u->type];
         int reach = t->move + game_range_max(g, t);   /* 夜は間接の射程が短い */
@@ -54,7 +63,8 @@ static int nearest_capture_goal(const Game *g, int me, int fx, int fy)
     for (int y = 0; y < g->h; y++)
         for (int x = 0; x < g->w; x++) {
             const TerrainType *t = game_terrain_at(g, x, y);
-            if (!t->capturable || g->tiles[y][x].owner == me) continue;
+            /* 自軍と援軍の拠点は目標にしない（中立と敵のみ） */
+            if (!t->capturable || !ai_can_take(g, me, g->tiles[y][x].owner)) continue;
             int d = hex_distance(fx, fy, x, y);
             /* 価値の高い建物を優先（距離を割引） */
             d -= building_value(g, x, y) / 500;
@@ -69,7 +79,7 @@ static int nearest_enemy_goal(const Game *g, int me, int fx, int fy)
     int best = 9999;
     for (int i = 0; i < g->n_units; i++) {
         const Unit *u = &g->units[i];
-        if (!(u->flags & UF_ALIVE) || u->owner == me) continue;
+        if (!(u->flags & UF_ALIVE) || !game_is_enemy(g, me, u->owner)) continue;
         if (!game_unit_visible_to(g, me, u)) continue;
         int d = hex_distance(fx, fy, u->pos.x, u->pos.y);
         if (d < best) best = d;
@@ -77,7 +87,7 @@ static int nearest_enemy_goal(const Game *g, int me, int fx, int fy)
     for (int y = 0; y < g->h; y++)
         for (int x = 0; x < g->w; x++)
             if (g->terrains[g->tiles[y][x].terrain].is_hq &&
-                g->tiles[y][x].owner != me) {
+                ai_can_take(g, me, g->tiles[y][x].owner)) {
                 int d = hex_distance(fx, fy, x, y);
                 if (d < best) best = d;
             }
@@ -97,7 +107,7 @@ static int nearest_target_goal(const Game *g, int me, const Unit *self,
     for (int i = 0; i < g->n_units; i++) {
         const Unit *d = &g->units[i];
         if (!(d->flags & UF_ALIVE) || (d->flags & UF_LOADED)) continue;
-        if (d->owner == me) continue;
+        if (!game_is_enemy(g, me, d->owner)) continue;
         if (!game_unit_visible_to(g, me, d)) continue;
         if (st->atk[g->types[d->type].armor] <= 0) continue;
         if (!unit_can_attack_target(g, self, d)) continue;
@@ -114,7 +124,7 @@ static int nearest_enemy_hq(const Game *g, int me, int fx, int fy)
     for (int y = 0; y < g->h; y++)
         for (int x = 0; x < g->w; x++)
             if (g->terrains[g->tiles[y][x].terrain].is_hq &&
-                g->tiles[y][x].owner != me) {
+                ai_can_take(g, me, g->tiles[y][x].owner)) {
                 int d = hex_distance(fx, fy, x, y);
                 if (d < best) best = d;
             }
@@ -300,7 +310,7 @@ static void pick_invasion_goal(Game *g, AiState *s)
     for (int y = 0; y < g->h; y++)
         for (int x = 0; x < g->w; x++) {
             const TerrainType *t = &g->terrains[g->tiles[y][x].terrain];
-            if (!t->capturable || g->tiles[y][x].owner == me) continue;
+            if (!t->capturable || !ai_can_take(g, me, g->tiles[y][x].owner)) continue;
             if (s->land_reach[y][x]) continue;         /* 陸路で行ける */
             /* 首都を最優先、次に生産拠点 */
             int pri = t->is_hq ? 0 : (t->produces != PROD_NONE ? 1 : 2);
@@ -410,7 +420,7 @@ static bool ai_try_co_power(Game *g, AiState *s, int phase)
             for (int j = 0; j < g->n_units; j++) {
                 const Unit *e = &g->units[j];
                 if (!(e->flags & UF_ALIVE) || (e->flags & UF_LOADED)) continue;
-                if (e->owner == me) continue;
+                if (!game_is_enemy(g, me, e->owner)) continue;
                 const UnitType *et = &g->types[e->type];
                 if (hex_distance(e->pos.x, e->pos.y, u->pos.x, u->pos.y)
                     <= et->move + et->range_max) { n++; break; }
@@ -469,7 +479,7 @@ static bool ai_try_co_power(Game *g, AiState *s, int phase)
         for (int i = 0; i < g->n_units; i++) {
             const Unit *e = &g->units[i];
             if (!(e->flags & UF_ALIVE) || (e->flags & UF_LOADED)) continue;
-            if (e->owner == me || e->hp <= 1) continue;
+            if (!game_is_enemy(g, me, e->owner) || e->hp <= 1) continue;
             for (int j = 0; j < g->n_units; j++) {
                 const Unit *u = &g->units[j];
                 if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
@@ -815,7 +825,7 @@ static void act_unit(Game *g, AiState *s, int ui)
 
             /* --- 占領評価 --- */
             if (ut->can_capture && terr->capturable &&
-                g->tiles[y][x].owner != me) {
+                ai_can_take(g, me, g->tiles[y][x].owner)) {
                 int sc = base + building_value(g, x, y);
                 if (sc > best.score) {
                     best.score = sc; best.mx = x; best.my = y;
@@ -964,7 +974,7 @@ static int pick_production(Game *g, AiState *s, int x, int y)
     for (int yy = 0; yy < g->h; yy++)
         for (int xx = 0; xx < g->w; xx++)
             if (g->terrains[g->tiles[yy][xx].terrain].capturable &&
-                g->tiles[yy][xx].owner != me)
+                ai_can_take(g, me, g->tiles[yy][xx].owner))
                 open_bldgs++;
 
     bool want_capture = (n_cap < 3 && open_bldgs > 0);

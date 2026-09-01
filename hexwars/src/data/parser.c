@@ -340,6 +340,12 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
     /* 天候は既定で有効・確率60/30/10。マップ側で weather=0 なら無効化できる */
     g->weather_on = 1;
     g->night_on = 1;      /* 既定で有効。.map で night=0 にできる */
+    /* チームの既定は「各自が自分のチーム」＝全軍独立の乱戦。
+     * .map で team1 = 0 のように書くと陣営1がチーム0に入る。 */
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        g->team[p] = (uint8_t)p;
+        g->team_leader[p] = -1;
+    }
     g->wx_pct[WX_CLEAR] = 60;
     g->wx_pct[WX_CLOUDY] = 30;
     g->wx_pct[WX_RAIN] = 10;
@@ -386,6 +392,25 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
             else if (!strcmp(key, "income_scale")) g->income_scale = atoi(val);
             else if (!strcmp(key, "weather"))        g->weather_on = (uint8_t)(atoi(val) != 0);
             else if (!strcmp(key, "night"))          g->night_on = (uint8_t)(atoi(val) != 0);
+            /* team0..team4 = 所属チーム / leader0..leader4 = そのチームの主力陣営 */
+            else if (!strncmp(key, "team", 4) && key[4] >= '0' &&
+                     key[4] <= '0' + MAX_PLAYERS - 1 && key[5] == 0) {
+                int t = atoi(val);
+                if (t < 0 || t >= MAX_PLAYERS) {
+                    set_err(err, errlen, path, ln, "team の番号が範囲外");
+                    fclose(f); return -1;
+                }
+                g->team[key[4] - '0'] = (uint8_t)t;
+            }
+            else if (!strncmp(key, "leader", 6) && key[6] >= '0' &&
+                     key[6] <= '0' + MAX_PLAYERS - 1 && key[7] == 0) {
+                int p = atoi(val);
+                if (p < 0 || p >= MAX_PLAYERS) {
+                    set_err(err, errlen, path, ln, "leader の陣営番号が範囲外");
+                    fclose(f); return -1;
+                }
+                g->team_leader[key[6] - '0'] = (int8_t)p;
+            }
             else if (!strcmp(key, "weather_clear"))  g->wx_pct[WX_CLEAR]  = (int16_t)atoi(val);
             else if (!strcmp(key, "weather_cloudy")) g->wx_pct[WX_CLOUDY] = (int16_t)atoi(val);
             else if (!strcmp(key, "weather_rain"))   g->wx_pct[WX_RAIN]   = (int16_t)atoi(val);

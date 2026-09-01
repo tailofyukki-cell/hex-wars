@@ -1,4 +1,5 @@
 ﻿/* screen_battle.c - 戦闘画面（サブ状態機械。仕様書 8章） */
+#include <stdlib.h>
 #include "app.h"
 #include "text.h"
 #include "sound.h"
@@ -88,6 +89,16 @@ static void set_banner(App *a, const char *text, int frames)
 {
     snprintf(a->banner, sizeof a->banner, "%s", text);
     a->banner_timer = frames;
+}
+
+/* 見ている側（viewer）から見た関係を返す。
+ * 多陣営だと陣営色だけでは援軍か敵か判別できないので、文字でも示す。 */
+static const char *rel_tag(const Game *g, int viewer, int owner)
+{
+    if (owner < 0 || viewer < 0) return "";
+    if (owner == viewer)                    return tx("REL_SELF");
+    if (game_same_team(g, viewer, owner))   return tx("REL_ALLY");
+    return tx("REL_ENEMY");
 }
 
 /* 生き残っている人間の陣営があるか */
@@ -1041,6 +1052,17 @@ void battle_enter(App *a)
     /* 戦闘BGM: オプションで曲を指定できる（-1 ならマップ名から自動で選ぶ） */
     snd_music(snd_battle_music(a->opt_bgm_track, a->game.map_name), true);
     begin_side(a);
+    /* 環境変数 HWCAM=x,y で見る位置を指定できる（画面確認用）。
+     * begin_side が自軍ユニットへ寄せるので、その後に上書きする。 */
+    {
+        const char *cam = getenv("HWCAM");
+        int hx = 0, hy = 0;
+        if (cam && sscanf(cam, "%d,%d", &hx, &hy) == 2 &&
+            game_in_bounds(&a->game, hx, hy)) {
+            a->cur_x = hx; a->cur_y = hy;
+            center_camera(a, hx, hy);
+        }
+    }
 }
 
 static void menu_key_nav(SDL_Keycode k, int *idx, int n)
@@ -1745,9 +1767,21 @@ static void draw_panels(App *a)
                  t->income * g->income_scale / 100);
         draw_text(a, a->font_s, 14, py + 68, COL_GRAY, buf);
     }
+    /* CPU手番中も人間側の視点で表示する。地形・ユニットの両方で使う。 */
+    int viewer = g->current;
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (g->ctrl[g->current] != CTRL_HUMAN && g->ctrl[p] == CTRL_HUMAN)
+            viewer = p;
+
     if (t->capturable) {
-        const char *own = tile->owner < 0 ? tx("NEUTRAL")
-                                          : faction_name(tile->owner);
+        char ownbuf[64];
+        const char *own = ownbuf;
+        if (tile->owner < 0) {
+            snprintf(ownbuf, sizeof ownbuf, "%s", tx("NEUTRAL"));
+        } else {
+            snprintf(ownbuf, sizeof ownbuf, "%s%s", faction_name(tile->owner),
+                     rel_tag(g, viewer, tile->owner));
+        }
         snprintf(buf, sizeof buf, tx("PANEL_OWNER_FMT"), own);
         draw_text(a, a->font_s, 14, py + 88,
                   tile->owner < 0 ? COL_GRAY : COL_P[tile->owner], buf);
@@ -1757,10 +1791,6 @@ static void draw_panels(App *a)
     int ux = WIN_W - 420;
     fill_rect(a, ux, py, 420, PANEL_H, (SDL_Color){ 28, 32, 38, 235 });
     outline_rect(a, ux, py, 420, PANEL_H, COL_DIM);
-    int viewer = g->current;
-    for (int p = 0; p < MAX_PLAYERS; p++)
-        if (g->ctrl[g->current] != CTRL_HUMAN && g->ctrl[p] == CTRL_HUMAN)
-            viewer = p;
 
     /* 立体化: 同じセルに複数いる場合は、一定間隔で表示を切り替える
      * （空/海面/海中が重なっていても全員の状態を確認できるように） */
@@ -1792,7 +1822,8 @@ static void draw_panels(App *a)
             snprintf(cb, sizeof cb, "%d/%d", scyc + 1, n_stack);
             draw_text(a, a->font_s, ux + 420 - 52, py + 14, COL_YELLOW, cb);
         } else {
-            snprintf(buf, sizeof buf, "%s", ut->name);
+            snprintf(buf, sizeof buf, "%s%s", ut->name,
+                     rel_tag(g, viewer, u->owner));
             draw_text(a, a->font_l, ux + 14, py + 8, COL_P[u->owner], buf);
         }
         if (ut->supply)

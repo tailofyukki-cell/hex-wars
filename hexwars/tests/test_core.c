@@ -1574,6 +1574,124 @@ static void test_commanders(void)
     }
 }
 
+/* チーム戦: 敵味方判定・視界共有・主力の首都で決着 */
+static void test_teams(void)
+{
+    Game *g = &s_game;
+    char err[256];
+
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/m06_alliance.map", err, sizeof err) == 0);
+    if (s_fail) return;
+
+    /* .map のチーム指定が読めていること */
+    CHECK(game_team_of(g, 0) == 0 && game_team_of(g, 2) == 0);
+    CHECK(game_team_of(g, 1) == 1 && game_team_of(g, 3) == 1);
+    CHECK(game_same_team(g, 0, 2));
+    CHECK(!game_is_enemy(g, 0, 2));
+    CHECK(game_is_enemy(g, 0, 1) && game_is_enemy(g, 0, 3));
+    CHECK(game_is_enemy(g, 2, 1));
+
+    g->fog = false;
+    game_start(g, 5);
+    CHECK(game_team_leader(g, 0) == 0);
+    CHECK(game_team_leader(g, 1) == 1);
+
+    /* --- 援軍は撃てない --- */
+    {
+        int inf = data_find_unit_type(g, "INFANTRY");
+        g->n_units = 0;
+        int a0 = game_spawn_unit(g, 0, inf, 9, 4, 10);   /* 自軍 */
+        int a2 = game_spawn_unit(g, 2, inf, 10, 4, 10);  /* 援軍 */
+        int e1 = game_spawn_unit(g, 1, inf, 8, 4, 10);   /* 敵 */
+        game_update_vision(g);
+        CHECK(!unit_can_attack_target(g, &g->units[a0], &g->units[a2]));
+        CHECK(!unit_can_attack_target(g, &g->units[a2], &g->units[a0]));
+        CHECK(unit_can_attack_target(g, &g->units[a0], &g->units[e1]));
+        CHECK(unit_can_attack_target(g, &g->units[a2], &g->units[e1]));
+        /* 対象一覧にも援軍は出ない */
+        int t[32];
+        int n = rules_list_targets(g, a0, g->units[a0].pos.x,
+                                   g->units[a0].pos.y, t, 32);
+        for (int i = 0; i < n; i++)
+            CHECK(g->units[t[i]].owner != 2);
+    }
+
+    /* --- 援軍の拠点は占領しない --- */
+    {
+        int inf = data_find_unit_type(g, "INFANTRY");
+        int city = -1;
+        for (int i = 0; i < g->n_terrains; i++)
+            if (!strcmp(g->terrains[i].id, "CITY")) city = i;
+        CHECK(city >= 0);
+        g->n_units = 0;
+        g->tiles[6][6].terrain = (uint8_t)city;
+        g->tiles[6][6].owner = 2;                        /* 援軍の都市 */
+        int u0 = game_spawn_unit(g, 0, inf, 6, 6, 10);
+        /* game_capture は「占領完了」でのみ1を返すので、進捗は cap_hp で見る */
+        g->tiles[6][6].capturer = -1;
+        g->tiles[6][6].cap_hp = CAPTURE_HP;
+        CHECK(game_capture(g, u0) == 0);
+        CHECK(g->tiles[6][6].cap_hp == CAPTURE_HP);      /* 援軍の拠点は進まない */
+
+        g->tiles[6][6].owner = 1;                        /* 敵の都市なら進む */
+        game_capture(g, u0);
+        CHECK(g->tiles[6][6].cap_hp < CAPTURE_HP);
+
+        g->tiles[6][6].owner = -1;                       /* 中立でも進む */
+        g->tiles[6][6].capturer = -1;
+        g->tiles[6][6].cap_hp = CAPTURE_HP;
+        game_capture(g, u0);
+        CHECK(g->tiles[6][6].cap_hp < CAPTURE_HP);
+    }
+
+    /* --- 視界はチーム内で共有される --- */
+    {
+        int inf = data_find_unit_type(g, "INFANTRY");
+        g->fog = true;
+        g->n_units = 0;
+        /* 援軍だけを盤の隅に置く。自軍(0)からもそこが見えるはず */
+        int a2 = game_spawn_unit(g, 2, inf, 30, 20, 10);
+        CHECK(a2 >= 0);
+        game_update_vision(g);
+        CHECK(g->visible[0][20][30]);      /* 援軍の足元が自軍にも見える */
+        CHECK(g->visible[2][20][30]);
+        CHECK(!g->visible[1][20][30]);     /* 敵には見えない */
+        g->fog = false;
+    }
+
+    /* --- 主力の首都が落ちたらチームの負け。援軍が健在でも決着 --- */
+    {
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        CHECK(data_load_map(g, "data/maps/m06_alliance.map", err, sizeof err) == 0);
+        if (s_fail) return;
+        g->fog = false;
+        game_start(g, 5);
+        CHECK(g->winner == WINNER_NONE);
+
+        /* 援軍(3)を丸ごと消しても、主力(1)が無事なら team1 は続く */
+        for (int i = 0; i < g->n_units; i++)
+            if (g->units[i].owner == 3) g->units[i].flags &= (uint8_t)~UF_ALIVE;
+        game_check_victory(g);
+        CHECK(g->winner == WINNER_NONE);
+        CHECK(!game_team_defeated(g, 1));
+
+        /* 主力(1)の首都を奪うと、援軍(3)の拠点が残っていても team1 の負け */
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++)
+                if (g->terrains[g->tiles[y][x].terrain].is_hq &&
+                    g->tiles[y][x].owner == 1)
+                    g->tiles[y][x].owner = 0;
+        CHECK(game_team_defeated(g, 1));
+        game_check_victory(g);
+        CHECK(g->winner == 0);             /* 勝者は team0 の主力 */
+    }
+}
+
 /* 多陣営: 参加判定・勝敗・手番送り */
 static void test_multiplayer(void)
 {
@@ -3216,6 +3334,7 @@ int main(void)
     test_weather();
     test_daynight();
     test_multiplayer();
+    test_teams();
     test_enemy_reinforce();
     test_join();
     test_ai_co_power();
