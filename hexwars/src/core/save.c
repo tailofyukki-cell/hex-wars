@@ -123,6 +123,15 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
     w_u8(w, g->weather_on);
     for (int i = 0; i < WX_COUNT; i++) w_i16(w, g->wx_pct[i]);
     w_u8(w, g->night_on);            /* v9 以降 */
+    /* v10: 3陣営目以降。陣営0/1 は上で既に書いているので続きだけ。
+     * この位置に入れるのは、下の指揮官ループの長さ自体が
+     * 版によって変わるため（旧版は2、v10は MAX_PLAYERS）。 */
+    for (int p = 2; p < MAX_PLAYERS; p++) {
+        w_i32(w, g->funds[p]);
+        w_u8(w, g->ctrl[p]);
+        w_i32(w, g->lost_units[p]);
+    }
+    for (int p = 0; p < MAX_PLAYERS; p++) w_u8(w, g->in_play[p]);
     /* 指揮官（v4） */
     for (int p = 0; p < MAX_PLAYERS; p++) {
         w_u8(w, (uint8_t)(int8_t)g->co_id[p]);
@@ -229,8 +238,18 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
     for (int i = 0; i < WX_COUNT; i++) g->wx_pct[i] = r_i16(r);
     /* v9 で昼夜を追加。古いセーブはマップの既定（有効）のまま読む */
     if (ver >= 9) g->night_on = r_u8(r);
-    /* 指揮官（v4） */
-    for (int p = 0; p < MAX_PLAYERS; p++) {
+    if (ver >= 10) {
+        for (int p = 2; p < MAX_PLAYERS; p++) {
+            g->funds[p] = r_i32(r);
+            g->ctrl[p] = r_u8(r);
+            g->lost_units[p] = r_i32(r);
+        }
+        for (int p = 0; p < MAX_PLAYERS; p++) g->in_play[p] = r_u8(r);
+    }
+    /* 指揮官（v4）。**旧版は2陣営分しか書いていない**ので長さを分ける。
+     * ここを間違えると以降の読み取りがすべてずれる。 */
+    int n_co = (ver >= 10) ? MAX_PLAYERS : 2;
+    for (int p = 0; p < n_co; p++) {
         g->co_id[p] = (int8_t)r_u8(r);
         g->co_gauge[p] = (int16_t)r_i32(r);
         g->co_power_turns[p] = (int8_t)r_u8(r);
@@ -375,6 +394,9 @@ int load_game(Game *g, CampaignState *cs, const char *path,
         if (err) snprintf(err, (size_t)errlen, "%s: データが不正です", path);
         return -1;
     }
+    /* v9以前は参加陣営を持たないので盤面から算出し直す。
+     * これを忘れると全陣営が「不参加」になり、ロード直後に引き分けになる。 */
+    if (ver < 10) game_recompute_in_play(g);
     game_update_vision(g);
     return 0;
 }

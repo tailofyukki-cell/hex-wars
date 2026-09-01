@@ -1328,6 +1328,8 @@ void game_start(Game *g, uint32_t seed)
             g->tiles[y][x].cap_hp = CAPTURE_HP;
             g->tiles[y][x].capturer = -1;
         }
+
+    game_recompute_in_play(g);
     begin_player_turn(g);
 }
 
@@ -1338,15 +1340,23 @@ void game_end_turn(Game *g)
     game_check_victory(g);
     if (g->winner != WINNER_NONE) return;
 
-    g->current = (g->current + 1) % MAX_PLAYERS;
-    if (g->current == 0) {
-        g->turn++;
-        /* 天候はラウンド単位で進める（両陣営が同じ天候になるように） */
-        weather_advance(g);
-        if (g->turn_limit > 0 && g->turn > g->turn_limit) {
-            g->winner = g->timeout_winner;
-            return;
+    /* 次の手番へ。**参加していない陣営と脱落した陣営は飛ばす**。
+     * MAX_PLAYERS を増やしたので飛ばさないと2陣営マップで
+     * 空の手番が3回挑さまる。ターン数は0を通過したときに進めるので、
+     * 陣営0が脱落してもカウンタは止まらない。 */
+    for (int step = 0; step < MAX_PLAYERS; step++) {
+        g->current = (g->current + 1) % MAX_PLAYERS;
+        if (g->current == 0) {
+            g->turn++;
+            /* 天候はラウンド単位で進める（全陣営が同じ天候になるように） */
+            weather_advance(g);
+            if (g->turn_limit > 0 && g->turn > g->turn_limit) {
+                g->winner = g->timeout_winner;
+                return;
+            }
         }
+        if (game_player_in_play(g, g->current) &&
+            !game_player_defeated(g, g->current)) break;
     }
     begin_player_turn(g);
     game_check_victory(g);
@@ -1507,6 +1517,73 @@ int game_check_events(Game *g, const char *msgs[], int max)
     return fired;
 }
 
+/* 参加陣営を算出する。ユニットか建物を一つでも持っていれば参加。
+ * 古いセーブを読んだときにも使う（v9以前はこの情報を持たない）。 */
+void game_recompute_in_play(Game *g)
+{
+    memset(g->in_play, 0, sizeof g->in_play);
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *u = &g->units[i];
+        if ((u->flags & UF_ALIVE) && u->owner >= 0 && u->owner < MAX_PLAYERS)
+            g->in_play[u->owner] = 1;
+    }
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++) {
+            int o = g->tiles[y][x].owner;
+            if (o >= 0 && o < MAX_PLAYERS &&
+                g->terrains[g->tiles[y][x].terrain].capturable)
+                g->in_play[o] = 1;
+        }
+}
+
+bool game_player_in_play(const Game *g, int p)
+{
+    if (p < 0 || p >= MAX_PLAYERS) return false;
+    return g->in_play[p] != 0;
+}
+
+/* その陣営の生存ユニットが1つでもあるか */
+static bool player_has_units(const Game *g, int p)
+{
+    for (int i = 0; i < g->n_units; i++)
+        if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == p) return true;
+    return false;
+}
+
+/* 全滅した陣営の拠点を中立に戻す。
+ * 部隊が居ないのに収入だけ入り続け、他陣営が占領し直す必要もある
+ * 状態を残さないため。中立に戻せば誰でも採りに行ける。 */
+static void neutralize_buildings(Game *g, int p)
+{
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++) {
+            Tile *t = &g->tiles[y][x];
+            if (t->owner != (int8_t)p) continue;
+            t->owner = -1;
+            t->capturer = -1;
+            t->cap_hp = CAPTURE_HP;
+        }
+}
+
+bool game_player_defeated(const Game *g, int p)
+{
+    if (!game_player_in_play(g, p)) return true;
+    /* 全滅したらその時点で敗北確定（拠点が残っていても復帰させない） */
+    if (!player_has_units(g, p)) return true;
+
+    /* 首都: 自陣営所有の首都が1つもなければ敗北（マップに首都がある場合） */
+    bool any_hq = false;
+    int mine = 0;
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++)
+            if (g->terrains[g->tiles[y][x].terrain].is_hq) {
+                any_hq = true;
+                if (g->tiles[y][x].owner == (int8_t)p) mine++;
+            }
+    if (any_hq && mine == 0) return true;
+    return false;
+}
+
 void game_check_victory(Game *g)
 {
     if (g->winner != WINNER_NONE) return;
@@ -1518,30 +1595,20 @@ void game_check_victory(Game *g)
         return;
     }
 
-    /* 首都: 自陣営所有の首都が1つもなければ敗北（マップに首都がある場合） */
-    int hq_count[MAX_PLAYERS] = {0};
-    bool any_hq = false;
-    for (int y = 0; y < g->h; y++)
-        for (int x = 0; x < g->w; x++)
-            if (g->terrains[g->tiles[y][x].terrain].is_hq) {
-                any_hq = true;
-                int o = g->tiles[y][x].owner;
-                if (o >= 0) hq_count[o]++;
-            }
+    /* 全滅した陣営の拠点を中立に戻す。残りの陣営が採りに行けるようにする。 */
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (game_player_in_play(g, p) && !player_has_units(g, p))
+            neutralize_buildings(g, p);
 
-    int alive[MAX_PLAYERS] = {0};
-    for (int i = 0; i < g->n_units; i++)
-        if (g->units[i].flags & UF_ALIVE)
-            alive[g->units[i].owner]++;
-
+    /* 参加陣営のうち、敗北していないものが1つだけになったらその勝ち。
+     * 参加していない陣営（ユニットも建物も持たずに始まった）は数えない。 */
+    int remaining = 0, last = -1;
     for (int p = 0; p < MAX_PLAYERS; p++) {
-        bool lost = false;
-        if (any_hq && hq_count[p] == 0) lost = true;
-        /* 全滅: ユニット0 かつ 生産可能施設なし or 資金不足でも簡易に0で敗北 */
-        if (alive[p] == 0) lost = true;
-        if (lost) {
-            g->winner = 1 - p;
-            return;
-        }
+        if (!game_player_in_play(g, p)) continue;
+        if (game_player_defeated(g, p)) continue;
+        remaining++;
+        last = p;
     }
+    if (remaining == 1)      g->winner = last;
+    else if (remaining == 0) g->winner = WINNER_DRAW;   /* 相打ちの共倒れ */
 }

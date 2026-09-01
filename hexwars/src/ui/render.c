@@ -4,9 +4,13 @@
 #include <math.h>
 #include <stdio.h>
 
-const SDL_Color COL_P[2] = {
+/* 陣営色。隣り合っても見分けられるよう色相を離してある。 */
+const SDL_Color COL_P[MAX_PLAYERS] = {
     { 58, 110, 200, 255 },   /* P0 西方同盟: 青 */
     { 205,  72,  58, 255 },  /* P1 東方連邦: 赤 */
+    { 226, 168,  52, 255 },  /* P2: 黄 */
+    { 92,  172,  96, 255 },  /* P3: 緑 */
+    { 158, 104, 200, 255 },  /* P4: 紫 */
 };
 const SDL_Color COL_WHITE  = { 240, 240, 235, 255 };
 const SDL_Color COL_BLACK  = {  25,  28,  30, 255 };

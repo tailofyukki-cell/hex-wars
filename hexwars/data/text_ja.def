@@ -3,6 +3,9 @@
 # --- 共通 ---
 FACTION0        = 西方同盟
 FACTION1        = 東方連邦
+FACTION2        = 南方連合
+FACTION3        = 北方同盟
+FACTION4        = 自由軍
 NEUTRAL         = 中立
 ON              = ON
 OFF             = OFF
@@ -28,6 +31,9 @@ SETUP_START     = 開始
 SETUP_BACK      = タイトルへ戻る
 SETUP_NOMAP     = （マップなし）
 SETUP_HINT      = 矢印:選択/変更  Z/Enter:決定  X/Esc:戻る
+SETUP_CTRL_FMT  = %s の操作
+SETUP_CO_FMT    = %s の指揮官
+SETUP_NEED_HUMAN = 人間が操作する陣営を最低1つ選んでください
 OPP_CPU_EASY    = CPU（EASY）
 OPP_CPU_NORMAL  = CPU（NORMAL）
 OPP_CPU_HARD    = CPU（HARD）
@@ -85,6 +91,7 @@ REWARD_NONE       = （画像なし）
 # --- 結果 ---
 RESULT_WIN_FMT    = %s軍の勝利！
 RESULT_DRAW       = 引き分け
+RESULT_HUMAN_OUT  = 自軍は全滅した…
 RESULT_TURNS_FMT  = 経過ターン: %d
 RESULT_LOSSES_FMT = 損失ユニット  %s軍: %d   %s軍: %d
 RESULT_NEXT_FMT   = 次の作戦: %s

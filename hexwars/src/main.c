@@ -102,13 +102,26 @@ int main(int argc, char *argv[])
     /* 未解禁の指揮官が初期選択にならないようにする */
     a->sel_co0 = co_is_unlocked(a, 0) ? 0 : co_next_unlocked(a, 0, 1);
     a->sel_co1 = a->sel_co0;
+    /* フリー対戦の初期値: 陣営0を人間、他はCPU普通。
+     * CTRL_HUMAN 相当の 3 を入れ忘れると「人間が居ない」で開始できなくなる。 */
+    a->sel_ctrl[0] = 3;
+    for (int p = 1; p < MAX_PLAYERS; p++) a->sel_ctrl[p] = 1;
+    for (int p = 0; p < MAX_PLAYERS; p++) a->sel_co[p] = a->sel_co0;
+    a->sel_p2 = 1;
 
     a->screen = SCREEN_TITLE;
     a->next_screen = SCREEN_TITLE;
     /* デバッグ用: --screen options 等で任意画面から起動 */
     if (argc >= 3 && strcmp(argv[1], "--screen") == 0) {
         if      (!strcmp(argv[2], "options")) a->next_screen = SCREEN_OPTIONS;
-        else if (!strcmp(argv[2], "setup"))   a->next_screen = SCREEN_SETUP;
+        else if (!strcmp(argv[2], "setup")) {
+            /* --screen setup [maplistの番号] でマップを選んだ状態にできる */
+            if (argc >= 4) {
+                int mi = atoi(argv[3]);
+                if (mi >= 0 && mi < a->maps.n) a->sel_map = mi;
+            }
+            a->next_screen = SCREEN_SETUP;
+        }
         else if (!strcmp(argv[2], "load"))    a->next_screen = SCREEN_LOAD;
         else if (!strcmp(argv[2], "endroll")) a->next_screen = SCREEN_ENDROLL;
         else if (!strcmp(argv[2], "result")) {

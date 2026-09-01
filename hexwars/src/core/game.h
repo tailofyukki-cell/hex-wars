@@ -51,7 +51,12 @@ typedef struct Game {
     int   funds[MAX_PLAYERS];
     int   turn;            /* 1開始 */
     int   current;         /* 手番プレイヤー */
-    int   winner;          /* WINNER_NONE / WINNER_DRAW / 0..1 */
+    int   winner;          /* WINNER_NONE / WINNER_DRAW / 0..MAX_PLAYERS-1 */
+    /* この作戦に参加している陣営。開幕時にユニットか建物を
+     * 持っていたかで決まる。**「脱落した」と「そもそも居ない」を
+     * 区別するために必要**。これがないと2陣営マップで
+     * 居ない陣営が開幕即敗北と見なされてしまう。 */
+    uint8_t in_play[MAX_PLAYERS];
     Rng   rng;
 
     /* 指揮官（CO）。co_id は cos[] の index（-1 または n_cos 超過で「なし」） */
@@ -165,6 +170,11 @@ bool game_can_unload_to(const Game *g, int transport, int x, int y);
 void game_start(Game *g, uint32_t seed);   /* 初期化後に呼ぶ（初回収入等） */
 void game_end_turn(Game *g);               /* 手番終了→次プレイヤー開始処理 */
 void game_check_victory(Game *g);
+/* その陣営がこの作戦に参加しているか */
+void game_recompute_in_play(Game *g);
+bool game_player_in_play(const Game *g, int p);
+/* その陣営が既に敗北条件を満たしているか（首都喪失 or 全滅） */
+bool game_player_defeated(const Game *g, int p);
 
 /* --- マップイベント ---
  * 手番開始時に呼ぶ。条件を満たした未発火イベントを全て実行し、発生した数を返す。

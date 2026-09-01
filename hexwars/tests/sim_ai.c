@@ -17,6 +17,47 @@ static int run_match(const char *map, uint32_t seed, int ctrl0, int ctrl1)
     return run_match_co(map, seed, ctrl0, ctrl1, NULL, NULL);
 }
 
+/* 多陣営の乱戦。参加している陣営をすべてCPUにして回す。 */
+static int run_match_ffa(const char *map, uint32_t seed, int ctrl)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    if (data_load_terrain(g, "data/terrain.def", err, sizeof err) != 0 ||
+        data_load_units(g, "data/units.def", err, sizeof err) != 0 ||
+        data_load_commanders(g, "data/commanders.def", err, sizeof err) != 0 ||
+        data_load_map(g, map, err, sizeof err) != 0) {
+        printf("LOAD ERROR: %s\n", err);
+        return -100;
+    }
+    g->fog = true;
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        g->co_id[p] = -1;
+        g->ctrl[p] = (uint8_t)ctrl;
+    }
+    game_start(g, seed);
+
+    int n_play = 0;
+    for (int p = 0; p < MAX_PLAYERS; p++) if (game_player_in_play(g, p)) n_play++;
+
+    int guard = 0;
+    while (g->winner == WINNER_NONE && guard < 300000) {
+        ai_begin_turn(g, &s_ai);
+        while (ai_step(g, &s_ai) && guard < 300000) guard++;
+        guard++;
+    }
+    if (g->winner == WINNER_NONE) {
+        printf("  打ち切り（無限ループ疑い） turn=%d\n", g->turn);
+        return -100;
+    }
+    printf("  %s: seed=%u 参加%d陣営 winner=%d turn=%d 損失=",
+           map, seed, n_play, g->winner, g->turn);
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (game_player_in_play(g, p)) printf("%d ", g->lost_units[p]);
+    printf("\n");
+    return g->winner;
+}
+
 static int run_match_co(const char *map, uint32_t seed, int ctrl0, int ctrl1,
                         const char *co0, const char *co1)
 {
@@ -160,6 +201,11 @@ int main(void)
                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "DIETER", "NOEL") == -100) fail++;
     if (run_match_co("data/maps/c09_cities.map", 5106,
                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "EAGLE", "GRAF") == -100) fail++;
+
+    printf("== 多陣営の乱戦 ==\n");
+    for (int s3 = 0; s3 < 3; s3++)
+        if (run_match_ffa("data/maps/m05_threeway.map", 900 + (uint32_t)s3,
+                          CTRL_CPU_NORMAL) == -100) fail++;
 
     printf("== キャンペーン実戦（マップイベントの発火） ==\n");
     {

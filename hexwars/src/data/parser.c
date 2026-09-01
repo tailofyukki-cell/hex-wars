@@ -379,8 +379,10 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
             else if (!strcmp(key, "height")) g->h = atoi(val);
             else if (!strcmp(key, "turns"))  g->turn_limit = atoi(val);
             else if (!strcmp(key, "timeout_winner")) g->timeout_winner = atoi(val);
-            else if (!strcmp(key, "funds0")) g->funds[0] = atoi(val);
-            else if (!strcmp(key, "funds1")) g->funds[1] = atoi(val);
+            /* funds0..funds4。陣営を増やしてもキーを並べなくて済むよう番号で拾う */
+            else if (!strncmp(key, "funds", 5) && key[5] >= '0' &&
+                     key[5] <= '0' + MAX_PLAYERS - 1 && key[6] == 0)
+                g->funds[key[5] - '0'] = atoi(val);
             else if (!strcmp(key, "income_scale")) g->income_scale = atoi(val);
             else if (!strcmp(key, "weather"))        g->weather_on = (uint8_t)(atoi(val) != 0);
             else if (!strcmp(key, "night"))          g->night_on = (uint8_t)(atoi(val) != 0);
@@ -448,6 +450,12 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
     }
     /* 安全網: 進入不可地形に配置されたユニット（例: 陸上の艦船）を最寄りの適地へ寄せる */
     game_fixup_unit_terrain(g);
+
+    /* 操作者の既定はCPU。**CTRL_HUMAN が 0 なので、設定し忘れた陣営は
+     * 「人間」扱いになって入力待ちで固まる**。陣営を最大5にしたことで
+     * 3陣営以上のマップで現実に起き得るので、ここで埋めておく。
+     * 人間が操作する陣営は呼び出し側がマップ読込の後に上書きする。 */
+    for (int p = 0; p < MAX_PLAYERS; p++) g->ctrl[p] = CTRL_CPU_NORMAL;
     return 0;
 }
 

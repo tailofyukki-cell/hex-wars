@@ -7,7 +7,10 @@
 
 #define MAX_MAP_W        64
 #define MAX_MAP_H        64
-#define MAX_PLAYERS       2
+/* 最大5陣営。実際に何陣営で戦うかはマップが決める
+ * （開幕時にユニットか建物を持っている陣営だけが参加する）。
+ * 2陣営の既存マップはそのまま動く。 */
+#define MAX_PLAYERS       5
 #define MAX_UNITS       200
 #define MAX_UNIT_TYPES   96   /* 種類数。索引は1バイトなので255まで増やせる */
 #define MAX_TERRAIN      32   /* 同上。ファンタジー等で地形を増やす余地 */

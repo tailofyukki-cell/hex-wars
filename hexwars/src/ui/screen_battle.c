@@ -90,9 +90,30 @@ static void set_banner(App *a, const char *text, int frames)
     a->banner_timer = frames;
 }
 
+/* 生き残っている人間の陣営があるか */
+static bool any_human_alive(const Game *g)
+{
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        if (g->ctrl[p] != CTRL_HUMAN) continue;
+        if (!game_player_in_play(g, p)) continue;
+        if (!game_player_defeated(g, p)) return true;
+    }
+    return false;
+}
+
 static void check_over(App *a)
 {
-    if (a->game.winner == WINNER_NONE) return;
+    Game *g = &a->game;
+    /* 人間の陣営が全滅したら、AI同士の決着を待たずに終わる。
+     * 3陣営以上だと、自分が倒れてから残りAIが数十ターン戦い続けることになる。 */
+    if (g->winner == WINNER_NONE) {
+        if (a->human_out || any_human_alive(g)) return;
+        a->human_out = true;
+        a->bs = BS_GAMEOVER;
+        a->sel_unit = -1;
+        set_banner(a, tx("RESULT_HUMAN_OUT"), 180);
+        return;
+    }
     a->bs = BS_GAMEOVER;
     a->sel_unit = -1;
     char buf[64];
@@ -140,7 +161,9 @@ static void begin_side(App *a)
 {
     Game *g = &a->game;
     a->sel_unit = -1;
-    if (g->winner != WINNER_NONE) { check_over(a); return; }
+    /* winner だけでなく「人間が全滅」も見るので無条件に呼ぶ */
+    check_over(a);
+    if (a->bs == BS_GAMEOVER) return;
 
     char buf[64];
     snprintf(buf, sizeof buf, tx("BANNER_TURN_FMT"),
@@ -159,8 +182,12 @@ static void begin_side(App *a)
         ui_save_path(a, 0, path, sizeof path);
         save_game(g, &a->cps, path, NULL, 0);
 
-        bool both_human = g->ctrl[0] == CTRL_HUMAN && g->ctrl[1] == CTRL_HUMAN;
-        a->bs = (g->fog && both_human) ? BS_HANDOVER : BS_IDLE;
+        /* 人間が2人以上のときだけ手番交代画面を挑む（盤面を見せないため）。
+         * 多陣営でも人間は1陣営なので通常は挑まない。 */
+        int humans = 0;
+        for (int p = 0; p < MAX_PLAYERS; p++)
+            if (game_player_in_play(g, p) && g->ctrl[p] == CTRL_HUMAN) humans++;
+        a->bs = (g->fog && humans >= 2) ? BS_HANDOVER : BS_IDLE;
         set_banner(a, buf, 120);
         snd_se(SE_TURN);
         focus_own_unit(a);
@@ -171,7 +198,8 @@ static void begin_side(App *a)
 static void do_end_turn(App *a)
 {
     game_end_turn(&a->game);
-    if (a->game.winner != WINNER_NONE) { check_over(a); return; }
+    check_over(a);
+    if (a->bs == BS_GAMEOVER) return;
     begin_side(a);
 }
 
@@ -1003,6 +1031,7 @@ static void cancel_action(App *a)
 /* ------------------------------------------------------------------ */
 void battle_enter(App *a)
 {
+    a->human_out = false;   /* 前の戦闘の結果を引きずらない */
     a->zoom = 1;
     a->sel_unit = -1;
     a->join_target = -1;
@@ -1453,7 +1482,9 @@ void battle_update(App *a)
         if (a->cpu_wait > 0) { a->cpu_wait--; return; }
         int cont = ai_step(g, &a->ai);
         show_ai_co_power(a);
-        if (g->winner != WINNER_NONE) { check_over(a); return; }
+        /* CPUの行動で自軍が全滅することがあるのでここも無条件に */
+        check_over(a);
+        if (a->bs == BS_GAMEOVER) return;
         if (a->ai.last_unit >= 0 &&
             (g->units[a->ai.last_unit].flags & UF_ALIVE)) {
             const Unit *u = &g->units[a->ai.last_unit];

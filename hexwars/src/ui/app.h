@@ -102,10 +102,20 @@ struct App {
 
     /* セットアップ画面の選択 */
     int sel_map;
-    int sel_p2;      /* 0=CPU弱 1=CPU普 2=CPU強 3=人間 */
+    /* 参加陣営ごとの操作者（0=CPU弱 1=CPU普 2=CPU強 3=人間）。
+     * マップによって何陣営参加するかが変わるので、
+     * setup_parts に立っている陣営の分だけ使う。 */
+    uint8_t sel_ctrl[MAX_PLAYERS];
+    unsigned setup_parts;   /* 選択中マップの参加陣営ビット */
+    /* 人間の陣営が全て倒れて終了したか。
+     * AI同士の決着を待っても操作できることはないのでその時点で終わる。
+     * winner は WINNER_NONE のままなので、結果画面はこの旗で判別する。 */
+    bool  human_out;
+    int sel_p2;      /* 旧: 互換のため残す（sel_ctrl[1] と連動） */
     int sel_fog;     /* 0=ON 1=OFF */
-    int sel_co0;     /* 指揮官（自軍）cos[] のindex */
-    int sel_co1;     /* 指揮官（敵軍） */
+    int sel_co[MAX_PLAYERS];  /* 陣営ごとの指揮官 cos[] のindex */
+    int sel_co0;     /* 旧: sel_co[0] の別名（main.c から使われる） */
+    int sel_co1;     /* 旧: sel_co[1] の別名 */
     int setup_row;
 
     /* タイトル/結果のメニュー選択 */
@@ -232,7 +242,7 @@ void draw_text_center(App *a, TTF_Font *f, int cx, int y, SDL_Color c, const cha
 int  text_width(App *a, TTF_Font *f, const char *s);
 
 /* render.c */
-extern const SDL_Color COL_P[2];
+extern const SDL_Color COL_P[MAX_PLAYERS];
 extern const SDL_Color COL_WHITE, COL_BLACK, COL_YELLOW, COL_GRAY, COL_DIM;
 float hex_size(const App *a);
 void  hex_center_px(const App *a, int x, int y, float *px, float *py);

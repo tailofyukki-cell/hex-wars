@@ -12,7 +12,11 @@
 
 const char *faction_name(int p)
 {
-    return tx(p == 0 ? "FACTION0" : "FACTION1");
+    static const char *K[MAX_PLAYERS] = {
+        "FACTION0", "FACTION1", "FACTION2", "FACTION3", "FACTION4"
+    };
+    if (p < 0 || p >= MAX_PLAYERS) return tx("FACTION1");
+    return tx(K[p]);
 }
 
 /* battle 画面（screen_battle.c） */
@@ -287,18 +291,102 @@ static void title_draw(App *a)
 static const char *P2_KEYS[] = {
     "OPP_CPU_EASY", "OPP_CPU_NORMAL", "OPP_CPU_HARD", "OPP_HUMAN"
 };
-#define SETUP_ROWS 7
-#define SETUP_START_ROW 5
-#define SETUP_BACK_ROW  6
+#define SETUP_CTRL_HUMAN 3      /* P2_KEYS の「人間」 */
+
+/* 行は「マップ・索敵・(参加陣営ごとの操作者)・(参加陣営ごとの指揮官)・開始・戻る」。
+ * 参加陣営数はマップで変わるので行数も変わる。 */
+#define SETUP_FIXED_TOP  2      /* マップ・索敵 */
+#define SETUP_FIXED_BOT  2      /* 開始・戻る */
+
+/* .map を軽く読んで参加陣営のビットを返す。
+ * 本読込（data_load_map）は Game 一式を要するので、選択中マップの下見には重い。
+ * own= と unit= の所有者だけ見れば参加陣営は分かる。 */
+static unsigned map_participants(const char *path)
+{
+    unsigned bits = 0;
+    FILE *f = fopen(path, "rb");
+    if (!f) return 0;
+    char line[512];
+    while (fgets(line, sizeof line, f)) {
+        char *hash = strchr(line, '#');
+        if (hash) *hash = '\0';
+        char *s = line;
+        while (*s == ' ' || *s == '\t') s++;
+        int o = -1;
+        if (!strncmp(s, "own", 3)) {
+            char *eq = strchr(s, '=');
+            if (eq) { int x, y; if (sscanf(eq + 1, "%d,%d,%d", &x, &y, &o) != 3) o = -1; }
+        } else if (!strncmp(s, "unit", 4)) {
+            char *eq = strchr(s, '=');
+            if (eq) o = atoi(eq + 1);
+        }
+        if (o >= 0 && o < MAX_PLAYERS) bits |= 1u << o;
+    }
+    fclose(f);
+    return bits;
+}
+
+static int setup_nparts(const App *a)
+{
+    int n = 0;
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (a->setup_parts & (1u << p)) n++;
+    return n < 2 ? 2 : n;          /* 最低2陣営として扱う（読めなかった場合の保険） */
+}
+
+/* i 番目の参加陣営の陣営番号 */
+static int setup_part_at(const App *a, int i)
+{
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (a->setup_parts & (1u << p)) {
+            if (i == 0) return p;
+            i--;
+        }
+    return i + 1 < MAX_PLAYERS ? i + 1 : 1;   /* 保険 */
+}
+
+static int setup_rows(const App *a)
+{
+    return SETUP_FIXED_TOP + setup_nparts(a) * 2 + SETUP_FIXED_BOT;
+}
+static int setup_start_row(const App *a) { return setup_rows(a) - 2; }
+static int setup_back_row(const App *a)  { return setup_rows(a) - 1; }
+
+/* 選択中マップの参加陣営を読み直す（マップを変えたら呼ぶ） */
+static void setup_refresh_parts(App *a)
+{
+    a->setup_parts = 0;
+    if (a->maps.n > 0) {
+        char path[600];
+        snprintf(path, sizeof path, "%sdata/%s", a->base_path,
+                 a->maps.file[a->sel_map]);
+        a->setup_parts = map_participants(path);
+    }
+    if (a->setup_parts == 0) a->setup_parts = 0x3;   /* 読めなければ2陣営扱い */
+    /* 陣営0は人間、それ以外はCPU普通を既定にする */
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (a->sel_ctrl[p] > SETUP_CTRL_HUMAN) a->sel_ctrl[p] = 1;
+    if (a->setup_row >= setup_rows(a)) a->setup_row = 0;
+}
 
 static void setup_enter(App *a)
 {
     a->setup_row = 0;
+    /* 旧フィールドから引き継ぐ（初回や他画面から戻ってきたとき） */
+    a->sel_ctrl[0] = SETUP_CTRL_HUMAN;
+    if (a->sel_ctrl[1] > SETUP_CTRL_HUMAN) a->sel_ctrl[1] = (uint8_t)a->sel_p2;
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (a->sel_co[p] < 0 || a->sel_co[p] >= a->game.n_cos) a->sel_co[p] = a->sel_co0;
+    setup_refresh_parts(a);
 }
 
-static SDL_Rect setup_row_rect(int i)
+static SDL_Rect setup_row_rect(const App *a, int i)
 {
-    SDL_Rect r = { WIN_W / 2 - 320, 210 + i * 62, 640, 48 };
+    int n = setup_rows(a);
+    int gap = (n <= 8) ? 62 : 46;
+    int h   = (n <= 8) ? 48 : 38;
+    int top = (n <= 8) ? 210 : 158;
+    SDL_Rect r = { WIN_W / 2 - 320, top + i * gap, 640, h };
     return r;
 }
 
@@ -341,26 +429,48 @@ static const char *co_label(App *a, int idx)
 static void setup_change(App *a, int dir)
 {
     snd_se(SE_CURSOR);
-    switch (a->setup_row) {
-    case 0:
+    int n = setup_nparts(a);
+    if (a->setup_row == 0) {
         a->sel_map = (a->sel_map + a->maps.n + dir) % (a->maps.n ? a->maps.n : 1);
-        break;
-    case 1: a->sel_p2 = (a->sel_p2 + 4 + dir) % 4; break;
-    case 2: a->sel_fog = (a->sel_fog + 2 + dir) % 2; break;
-    case 3:
-        a->sel_co0 = co_next_unlocked(a, a->sel_co0, dir);
-        break;
-    case 4:
-        a->sel_co1 = co_next_unlocked(a, a->sel_co1, dir);
-        break;
-    default: break;
+        setup_refresh_parts(a);          /* マップで参加陣営数が変わる */
+        return;
     }
+    if (a->setup_row == 1) {
+        a->sel_fog = (a->sel_fog + 2 + dir) % 2;
+        return;
+    }
+    int r = a->setup_row - SETUP_FIXED_TOP;
+    if (r < n) {                          /* 操作者 */
+        int p = setup_part_at(a, r);
+        a->sel_ctrl[p] = (uint8_t)((a->sel_ctrl[p] + 4 + dir) % 4);
+        if (p == 1) a->sel_p2 = a->sel_ctrl[1];   /* 旧フィールドを追随させる */
+        return;
+    }
+    r -= n;
+    if (r < n) {                          /* 指揮官 */
+        int p = setup_part_at(a, r);
+        a->sel_co[p] = co_next_unlocked(a, a->sel_co[p], dir);
+        if (p == 0) a->sel_co0 = a->sel_co[0];
+        if (p == 1) a->sel_co1 = a->sel_co[1];
+    }
+}
+
+/* 人間の陣営が1つも無ければ開始できない（誰も操作できない対戦になるため） */
+static bool setup_has_human(const App *a)
+{
+    int n = setup_nparts(a);
+    for (int i = 0; i < n; i++)
+        if (a->sel_ctrl[setup_part_at(a, i)] == SETUP_CTRL_HUMAN) return true;
+    return false;
 }
 
 static void setup_start(App *a)
 {
     Game *g = &a->game;
     char path[600], err[256];
+    /* 人間が1つも無ければ開始しない（誰も操作できない対戦になるため）。
+     * 理由は setup_draw が画面下に常時出している。 */
+    if (!setup_has_human(a)) { snd_se(SE_CANCEL); return; }
     snprintf(path, sizeof path, "%sdata/%s", a->base_path,
              a->maps.file[a->sel_map]);
     if (data_load_map(g, path, err, sizeof err) != 0) {
@@ -370,13 +480,16 @@ static void setup_start(App *a)
     a->campaign_mode = false;
     a->cps.active = false;
     g->fog = (a->sel_fog == 0);
-    g->ctrl[0] = CTRL_HUMAN;
-    g->ctrl[1] = (a->sel_p2 == 0) ? CTRL_CPU_EASY
-               : (a->sel_p2 == 1) ? CTRL_CPU_NORMAL
-               : (a->sel_p2 == 2) ? CTRL_CPU_HARD
-               : CTRL_HUMAN;
-    g->co_id[0] = (int8_t)(g->n_cos > 0 ? a->sel_co0 : -1);
-    g->co_id[1] = (int8_t)(g->n_cos > 0 ? a->sel_co1 : -1);
+    /* data_load_map が全陣営をCPU普通で埋めているので、選んだぶんだけ上書きする */
+    int n = setup_nparts(a);
+    for (int i = 0; i < n; i++) {
+        int p = setup_part_at(a, i);
+        g->ctrl[p] = (a->sel_ctrl[p] == 0) ? CTRL_CPU_EASY
+                   : (a->sel_ctrl[p] == 1) ? CTRL_CPU_NORMAL
+                   : (a->sel_ctrl[p] == 2) ? CTRL_CPU_HARD
+                   : CTRL_HUMAN;
+        g->co_id[p] = (int8_t)(g->n_cos > 0 ? a->sel_co[p] : -1);
+    }
     game_start(g, SDL_GetTicks() | 1u);
     a->next_screen = SCREEN_BATTLE;
 }
@@ -384,21 +497,24 @@ static void setup_start(App *a)
 static void setup_select(App *a)
 {
     snd_se(SE_OK);
-    if (a->setup_row == SETUP_START_ROW) setup_start(a);
-    else if (a->setup_row == SETUP_BACK_ROW) a->next_screen = SCREEN_TITLE;
+    if (a->setup_row == setup_start_row(a)) setup_start(a);
+    else if (a->setup_row == setup_back_row(a)) a->next_screen = SCREEN_TITLE;
     else setup_change(a, 1);
 }
 
+static void setup_update(App *a) { (void)a; }
+
 static void setup_event(App *a, const SDL_Event *e)
 {
+    int rows = setup_rows(a);
     if (e->type == SDL_KEYDOWN) {
         SDL_Keycode k = e->key.keysym.sym;
         if (k == SDLK_UP) {
-            a->setup_row = (a->setup_row + SETUP_ROWS - 1) % SETUP_ROWS;
+            a->setup_row = (a->setup_row + rows - 1) % rows;
             snd_se(SE_CURSOR);
         }
         if (k == SDLK_DOWN) {
-            a->setup_row = (a->setup_row + 1) % SETUP_ROWS;
+            a->setup_row = (a->setup_row + 1) % rows;
             snd_se(SE_CURSOR);
         }
         if (k == SDLK_LEFT)  setup_change(a, -1);
@@ -410,8 +526,8 @@ static void setup_event(App *a, const SDL_Event *e)
         }
     }
     if (e->type == SDL_MOUSEMOTION) {
-        for (int i = 0; i < SETUP_ROWS; i++) {
-            SDL_Rect r = setup_row_rect(i);
+        for (int i = 0; i < rows; i++) {
+            SDL_Rect r = setup_row_rect(a, i);
             SDL_Point p = { e->motion.x, e->motion.y };
             if (SDL_PointInRect(&p, &r)) a->setup_row = i;
         }
@@ -423,82 +539,91 @@ static void setup_event(App *a, const SDL_Event *e)
             a->next_screen = SCREEN_TITLE;
             return;
         }
-        for (int i = 0; i < SETUP_ROWS; i++) {
-            SDL_Rect r = setup_row_rect(i);
+        for (int i = 0; i < rows; i++) {
+            SDL_Rect r = setup_row_rect(a, i);
             if (SDL_PointInRect(&p, &r)) { a->setup_row = i; setup_select(a); }
         }
     }
 }
-
-static void setup_update(App *a) { (void)a; }
 
 static void setup_draw(App *a)
 {
     fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 32, 42, 52, 255 });
     draw_text_center(a, a->font_xl, WIN_W / 2, 100, COL_WHITE, tx("SETUP_TITLE"));
 
-    const char *labels[SETUP_ROWS] = {
-        tx("SETUP_MAP"), tx("SETUP_OPP"), tx("SETUP_FOG"),
-        tx("SETUP_CO0"), tx("SETUP_CO1"),
-        tx("SETUP_START"), tx("SETUP_BACK")
-    };
-    for (int i = 0; i < SETUP_ROWS; i++) {
-        SDL_Rect r = setup_row_rect(i);
+    int n = setup_nparts(a);
+    int rows = setup_rows(a);
+    bool small = (rows > 8);
+    TTF_Font *f = small ? a->font_s : a->font_m;
+
+    for (int i = 0; i < rows; i++) {
+        SDL_Rect r = setup_row_rect(a, i);
         bool sel = (a->setup_row == i);
         fill_rect(a, r.x, r.y, r.w, r.h,
                   sel ? (SDL_Color){ 70, 100, 150, 255 }
                       : (SDL_Color){ 45, 55, 68, 255 });
         outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
 
-        if (i <= 4) {
-            draw_text(a, a->font_m, r.x + 20, r.y + 10,
-                      sel ? COL_WHITE : COL_GRAY, labels[i]);
-            const char *val = "";
-            if (i == 0) val = a->maps.n ? a->maps.name[a->sel_map] : tx("SETUP_NOMAP");
-            if (i == 1) val = tx(P2_KEYS[a->sel_p2]);
-            if (i == 2) val = tx(a->sel_fog == 0 ? "ON" : "OFF");
-            if (i == 3) val = co_label(a, a->sel_co0);
-            if (i == 4) val = co_label(a, a->sel_co1);
-            char buf[96];
-            snprintf(buf, sizeof buf, "◀ %s ▶", val);
-            draw_text(a, a->font_m, r.x + 300, r.y + 10,
-                      sel ? COL_YELLOW : COL_WHITE, buf);
+        int ty = r.y + (small ? 8 : 10);
+        if (i == setup_start_row(a) || i == setup_back_row(a)) {
+            const char *lbl = (i == setup_start_row(a)) ? tx("SETUP_START")
+                                                        : tx("SETUP_BACK");
+            SDL_Color c = sel ? COL_WHITE : COL_GRAY;
+            /* 人間が0なら開始は押せないと分かるように暗く出す */
+            if (i == setup_start_row(a) && !setup_has_human(a)) c = COL_DIM;
+            draw_text_center(a, f, r.x + r.w / 2, ty, c, lbl);
+            continue;
+        }
+
+        char lbuf[96], vbuf[96];
+        const char *label = lbuf;
+        const char *val = "";
+        lbuf[0] = 0;
+        if (i == 0) {
+            snprintf(lbuf, sizeof lbuf, "%s", tx("SETUP_MAP"));
+            val = a->maps.n ? a->maps.name[a->sel_map] : tx("SETUP_NOMAP");
+        } else if (i == 1) {
+            snprintf(lbuf, sizeof lbuf, "%s", tx("SETUP_FOG"));
+            val = tx(a->sel_fog == 0 ? "ON" : "OFF");
         } else {
-            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 10,
-                             sel ? COL_WHITE : COL_GRAY, labels[i]);
+            int rr = i - SETUP_FIXED_TOP;
+            if (rr < n) {
+                int p = setup_part_at(a, rr);
+                snprintf(lbuf, sizeof lbuf, tx("SETUP_CTRL_FMT"), faction_name(p));
+                val = tx(P2_KEYS[a->sel_ctrl[p]]);
+            } else {
+                int p = setup_part_at(a, rr - n);
+                snprintf(lbuf, sizeof lbuf, tx("SETUP_CO_FMT"), faction_name(p));
+                val = co_label(a, a->sel_co[p]);
+            }
         }
+        /* 陣営の行はその陣営の色でラベルを出す（対応が一目で分かる） */
+        SDL_Color lc = sel ? COL_WHITE : COL_GRAY;
+        if (i >= SETUP_FIXED_TOP) {
+            int rr = i - SETUP_FIXED_TOP;
+            int p = setup_part_at(a, rr < n ? rr : rr - n);
+            lc = COL_P[p];
+        }
+        draw_text(a, f, r.x + 20, ty, lc, label);
+        snprintf(vbuf, sizeof vbuf, "◀ %s ▶", val);
+        draw_text(a, f, r.x + 300, ty, sel ? COL_YELLOW : COL_WHITE, vbuf);
     }
-    /* 選択中の指揮官の顔絵（右側）。行3=自軍 / 行4=敵軍 に追随する */
+
+    /* 指揮官の行を選んでいるときだけ、その陣営の顔絵を出す */
     if (a->game.n_cos > 0) {
-        int ci = (a->setup_row == 4) ? a->sel_co1 : a->sel_co0;
-        draw_co_portrait(a, ci, 985, 246, 264, 352);
-        draw_text_center(a, a->font_s, 985 + 132, 214, COL_GRAY,
-                         tx(a->setup_row == 4 ? "SETUP_CO1" : "SETUP_CO0"));
-    }
-    /* 選択中の指揮官の説明を下に出す */
-    {
-        int ci = (a->setup_row == 4) ? a->sel_co1 : a->sel_co0;
-        if (a->game.n_cos > 0 && ci >= 0 && ci < a->game.n_cos) {
-            const CommanderType *c = &a->game.cos[ci];
-            char buf[192];
-            snprintf(buf, sizeof buf, "【%s】%s", c->title, c->desc);
-            draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 92, COL_WHITE, buf);
-            snprintf(buf, sizeof buf, "%s: %s", c->power_name, c->power_desc);
-            draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 66, COL_YELLOW, buf);
+        int rr = a->setup_row - SETUP_FIXED_TOP;
+        if (rr >= n && rr < n * 2) {
+            int p = setup_part_at(a, rr - n);
+            draw_co_portrait(a, a->sel_co[p], 985, 246, 264, 352);
+            char buf[64];
+            snprintf(buf, sizeof buf, tx("SETUP_CO_FMT"), faction_name(p));
+            draw_text_center(a, a->font_s, 985 + 132, 214, COL_GRAY, buf);
         }
     }
-    /* 未解禁の指揮官が残っていることを知らせる */
-    {
-        int locked = 0;
-        for (int i = 0; i < a->game.n_cos; i++)
-            if (!co_is_unlocked(a, i)) locked++;
-        if (locked > 0) {
-            char lb[128];
-            snprintf(lb, sizeof lb, tx("CO_LOCKED_FMT"), locked);
-            draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 118, COL_DIM, lb);
-        }
-    }
-    draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 40, COL_DIM, tx("SETUP_HINT"));
+    if (!setup_has_human(a))
+        draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 60,
+                         (SDL_Color){ 230, 150, 150, 255 }, tx("SETUP_NEED_HUMAN"));
+    draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 34, COL_DIM, tx("SETUP_HINT"));
 }
 
 /* ------------------------------------------------------------------ */
@@ -1438,7 +1563,11 @@ static void result_draw(App *a)
     int y = 170;   /* 画面の縦位置。行が増えても下の余白で吸収できるだけ余裕を取る */
     char buf[160];
 
-    if (g->winner >= 0) {
+    if (a->human_out) {
+        /* 人間の陣営が全滅。引き分けではないので別の文言にする */
+        draw_text_center(a, a->font_xl, cx, y,
+                         (SDL_Color){ 220, 130, 130, 255 }, tx("RESULT_HUMAN_OUT"));
+    } else if (g->winner >= 0) {
         SDL_Color c = COL_P[g->winner];
         snprintf(buf, sizeof buf, tx("RESULT_WIN_FMT"), faction_name(g->winner));
         draw_text_center(a, a->font_xl, cx, y, c, buf);

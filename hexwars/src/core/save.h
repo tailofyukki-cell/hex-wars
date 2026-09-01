@@ -6,7 +6,8 @@
 #include "campaign.h"
 
 #define SAVE_MAGIC   "HXWS"
-#define SAVE_VERSION 9   /* v9: 昼夜の有効/無効を追加。v6以降は引き続き読める */
+#define SAVE_VERSION 10  /* v10: 陣営を最大5へ。陣営別配列の長さが変わるため
+                          * 旧セーブは2陣営分だけ読んで残りは初期値にする。 */
 /* この版以降は読める（古いセーブは欠けている項目を既定値で埋める）。
  * 進行中のキャンペーンを無駄にしないための下位互換。 */
 #define SAVE_VERSION_MIN 6

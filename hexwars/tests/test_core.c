@@ -1574,6 +1574,139 @@ static void test_commanders(void)
     }
 }
 
+/* 多陣営: 参加判定・勝敗・手番送り */
+static void test_multiplayer(void)
+{
+    Game *g = &s_game;
+    char err[256];
+
+    /* --- 2陣営マップ: 居ない陣営が「開幕即敗北」にならないこと --- */
+    {
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        CHECK(data_load_map(g, "data/maps/m01_border_hills.map", err, sizeof err) == 0);
+        if (s_fail) return;
+        game_start(g, 5);
+        CHECK(game_player_in_play(g, 0));
+        CHECK(game_player_in_play(g, 1));
+        for (int p = 2; p < MAX_PLAYERS; p++)
+            CHECK(!game_player_in_play(g, p));   /* 居ない陣営は参加扱いしない */
+        game_check_victory(g);
+        CHECK(g->winner == WINNER_NONE);         /* 開幕で決着しない */
+
+        /* 手番送り: 居ない陣営を飛ばして 0→1→0 と回ること */
+        CHECK(g->current == 0);
+        game_end_turn(g);
+        CHECK(g->current == 1);
+        int t0 = g->turn;
+        game_end_turn(g);
+        CHECK(g->current == 0);
+        CHECK(g->turn == t0 + 1);                /* 一周でターンが1進む */
+    }
+
+    /* --- 操作者の既定がCPUであること --- */
+    {
+        /* CTRL_HUMAN は 0 なので、マップ読込で埋めないと
+         * 設定し忘れた陣営が入力待ちで固まる。
+         * 3陣営以上のマップで現実に起き得るので固めておく。 */
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        CHECK(data_load_map(g, "data/maps/m05_threeway.map", err, sizeof err) == 0);
+        if (s_fail) return;
+        for (int p = 0; p < MAX_PLAYERS; p++)
+            CHECK(g->ctrl[p] != CTRL_HUMAN);
+    }
+
+    /* --- 全滅したら敗北確定、拠点は中立に戻る --- */
+    {
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        CHECK(data_load_map(g, "data/maps/m05_threeway.map", err, sizeof err) == 0);
+        if (s_fail) return;
+        g->fog = false;
+        game_start(g, 5);
+
+        int before = 0;
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++)
+                if (g->tiles[y][x].owner == 2) before++;
+        CHECK(before > 0);                       /* 陣営2 は拠点を持っている */
+
+        /* ユニットだけ全滅させる（拠点は触らない） */
+        for (int i = 0; i < g->n_units; i++)
+            if (g->units[i].owner == 2) g->units[i].flags &= (uint8_t)~UF_ALIVE;
+        CHECK(game_player_defeated(g, 2));       /* 拠点が残っていても敗北 */
+
+        game_check_victory(g);
+        int after = 0, neutral_hq = 0;
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++) {
+                if (g->tiles[y][x].owner == 2) after++;
+                if (g->terrains[g->tiles[y][x].terrain].is_hq &&
+                    g->tiles[y][x].owner < 0) neutral_hq++;
+            }
+        CHECK(after == 0);                       /* 拠点はすべて中立へ */
+        CHECK(neutral_hq >= 1);                  /* 首都も中立になる */
+        CHECK(g->winner == WINNER_NONE);         /* 残り2陣営なので続行 */
+    }
+
+    /* --- 3陣営マップ: 1つ倒れても続き、最後の1つが勝つ --- */
+    {
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        CHECK(data_load_map(g, "data/maps/m05_threeway.map", err, sizeof err) == 0);
+        if (s_fail) return;
+        g->fog = false;
+        game_start(g, 5);
+
+        int n = 0;
+        for (int p = 0; p < MAX_PLAYERS; p++) if (game_player_in_play(g, p)) n++;
+        CHECK(n == 3);
+        CHECK(g->winner == WINNER_NONE);
+
+        /* 陣営2を消す（ユニット全滅＋首都を陣営0へ）。まだ2陣営残るので続く */
+        for (int i = 0; i < g->n_units; i++)
+            if (g->units[i].owner == 2) g->units[i].flags &= (uint8_t)~UF_ALIVE;
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++)
+                if (g->tiles[y][x].owner == 2) g->tiles[y][x].owner = 0;
+        CHECK(game_player_defeated(g, 2));
+        game_check_victory(g);
+        CHECK(g->winner == WINNER_NONE);         /* まだ 0 と 1 が残っている */
+
+        /* 陣営1も消す → 陣営0の勝ち */
+        for (int i = 0; i < g->n_units; i++)
+            if (g->units[i].owner == 1) g->units[i].flags &= (uint8_t)~UF_ALIVE;
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++)
+                if (g->tiles[y][x].owner == 1) g->tiles[y][x].owner = 0;
+        game_check_victory(g);
+        CHECK(g->winner == 0);
+    }
+
+    /* --- 手番送りが脱落陣営を飛ばすこと（3陣営で中央が脱落） --- */
+    {
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        CHECK(data_load_map(g, "data/maps/m05_threeway.map", err, sizeof err) == 0);
+        if (s_fail) return;
+        g->fog = false;
+        game_start(g, 5);
+        /* 陣営1だけ全滅させる（首都は残すので勝敗はつかない） */
+        for (int i = 0; i < g->n_units; i++)
+            if (g->units[i].owner == 1) g->units[i].flags &= (uint8_t)~UF_ALIVE;
+        CHECK(game_player_defeated(g, 1));
+        CHECK(g->current == 0);
+        game_end_turn(g);
+        CHECK(g->current == 2);          /* 1 を飛ばして 2 へ */
+    }
+}
+
 /* 昼夜: 固定周期・領域制限・攻撃補正・視界・射程・地形防御 */
 static void test_daynight(void)
 {
@@ -3082,6 +3215,7 @@ int main(void)
     test_commanders();
     test_weather();
     test_daynight();
+    test_multiplayer();
     test_enemy_reinforce();
     test_join();
     test_ai_co_power();
