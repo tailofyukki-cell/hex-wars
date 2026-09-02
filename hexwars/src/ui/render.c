@@ -92,14 +92,17 @@ static float unit_draw_oy(const App *a, Layer L, float s)
     return oy;
 }
 
-/* 描画に使う視点プレイヤー（CPU手番中は人間側の視界で描く） */
+/* 描画に使う視点。CPU手番中は人間側の視界で描く。
+ * **参加している陣営だけを見ること**。CTRL_HUMAN は 0 なので、
+ * ctrl が未設定の陣営（古いセーブなど）が「人間」と見なされ、
+ * その空の視界を拾って盤面が何も見えなくなる。 */
 static int render_viewer(const Game *g)
 {
-    int viewer = g->current;
+    if (g->ctrl[g->current] == CTRL_HUMAN) return g->current;
     for (int p = 0; p < MAX_PLAYERS; p++)
-        if (g->ctrl[g->current] != CTRL_HUMAN && g->ctrl[p] == CTRL_HUMAN)
-            viewer = p;
-    return viewer;
+        if (g->ctrl[p] == CTRL_HUMAN && game_player_in_play(g, p))
+            return p;                     /* 最初に見つかった人間 */
+    return g->current;
 }
 
 /* 斜め表示ではヘクスがY方向に潰れる一方でユニットの絵は縮まないため、絵が

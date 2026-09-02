@@ -409,7 +409,13 @@ int load_game(Game *g, CampaignState *cs, const char *path,
     }
     /* v9以前は参加陣営を持たないので盤面から算出し直す。
      * これを忘れると全陣営が「不参加」になり、ロード直後に引き分けになる。 */
-    if (ver < 10) game_recompute_in_play(g);
+    if (ver < 10) {
+        /* v9以前は参加陣営と 3陣営目以降の ctrl を持たない。
+         * **ctrl を埋めないと CTRL_HUMAN(=0) のままになり、
+         * 居ない陣営が「人間」扱いになって描画視点が壊れる**。 */
+        for (int p = 2; p < MAX_PLAYERS; p++) g->ctrl[p] = CTRL_CPU_NORMAL;
+        game_recompute_in_play(g);
+    }
     game_update_vision(g);
     return 0;
 }

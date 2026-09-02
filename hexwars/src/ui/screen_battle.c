@@ -172,6 +172,10 @@ static void begin_side(App *a)
 {
     Game *g = &a->game;
     a->sel_unit = -1;
+    /* **先に BS_IDLE へ戻すこと**。直前の戦闘が BS_GAMEOVER のまま
+     * 次のマップに入ると、下の return で手番を始めずに抜け、
+     * battle_update がそのまま結果画面へ飛ばす（開幕で引き分けになる）。 */
+    a->bs = BS_IDLE;
     /* winner だけでなく「人間が全滅」も見るので無条件に呼ぶ */
     check_over(a);
     if (a->bs == BS_GAMEOVER) return;
@@ -1769,9 +1773,11 @@ static void draw_panels(App *a)
     }
     /* CPU手番中も人間側の視点で表示する。地形・ユニットの両方で使う。 */
     int viewer = g->current;
-    for (int p = 0; p < MAX_PLAYERS; p++)
-        if (g->ctrl[g->current] != CTRL_HUMAN && g->ctrl[p] == CTRL_HUMAN)
-            viewer = p;
+    if (g->ctrl[viewer] != CTRL_HUMAN)
+        for (int p = 0; p < MAX_PLAYERS; p++)
+            if (g->ctrl[p] == CTRL_HUMAN && game_player_in_play(g, p)) {
+                viewer = p; break;
+            }
 
     if (t->capturable) {
         char ownbuf[64];
