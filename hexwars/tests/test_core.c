@@ -84,16 +84,16 @@ static void test_data_and_battle(void)
             CHECK(g->terrains[as_].capturable && g->terrains[an_].capturable);
         }
     }
-    /* 生産できる34種 + 進化先31種。進化先は no_produce なので生産に出ない。
-     * 生産側の34には夜間ユニット3種を含む。 */
-    CHECK(g->n_types == 65);
+    /* 生産できる34種 + 進化先34種。進化先は no_produce なので生産に出ない。
+     * 生産側の34には夜間ユニットの3種を含み、それらも進化先を持つ。 */
+    CHECK(g->n_types == 68);
     {
         int producible = 0, evo = 0;
         for (int i = 0; i < g->n_types; i++) {
             if (g->types[i].no_produce) evo++;
             else producible++;
         }
-        CHECK(producible == 34 && evo == 31);
+        CHECK(producible == 34 && evo == 34);
         /* 進化先を持つ種は、その進化先が実在し、生産不可であること */
         for (int i = 0; i < g->n_types; i++) {
             if (!g->types[i].evolve_to[0]) continue;
@@ -107,6 +107,10 @@ static void test_data_and_battle(void)
                 CHECK(g->types[to].evolve_to[0] == 0);
                 /* 移動クラスは変わらない（陸が空になったりしない） */
                 CHECK(g->types[to].mclass == g->types[i].mclass);
+                /* **夜間ユニットの進化先は night を引き継ぐこと**。
+                 * 落とすと進化した途端に夜の+50%と視界維持を失い、
+                 * 育てたほど弱くなるという気づきにくい退化になる。 */
+                CHECK(g->types[to].night == g->types[i].night);
             }
         }
     }
@@ -121,7 +125,7 @@ static void test_data_and_battle(void)
         }
         /* 進化先も同じ内訳で増えるので倍になる。
          * 夜間ユニットは陸・空・海に1つずつ。 */
-        CHECK(land == 29 && air == 17 && sea == 19);
+        CHECK(land == 30 && air == 18 && sea == 20);
     }
     /* 画像指定（image=）が両陣営分に読めていること */
     {
@@ -1692,6 +1696,7 @@ static void test_teams(void)
     }
 }
 
+
 /* 多陣営: 参加判定・勝敗・手番送り */
 static void test_multiplayer(void)
 {
@@ -1710,6 +1715,11 @@ static void test_multiplayer(void)
         CHECK(game_player_in_play(g, 1));
         for (int p = 2; p < MAX_PLAYERS; p++)
             CHECK(!game_player_in_play(g, p));   /* 居ない陣営は参加扱いしない */
+        /* **居ない陣営の ctrl を CTRL_HUMAN(=0) のままにしないこと**。
+         * 描画は「CPU手番中は人間の視界で描く」ために ctrl を見るので、
+         * 幽霊の「人間」がいるとその空の視界で盤面が真っ暗になる。 */
+        for (int p = 2; p < MAX_PLAYERS; p++)
+            CHECK(g->ctrl[p] != CTRL_HUMAN);
         game_check_victory(g);
         CHECK(g->winner == WINNER_NONE);         /* 開幕で決着しない */
 

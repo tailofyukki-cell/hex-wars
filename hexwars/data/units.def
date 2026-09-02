@@ -1307,6 +1307,7 @@ no_produce   = 1
 
 [unit NIGHT_INF]
 name          = 夜間忍兵
+evolve_to     = NIGHT_INF_V
 icon          = 忍
 image         = gfx/units/night_inf.png
 class         = LAND_TRACK
@@ -1332,6 +1333,7 @@ transport_by  = TRUCK
 
 [unit NIGHT_BOAT]
 name          = 夜間突撃艦
+evolve_to     = NIGHT_BOAT_V
 icon          = 襲
 image         = gfx/units/night_boat.png
 class         = SEA
@@ -1353,6 +1355,7 @@ night         = 1
 
 [unit NIGHT_FIGHTER]
 name          = 夜間迎撃機
+evolve_to     = NIGHT_FIGHTER_V
 icon          = 迎
 image         = gfx/units/night_fighter.png
 class         = AIR
@@ -1372,3 +1375,78 @@ range_max     = 1
 move_and_fire = 1
 night         = 1
 
+# ---- 夜間ユニットの進化先 ----
+# night=1 を引き継ぐこと。落とすと進化した途端に
+# 夜の強み（攻撃+50%%と視界維持）を失って弱体化する。
+# 昼は同価格帯の通常進化体より一段弱いままにしてある。
+
+[unit NIGHT_INF_V]
+name          = 闇夜特務兵
+icon          = 闇
+image         = gfx/units/night_inf.png
+class         = LAND_TRACK
+armor         = HARD
+cost          = 360
+move          = 6
+fuel          = 75
+ammo          = 6
+vision        = 4
+atk_soft      = 64
+atk_hard      = 38
+atk_air       = 0
+atk_sea       = 14
+def           = 42
+range_min     = 1
+range_max     = 1
+can_capture   = 1
+move_and_fire = 1
+night         = 1
+transport_by  = T_SHIP
+transport_by  = T_COPTER
+transport_by  = TRUCK
+no_produce    = 1
+
+[unit NIGHT_BOAT_V]
+name          = 黒潮強襲艦
+icon          = 潮
+image         = gfx/units/night_boat.png
+class         = SEA
+armor         = SEA
+cost          = 500
+move          = 9
+fuel          = 65
+ammo          = 6
+vision        = 6
+atk_soft      = 34
+atk_hard      = 34
+atk_air       = 0
+atk_sea       = 86
+def           = 34
+range_min     = 1
+range_max     = 1
+move_and_fire = 1
+night         = 1
+no_produce    = 1
+
+[unit NIGHT_FIGHTER_V]
+name          = 夜天迎撃機
+icon          = 天
+image         = gfx/units/night_fighter.png
+class         = AIR
+armor         = AIR
+cost          = 620
+move          = 10
+fuel          = 65
+ammo          = 7
+vision        = 6
+atk_soft      = 0
+atk_hard      = 0
+atk_air       = 80
+atk_sea       = 0
+def           = 46
+range_min     = 1
+range_max     = 1
+move_and_fire = 1
+night         = 1
+upkeep        = 2
+no_produce    = 1

@@ -79,9 +79,9 @@
 | `gfx/units/missile_boat.png` | MISSILE_BOAT ほか1件 | ○ | 96x96 |
 | `gfx/units/supply_ship.png` | SUPPLY_SHIP ほか1件 | ○ | 96x96 |
 | `gfx/units/t_plane.png` | T_PLANE ほか1件 | ○ | 96x96 |
-| `gfx/units/night_inf.png` | NIGHT_INF（夜間忍兵） | **未** | - |
-| `gfx/units/night_boat.png` | NIGHT_BOAT（夜間突撃艦） | **未** | - |
-| `gfx/units/night_fighter.png` | NIGHT_FIGHTER（夜間迎撃機） | **未** | - |
+| `gfx/units/night_inf.png` | NIGHT_INF ほか1件（夜間忍兵） | **未** | - |
+| `gfx/units/night_boat.png` | NIGHT_BOAT ほか1件（夜間突撃艦） | **未** | - |
+| `gfx/units/night_fighter.png` | NIGHT_FIGHTER ほか1件（夜間迎撃機） | **未** | - |
 
 ## 指揮官（11本）
 
