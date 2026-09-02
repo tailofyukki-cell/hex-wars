@@ -161,6 +161,24 @@ int  game_evolve_cost(const Game *g, int ui);
 /* 進化を実行する。戻り値 0=成功 */
 int  game_evolve_unit(Game *g, int ui);
 
+/* --- 工作（地形の破壊と復旧） ---
+ * engineer=1 の部隊が**隣接ヘクス**に対して行う。
+ * 目的地は必ず隣接で、人の居るヘクスは対象外。
+ * 前者は自分の足元を壊して立ち往生する事故への保険、
+ * 後者は籠城している敵の地形防御をタダで剥がせないようにするため。 */
+#define WORK_NONE     0
+#define WORK_DEMOLISH 1
+#define WORK_REPAIR   2
+bool game_unit_is_engineer(const Game *g, int ui);
+/* (x,y) に対して ui ができる工作。WORK_NONE=できない */
+int  game_work_kind_at(const Game *g, int ui, int x, int y);
+/* 工作できる隣接ヘクスを集める。戻り値=個数 */
+int  game_work_targets(const Game *g, int ui, uint8_t *xs, uint8_t *ys, int max);
+/* 復旧に要る資金（破壊は0） */
+int  game_work_cost(const Game *g, int x, int y);
+/* 実行する。戻り値は WORK_DEMOLISH / WORK_REPAIR / WORK_NONE(失敗) */
+int  game_do_work(Game *g, int ui, int x, int y);
+
 /* --- 合流（同種の傷ついた味方2部隊を1部隊に統合） --- */
 /* mover を target に合流できるか（同陣営・同種別・target が損傷・双方とも非搭載/非搭載中） */
 bool game_can_join(const Game *g, int mover, int target);

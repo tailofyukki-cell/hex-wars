@@ -1605,10 +1605,23 @@ static void result_draw(App *a)
     draw_text_center(a, a->font_m, cx, y, COL_WHITE, buf);
     y += 28;
 
-    snprintf(buf, sizeof buf, tx("RESULT_LOSSES_FMT"),
-             faction_name(0), g->lost_units[0],
-             faction_name(1), g->lost_units[1]);
-    draw_text_center(a, a->font_m, cx, y, COL_WHITE, buf);
+    /* 損失は参加した陣営を全部並べる。三つ巴や援軍マップだと
+     * 2陣営分しか出さないと、誰がどれだけ失ったのか分からない。 */
+    {
+        int n = 0;
+        buf[0] = 0;
+        for (int p = 0; p < MAX_PLAYERS; p++) {
+            if (!game_player_in_play(g, p) && g->lost_units[p] == 0) continue;
+            char one[48];
+            snprintf(one, sizeof one, tx("RESULT_LOSS_ONE_FMT"),
+                     faction_name(p), g->lost_units[p]);
+            if (n++) strncat(buf, "   ", sizeof buf - strlen(buf) - 1);
+            strncat(buf, one, sizeof buf - strlen(buf) - 1);
+        }
+        char line[192];
+        snprintf(line, sizeof line, "%s  %s", tx("RESULT_LOSSES_HEAD"), buf);
+        draw_text_center(a, n > 2 ? a->font_s : a->font_m, cx, y, COL_WHITE, line);
+    }
     y += 34;
 
     /* 副目標の達成状況（達成分はボーナス資金に加算済み） */

@@ -13,11 +13,11 @@
 #include <math.h>
 
 enum { ACT_ATTACK = 0, ACT_CAPTURE, ACT_WAIT, ACT_CANCEL, ACT_UNLOAD,
-       ACT_SUPPLY, ACT_HEAL, ACT_EVOLVE };
+       ACT_SUPPLY, ACT_HEAL, ACT_EVOLVE, ACT_WORK };
 enum { LP_SELECT = 0, LP_ATTACK };   /* レイヤー選択ポップアップの用途 */
 static const char *ACT_KEYS[] = {
     "ACT_ATTACK", "ACT_CAPTURE", "ACT_WAIT", "ACT_CANCEL", "ACT_UNLOAD",
-    "ACT_SUPPLY", "ACT_HEAL", "ACT_EVOLVE"
+    "ACT_SUPPLY", "ACT_HEAL", "ACT_EVOLVE", "ACT_WORK"
 };
 
 /* ターンメニューの項目（順番を変えたらここだけ直せば済むように名前を付ける） */
@@ -372,6 +372,13 @@ static void compute_unload_targets(App *a)
     }
 }
 
+/* 工兵が今工作できる隣接ヘクスを集める */
+static void compute_work_targets(App *a)
+{
+    a->n_work = game_work_targets(&a->game, a->sel_unit,
+                                  a->work_x, a->work_y, HEX_DIRS);
+}
+
 static void build_action_menu(App *a)
 {
     Game *g = &a->game;
@@ -400,6 +407,12 @@ static void build_action_menu(App *a)
     /* 補給車: 隣接に損傷した味方がいて物資10以上あれば「回復」 */
     if (game_can_heal(g, a->sel_unit))
         a->amenu_items[a->amenu_n++] = ACT_HEAL;
+    /* 工兵: 隣接に壊せる/直せる地形があれば「工作」。
+     * 移動後でもできる（前線まで出て壊すのが仕事なため）。 */
+    if (game_unit_is_engineer(g, a->sel_unit)) {
+        compute_work_targets(a);
+        if (a->n_work > 0) a->amenu_items[a->amenu_n++] = ACT_WORK;
+    }
     /* 経験値が満タンで、自軍の補給拠点の上にいるなら「進化」 */
     if (game_can_evolve(g, a->sel_unit))
         a->amenu_items[a->amenu_n++] = ACT_EVOLVE;
@@ -527,6 +540,10 @@ static void select_action(App *a, int act)
         check_over(a);
         break;
     }
+    case ACT_WORK:
+        a->bs = BS_WORK;
+        if (a->n_work > 0) { a->cur_x = a->work_x[0]; a->cur_y = a->work_y[0]; }
+        break;
     case ACT_UNLOAD:
         a->bs = BS_UNLOAD;
         a->unload_count = 0;
@@ -910,6 +927,31 @@ static void confirm_at(App *a, int hx, int hy)
         else if (n >= 2) open_layer_pick(a, hits, n, LP_ATTACK);
         break;
     }
+    case BS_WORK:
+        for (int i = 0; i < a->n_work; i++) {
+            if (a->work_x[i] != hx || a->work_y[i] != hy) continue;
+            int kind = game_work_kind_at(g, a->sel_unit, hx, hy);
+            int cost = game_work_cost(g, hx, hy);
+            if (kind == WORK_REPAIR && g->funds[g->units[a->sel_unit].owner] < cost) {
+                snd_se(SE_CANCEL);
+                set_banner(a, tx("WORK_NO_FUNDS"), 90);
+                return;
+            }
+            kind = game_do_work(g, a->sel_unit, hx, hy);
+            if (kind == WORK_NONE) { snd_se(SE_CANCEL); return; }
+            if (kind == WORK_REPAIR) {
+                char buf[48];
+                snprintf(buf, sizeof buf, tx("POP_REPAIR_FMT"), cost);
+                battle_add_popup(a, hx, hy, buf, COL_YELLOW);
+            } else {
+                battle_add_popup(a, hx, hy, tx("POP_DEMOLISH"), COL_WHITE);
+            }
+            snd_se(SE_EXPLOSION);
+            a->sel_unit = -1;
+            a->bs = BS_IDLE;
+            return;
+        }
+        break;
     case BS_UNLOAD:
         for (int i = 0; i < a->n_unload; i++) {
             if (a->unload_x[i] == hx && a->unload_y[i] == hy) {
@@ -989,6 +1031,9 @@ static void cancel_action(App *a)
         break;
     case BS_ACTION_MENU:
         select_action(a, ACT_CANCEL);
+        break;
+    case BS_WORK:
+        build_action_menu(a);        /* 何もしていないのでメニューへ戻すだけ */
         break;
     case BS_UNLOAD:
         /* 既に1体以上降ろしていたら、その時点で輸送ユニットの手番を確定 */
@@ -1157,7 +1202,8 @@ void battle_event(App *a, const SDL_Event *e)
             /* 地図カーソルは「地図操作中」の状態でのみマウス追従。
              * メニュー/ポップアップ表示中は動かさない（ポップアップが逃げるのを防ぐ）。 */
             bool map_cursor = (a->bs == BS_IDLE || a->bs == BS_UNIT_SELECTED ||
-                               a->bs == BS_TARGET_SELECT || a->bs == BS_UNLOAD);
+                               a->bs == BS_TARGET_SELECT || a->bs == BS_UNLOAD ||
+                               a->bs == BS_WORK);
             int hx, hy;
             if (map_cursor && px_to_hex(a, e->motion.x, e->motion.y, &hx, &hy)) {
                 a->cur_x = hx; a->cur_y = hy;
@@ -1408,6 +1454,21 @@ void battle_event(App *a, const SDL_Event *e)
             return;
         }
 
+        if (a->bs == BS_WORK && a->n_work > 0 &&
+            (k == SDLK_LEFT || k == SDLK_RIGHT || k == SDLK_UP || k == SDLK_DOWN)) {
+            /* 工作先巡回。候補は多くても6つなので、
+             * 自由カーソルで狙うより順に送る方が早い。 */
+            int dir = (k == SDLK_LEFT || k == SDLK_UP) ? -1 : 1;
+            int cur = 0;
+            for (int i = 0; i < a->n_work; i++)
+                if (a->work_x[i] == a->cur_x && a->work_y[i] == a->cur_y) cur = i;
+            cur = (cur + a->n_work + dir) % a->n_work;
+            a->cur_x = a->work_x[cur];
+            a->cur_y = a->work_y[cur];
+            ensure_cursor_visible(a);
+            snd_se(SE_CURSOR);
+            return;
+        }
         if (k == SDLK_LEFT || k == SDLK_RIGHT || k == SDLK_UP || k == SDLK_DOWN) {
             int nx = a->cur_x + (k == SDLK_RIGHT) - (k == SDLK_LEFT);
             int ny = a->cur_y + (k == SDLK_DOWN) - (k == SDLK_UP);
@@ -1476,7 +1537,8 @@ void battle_update(App *a)
     /* マウスを画面端に寄せて地図スクロール（地図操作中の状態のみ。
      * メニュー/生産/ポップアップ表示中は無効） */
     if (a->bs == BS_IDLE || a->bs == BS_UNIT_SELECTED ||
-        a->bs == BS_TARGET_SELECT || a->bs == BS_UNLOAD)
+        a->bs == BS_TARGET_SELECT || a->bs == BS_UNLOAD ||
+        a->bs == BS_WORK)
         edge_scroll(a);
 
     if (a->bs == BS_BATTLE_ANIM) {
@@ -1584,6 +1646,21 @@ static void draw_overlays(App *a)
                 draw_text_center(a, a->font_s, (int)cx, (int)(cy + s * 0.18f),
                                  COL_WHITE, nb);
             }
+        }
+    }
+    if (a->bs == BS_WORK) {
+        for (int i = 0; i < a->n_work; i++) {
+            float cx, cy;
+            hex_center_px(a, a->work_x[i], a->work_y[i], &cx, &cy);
+            /* 壊すのか直すのかを色で分ける。押してから違ったとは言わせない。 */
+            bool rep = (game_work_kind_at(g, a->sel_unit,
+                                          a->work_x[i], a->work_y[i]) == WORK_REPAIR);
+            SDL_Color fill = rep ? (SDL_Color){  80, 200, 120, 90 }
+                                 : (SDL_Color){ 210,  90,  70, 90 };
+            SDL_Color line = rep ? (SDL_Color){ 100, 230, 140, 255 }
+                                 : (SDL_Color){ 240, 120,  90, 255 };
+            render_fill_hex_map(a, cx, cy, s - 1.5f, fill);
+            render_hex_outline_map(a, cx, cy, s - 1.0f, line);
         }
     }
     if (a->bs == BS_UNLOAD) {
@@ -1876,6 +1953,7 @@ static void draw_panels(App *a)
     case BS_UNIT_SELECTED: hint = tx("HINT_MOVE"); break;
     case BS_ACTION_MENU:   hint = tx("HINT_MENU"); break;
     case BS_TARGET_SELECT: hint = tx("HINT_TARGET"); break;
+    case BS_WORK:          hint = tx("HINT_WORK"); break;
     case BS_UNLOAD:        hint = tx("HINT_UNLOAD"); break;
     case BS_LAYER_PICK:    hint = tx("HINT_LAYER_PICK"); break;
     case BS_EVOLVE_CONFIRM: hint = tx("HINT_EVOLVE"); break;

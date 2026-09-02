@@ -5,6 +5,7 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include "../core/game.h"
+#include "../core/hex.h"
 #include "../core/ai.h"
 #include "../core/path.h"
 #include "../core/campaign.h"
@@ -39,6 +40,7 @@ typedef enum {
     BS_TURN_MENU,
     BS_SAVE_MENU,      /* セーブスロット選択 */
     BS_UNLOAD,         /* 輸送ユニットから降ろす先の選択 */
+    BS_WORK,           /* 工兵の工作先の選択（破壊・復旧） */
     BS_LAYER_PICK,     /* 重なりセルのユニット選択（空/海面/海中） */
     BS_UNITLIST,       /* 未行動ユニット一覧（選ぶとカーソルが飛ぶ） */
     BS_EVOLVE_CONFIRM, /* 進化の確認（不可逆なので必ず一度止める） */
@@ -205,6 +207,9 @@ struct App {
     /* 降車先候補。隣接6方向 + 空挺降下の「真下」1つで最大7 */
     int   unload_x[7], unload_y[7];
     int   n_unload;
+    /* 工兵の工作先（隣接の最大6ヘクス） */
+    uint8_t work_x[HEX_DIRS], work_y[HEX_DIRS];
+    int   n_work;
     int   unload_count;   /* 今回の降車で既に降ろした数（複数降車の確定判定用） */
     /* レイヤー選択ポップアップ（重なりセルの選択・攻撃対象選択） */
     int   lpick_unit[LAYER_COUNT];   /* 候補ユニットindex（表示順） */

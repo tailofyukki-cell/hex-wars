@@ -423,6 +423,28 @@ def       = 35
 can_capture = 1
 transport_by = T_SHIP
 
+[unit ENGINEER]
+image     = gfx/units/engineer.png
+name      = 工兵
+evolve_to    = ENGINEER_V
+icon      = 工
+class     = LAND_FOOT
+armor     = SOFT
+cost      = 200
+move      = 3
+fuel      = 60
+ammo      = 4
+vision    = 2
+atk_soft  = 30
+atk_hard  = 10
+atk_air   = 0
+atk_sea   = 5
+def       = 24
+# 隣接ヘクスの地形を壊したり元に戻したりできる。
+# 占領はできない（歩兵の代わりにさせないため）。
+engineer  = 1
+transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
+
 [unit LTANK]
 image     = gfx/units/ltank.png
 cutin     = gfx/cutin/tank.png
@@ -1297,6 +1319,26 @@ atk_sea      = 0
 def          = 34
 transport_by = CARRIER
 anti_sub     = 1
+no_produce   = 1
+
+[unit ENGINEER_V]
+name         = 機甲工兵
+icon         = 甲
+cost         = 330
+image        = gfx/units/engineer.png
+class        = LAND_FOOT
+armor        = SOFT
+move         = 4
+fuel         = 70
+ammo         = 5
+vision       = 3
+atk_soft     = 40
+atk_hard     = 20
+atk_air      = 0
+atk_sea      = 5
+def          = 36
+engineer     = 1
+transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 no_produce   = 1
 
 # --- 夜間ユニット ---

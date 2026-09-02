@@ -96,7 +96,8 @@ RESULT_WIN_FMT    = %s軍の勝利！
 RESULT_DRAW       = 引き分け
 RESULT_HUMAN_OUT  = 自軍は全滅した…
 RESULT_TURNS_FMT  = 経過ターン: %d
-RESULT_LOSSES_FMT = 損失ユニット  %s軍: %d   %s軍: %d
+RESULT_LOSSES_HEAD  = 損失ユニット
+RESULT_LOSS_ONE_FMT = %s軍: %d
 RESULT_NEXT_FMT   = 次の作戦: %s
 RESULT_CARRY_FMT  = 持越し部隊 %d ユニット / 持越し資金 +%dG
 RESULT_NEXT_HINT  = Z:次の作戦へ  X:タイトルへ
@@ -139,6 +140,7 @@ ACT_UNLOAD      = 降ろす
 ACT_SUPPLY      = 補給
 ACT_HEAL        = 回復
 ACT_EVOLVE      = 進化
+ACT_WORK        = 工作
 
 # --- 進化（経験値満タン＋自軍の補給拠点の上でのみ）---
 EVOLVE_TITLE_FMT = %s を %s に進化させますか？
@@ -196,6 +198,7 @@ FC_CNT_KILL_FMT = 反撃        %d    自軍 %d → 撃破される！
 FC_NO_COUNTER   = 反撃なし
 FC_NOTE         = ※期待値。実際は ±15% ぶれます
 HINT_UNLOAD     = 降ろす先を選択（続けて複数降車可）  Z:決定  X:終了
+HINT_WORK       = 工作するヘクスを選択（赤=破壊 / 緑=復旧）  Z:決定  X:やめる
 HINT_LAYER_PICK = 高度を選択  ↑↓:選択  Z:決定  X:戻る
 HINT_UNITLIST   = ↑↓/ホイール:選択  Z:そのユニットへ移動  X:戻る
 LAYER_AIR       = 空
@@ -210,6 +213,9 @@ POP_BOARD       = 搭載
 POP_JOIN_FMT    = 合流 HP%d
 POP_REFUND_FMT  = 払戻 +%d
 POP_UNBOARD     = 降車
+POP_DEMOLISH    = 破壊！
+POP_REPAIR_FMT  = 復旧 -%dG
+WORK_NO_FUNDS   = 復旧に必要な資金が足りない
 POP_KILL        = 撃破！
 POP_LOST        = 損失…
 POP_CAP_DONE    = 占領完了！

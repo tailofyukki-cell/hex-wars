@@ -39,6 +39,9 @@ cost_track = 1
 cost_air   = 2
 color      = C9B79C
 height     = 0
+# 工兵で壊せる。repair_cost は「この地形に戻す」のに要る資金。
+breaks_to   = PLAIN
+repair_cost = 150
 
 [terrain FOREST]
 name       = 森
@@ -99,6 +102,9 @@ supplies   = LAND
 hide       = 1
 color      = C8C8C0
 height     = 3
+# 工兵で壊せる。repair_cost は「この地形に戻す」のに要る資金。
+breaks_to   = RUBBLE
+repair_cost = 500
 
 [terrain FACTORY]
 name       = 工場
@@ -115,6 +121,9 @@ produces   = LAND
 supplies   = LAND
 color      = A89A8E
 height     = 3
+# 工兵で壊せる。repair_cost は「この地形に戻す」のに要る資金。
+breaks_to   = RUBBLE
+repair_cost = 800
 
 [terrain AIRPORT]
 name       = 空港
@@ -131,6 +140,9 @@ produces   = AIR
 supplies   = AIR
 color      = B7B7C4
 height     = 2
+# 工兵で壊せる。repair_cost は「この地形に戻す」のに要る資金。
+breaks_to   = RUBBLE
+repair_cost = 700
 
 [terrain PORT]
 name       = 港
@@ -149,6 +161,9 @@ produces   = SEA
 supplies   = SEA,SUB
 color      = 9FB4C0
 height     = 1
+# 工兵で壊せる。repair_cost は「この地形に戻す」のに要る資金。
+breaks_to   = RUBBLE_PORT
+repair_cost = 700
 
 [terrain HILL]
 name       = 丘
@@ -208,6 +223,9 @@ capturable = 1
 supplies   = AIR
 color      = A6AEB0
 height     = 2
+# 工兵で壊せる。repair_cost は「この地形に戻す」のに要る資金。
+breaks_to   = RUBBLE
+repair_cost = 300
 
 [terrain ANCHORAGE]
 name       = 泊地
@@ -225,3 +243,38 @@ capturable = 1
 supplies   = SEA,SUB
 color      = 8FA0AC
 height     = 1
+# 工兵で壊せる。repair_cost は「この地形に戻す」のに要る資金。
+breaks_to   = RUBBLE_PORT
+repair_cost = 300
+
+[terrain RUBBLE]
+name       = 瓦礫
+image      = gfx/terrain/rubble.png
+char       = X
+def        = 20
+cost_foot  = 2
+cost_wheel = 3
+cost_track = 2
+cost_air   = 2
+color      = 8C8478
+height     = 2
+# 壊された拠点の成れの果て。収入も補給も無く、占領もできない。
+# 短い遮蔽物なので防御補正は少しだけ残る。
+# ここからは工兵の復旧でしか戻らないので breaks_to は無し。
+
+[terrain RUBBLE_PORT]
+name       = 破壊された港湾
+image      = gfx/terrain/rubble_port.png
+char       = Y
+def        = 15
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+cost_sea   = 2
+cost_sub   = 2
+color      = 6E7A82
+height     = 0
+# 港・泊地の破壊後。収入も補給も生産も無く、占領もできない。
+# **通行可否は元の港と同じにしてある**。陸の瓦礫にしてしまうと
+# 艦船が入れなくなり、海峡や運河を工兵一つで永久に塞げる。

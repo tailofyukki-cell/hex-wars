@@ -115,6 +115,9 @@ int data_load_terrain(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "capturable")) cur->capturable = (uint8_t)atoi(val);
         else if (!strcmp(key, "hide"))       cur->hide = (uint8_t)atoi(val);
         else if (!strcmp(key, "hq"))         cur->is_hq = (uint8_t)atoi(val);
+        else if (!strcmp(key, "breaks_to"))
+            snprintf(cur->breaks_to, sizeof cur->breaks_to, "%s", val);
+        else if (!strcmp(key, "repair_cost")) cur->repair_cost = (int16_t)atoi(val);
         else if (!strcmp(key, "height"))     cur->height = (int16_t)atoi(val);
         else if (!strcmp(key, "image"))      snprintf(cur->image, sizeof cur->image, "%s", val);
         else if (!strcmp(key, "color"))      cur->color = (uint32_t)strtoul(val, NULL, 16);
@@ -128,6 +131,20 @@ int data_load_terrain(Game *g, const char *path, char *err, int errlen)
         else { set_err(err, errlen, path, ln, "不明なキー"); fclose(f); return -1; }
     }
     fclose(f);
+
+    /* breaks_to を index に直す。前方参照を許すため全部読んでからやる。
+     * 誤記を黙って「破壊不可」に落とすと原因が見えないのでエラーにする。 */
+    for (int i = 0; i < g->n_terrains; i++) {
+        g->terrains[i].breaks_idx = -1;
+        if (!g->terrains[i].breaks_to[0]) continue;
+        for (int k = 0; k < g->n_terrains; k++)
+            if (!strcmp(g->terrains[k].id, g->terrains[i].breaks_to))
+                g->terrains[i].breaks_idx = (int16_t)k;
+        if (g->terrains[i].breaks_idx < 0) {
+            set_err(err, errlen, path, 0, "breaks_to の地形IDが見つかりません");
+            return -1;
+        }
+    }
     return 0;
 }
 
@@ -268,6 +285,7 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "anim"))   snprintf(cur->anim, sizeof cur->anim, "%s", val);
         else if (!strcmp(key, "cutin"))  snprintf(cur->cutin, sizeof cur->cutin, "%s", val);
         else if (!strcmp(key, "paradrop")) cur->paradrop = (uint8_t)atoi(val);
+        else if (!strcmp(key, "engineer")) cur->engineer = (uint8_t)atoi(val);
         else if (!strcmp(key, "night"))    cur->night = (uint8_t)atoi(val);
         else if (!strcmp(key, "recon"))    cur->recon = (uint8_t)atoi(val);
         else if (!strcmp(key, "no_produce")) cur->no_produce = (uint8_t)atoi(val);
@@ -431,6 +449,8 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
                     int t = find_terrain_by_char(g, val[x]);
                     if (t < 0) { set_err(err, errlen, path, ln, "未定義の地形文字"); fclose(f); return -1; }
                     g->tiles[row][x].terrain = (uint8_t)t;
+                    /* 本来の地形を覚えておく（工兵の復旧先） */
+                    g->tiles[row][x].orig_terrain = (uint8_t)t;
                 }
                 row++;
             }

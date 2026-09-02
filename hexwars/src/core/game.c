@@ -1056,6 +1056,100 @@ int game_evolve_unit(Game *g, int ui)
 }
 
 /* ------------------------------------------------------------------ */
+/* 工作（地形の破壊と復旧）                                       */
+/* ------------------------------------------------------------------ */
+bool game_unit_is_engineer(const Game *g, int ui)
+{
+    if (ui < 0 || ui >= g->n_units) return false;
+    const Unit *u = &g->units[ui];
+    if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) return false;
+    return unit_type(g, u)->engineer != 0;
+}
+
+/* そのヘクスに誰か居るか（搭載中は数えない） */
+static bool tile_occupied(const Game *g, int x, int y)
+{
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *u = &g->units[i];
+        if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+        if (u->pos.x == x && u->pos.y == y) return true;
+    }
+    return false;
+}
+
+int game_work_kind_at(const Game *g, int ui, int x, int y)
+{
+    if (!game_unit_is_engineer(g, ui)) return WORK_NONE;
+    if (g->units[ui].flags & UF_DONE) return WORK_NONE;
+    if (!game_in_bounds(g, x, y)) return WORK_NONE;
+
+    /* 隣接だけ。現状は破壊先の通行可否を元の地形と揃えてあるが（テストで固定）、
+     * 将来それを破る地形を足してもユニットが立ち往生しないよう、
+     * 「足元は対象外」を構造側の保険として残しておく。 */
+    const Unit *u = &g->units[ui];
+    if (hex_distance(u->pos.x, u->pos.y, x, y) != 1) return WORK_NONE;
+    /* 人の居るヘクスは触らない。籠城している敵の足元を壊して
+     * 地形防御をタダで剥がせると、工兵が強すぎる。 */
+    if (tile_occupied(g, x, y)) return WORK_NONE;
+
+    const Tile *t = &g->tiles[y][x];
+    if (t->terrain != t->orig_terrain) return WORK_REPAIR;   /* 壊れている */
+    const TerrainType *tt = &g->terrains[t->terrain];
+    /* 首都は壊せない。壊せると工兵一つで勝敗がついてしまう。 */
+    if (tt->is_hq) return WORK_NONE;
+    if (tt->breaks_idx >= 0) return WORK_DEMOLISH;
+    return WORK_NONE;
+}
+
+int game_work_cost(const Game *g, int x, int y)
+{
+    if (!game_in_bounds(g, x, y)) return 0;
+    const Tile *t = &g->tiles[y][x];
+    if (t->terrain == t->orig_terrain) return 0;             /* 破壊は無料 */
+    return g->terrains[t->orig_terrain].repair_cost;
+}
+
+int game_work_targets(const Game *g, int ui, uint8_t *xs, uint8_t *ys, int max)
+{
+    int n = 0;
+    if (!game_unit_is_engineer(g, ui)) return 0;
+    const Unit *u = &g->units[ui];
+    for (int d = 0; d < HEX_DIRS && n < max; d++) {
+        int nx, ny;
+        hex_neighbor(u->pos.x, u->pos.y, d, &nx, &ny);
+        if (game_work_kind_at(g, ui, nx, ny) == WORK_NONE) continue;
+        xs[n] = (uint8_t)nx; ys[n] = (uint8_t)ny; n++;
+    }
+    return n;
+}
+
+int game_do_work(Game *g, int ui, int x, int y)
+{
+    int kind = game_work_kind_at(g, ui, x, y);
+    if (kind == WORK_NONE) return WORK_NONE;
+    Unit *u = &g->units[ui];
+    Tile *t = &g->tiles[y][x];
+
+    if (kind == WORK_REPAIR) {
+        int cost = game_work_cost(g, x, y);
+        if (g->funds[u->owner] < cost) return WORK_NONE;
+        g->funds[u->owner] -= cost;
+        t->terrain = t->orig_terrain;
+    } else {
+        t->terrain = (uint8_t)g->terrains[t->terrain].breaks_idx;
+    }
+    /* 拠点でなくなる/なるので占領状態はどちらも白紙に戻す。
+     * 復旧しても持ち主は中立なので、改めて占領し直す必要がある。 */
+    t->owner = -1;
+    t->capturer = -1;
+    t->cap_hp = CAPTURE_HP;
+
+    u->flags |= UF_DONE;
+    game_update_vision(g);         /* hide や視界が変わる */
+    return kind;
+}
+
+/* ------------------------------------------------------------------ */
 /* 合流                                                                */
 /* ------------------------------------------------------------------ */
 bool game_can_join(const Game *g, int mover, int target)

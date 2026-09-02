@@ -194,6 +194,14 @@ static int parse_sub(CpnNode *n, const char *val)
     return 0;
 }
 
+/* .cpn の EASY/NORMAL/HARD を PlayerCtrl に直す。誤記は普通扱い。 */
+static uint8_t ctrl_from_word(const char *val)
+{
+    if (!strcmp(val, "EASY")) return CTRL_CPU_EASY;
+    if (!strcmp(val, "HARD")) return CTRL_CPU_HARD;
+    return CTRL_CPU_NORMAL;
+}
+
 int campaign_load(Campaign *c, const char *path, char *err, int errlen)
 {
     FILE *f = fopen(path, "rb");
@@ -223,7 +231,7 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
                 }
                 cur = &c->nodes[c->n_nodes++];
                 memset(cur, 0, sizeof *cur);
-                cur->enemy = CTRL_CPU_NORMAL;
+                for (int p = 0; p < MAX_PLAYERS; p++) cur->ctrl[p] = CTRL_CPU_NORMAL;
                 snprintf(cur->id, sizeof cur->id, "%s", key + 5);
                 continue;
             }
@@ -266,13 +274,18 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         }
         else if (!strcmp(key, "next_lose"))     snprintf(cur->next_lose, sizeof cur->next_lose, "%s", val);
         else if (!strcmp(key, "enemy_co"))
-            snprintf(cur->enemy_co, sizeof cur->enemy_co, "%s", val);
+            snprintf(cur->co[1], sizeof cur->co[1], "%s", val);
         else if (!strcmp(key, "carry"))         cur->carry = atoi(val);
         else if (!strcmp(key, "bonus"))         cur->bonus = atoi(val);
-        else if (!strcmp(key, "enemy")) {
-            if      (!strcmp(val, "EASY"))   cur->enemy = CTRL_CPU_EASY;
-            else if (!strcmp(val, "HARD"))   cur->enemy = CTRL_CPU_HARD;
-            else                             cur->enemy = CTRL_CPU_NORMAL;
+        else if (!strcmp(key, "enemy")) cur->ctrl[1] = ctrl_from_word(val);
+        /* ctrl2=HARD / co2=WOLF のように、陣営2以降を番号付きで指定する。
+         * 陣営0は常に人間なので受け付けない。 */
+        else if ((!strncmp(key, "ctrl", 4) || !strncmp(key, "co", 2)) &&
+                 key[strlen(key) - 1] >= '1' && key[strlen(key) - 1] <= '4' &&
+                 (strlen(key) == 5 || strlen(key) == 3)) {
+            int p = key[strlen(key) - 1] - '0';
+            if (key[0] == 'c' && key[1] == 't') cur->ctrl[p] = ctrl_from_word(val);
+            else snprintf(cur->co[p], sizeof cur->co[p], "%s", val);
         }
         else {
             if (err) snprintf(err, (size_t)errlen, "%s:%d: 不明なキー", path, ln);
@@ -308,6 +321,16 @@ static bool type_is_kind(const Game *g, int type, const char *name)
     return false;
 }
 
+/* 自軍の敵に回る陣営の損失合計。三つ巴や援軍マップでは
+ * 敵が陣営1だけとは限らないので、戦果は全部を足して数える。 */
+static int enemy_losses(const Game *g)
+{
+    int n = 0;
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (game_is_enemy(g, 0, p)) n += g->lost_units[p];
+    return n;
+}
+
 bool campaign_sub_done(const Game *g, const CpnNode *node, int i)
 {
     if (!g || !node || i < 0 || i >= node->n_subs) return false;
@@ -315,7 +338,7 @@ bool campaign_sub_done(const Game *g, const CpnNode *node, int i)
     switch (o->type) {
     case SUB_MAX_LOSS:  return g->lost_units[0] <= o->param;
     case SUB_MAX_TURNS: return g->turn <= o->param;
-    case SUB_MIN_KILLS: return g->lost_units[1] >= o->param;
+    case SUB_MIN_KILLS: return enemy_losses(g) >= o->param;
     case SUB_KEEP_BLD:
     case SUB_CAPTURE:   return game_count_buildings(g, 0) >= o->param;
     case SUB_SURVIVE: {
@@ -359,7 +382,7 @@ void campaign_evaluate(const Game *g, const CpnNode *node, CpnScore *out)
     out->loss = clamp100(100 - g->lost_units[0] * 10);
 
     /* 戦果: 敵を減らした量（1体につき+10、10体で満点） */
-    out->power = clamp100(g->lost_units[1] * 10);
+    out->power = clamp100(enemy_losses(g) * 10);
 
     out->total = (out->speed + out->loss + out->power) / 3;
     out->rank = (out->total >= 90) ? RANK_S
@@ -514,23 +537,43 @@ static void reinforce_enemy(Game *g, int player_extra)
 {
     if (player_extra <= 0) return;
 
-    /* 既存の敵編成を集める（同じ顔ぶれを増やす） */
-    int types[MAX_UNITS], n_types_seen = 0;
-    for (int i = 0; i < g->n_units; i++) {
-        const Unit *u = &g->units[i];
-        if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
-        if (u->owner != 1) continue;
-        types[n_types_seen++] = u->type;
+    /* 自軍の敵に回る陣営全部に分けて増援を出す。
+     * 2陣営なら従来どおり陣営1だけ。三つ巴や援軍マップでは
+     * 敵側が複数になるので、一方だけを肥やすと力関係が崩れる。 */
+    /* **居る陣営だけ数えること**。既定の team[p]=p ではマップに居ない
+     * 陣営も「敵」になるので、そのまま割ると増援が発生しない分に消える。 */
+    int foes[MAX_PLAYERS], n_foes = 0;
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        if (!game_is_enemy(g, 0, p)) continue;
+        for (int i = 0; i < g->n_units; i++)
+            if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == p) {
+                foes[n_foes++] = p; break;
+            }
     }
-    if (n_types_seen <= 0) return;      /* 敵がいないマップでは何もしない */
+    if (n_foes <= 0) return;
 
-    int cap = n_types_seen * (CAMPAIGN_ENEMY_MAX_RATIO - 1);
-    int add = player_extra < cap ? player_extra : cap;
+    for (int k = 0; k < n_foes; k++) {
+        int who = foes[k];
+        /* 既存の編成を集める（同じ顔ぶれを増やす） */
+        int types[MAX_UNITS], n_types_seen = 0;
+        for (int i = 0; i < g->n_units; i++) {
+            const Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+            if (u->owner != who) continue;
+            types[n_types_seen++] = u->type;
+        }
+        if (n_types_seen <= 0) continue;   /* この陣営が居ないマップ */
 
-    int ox, oy;
-    find_origin(g, 1, &ox, &oy);
-    for (int i = 0; i < add; i++)
-        place_unit_near(g, 1, types[i % n_types_seen], ox, oy);
+        /* 人数割り。余りは前の陣営から順に引き受ける。 */
+        int share = player_extra / n_foes + (k < player_extra % n_foes ? 1 : 0);
+        int cap = n_types_seen * (CAMPAIGN_ENEMY_MAX_RATIO - 1);
+        int add = share < cap ? share : cap;
+
+        int ox, oy;
+        find_origin(g, who, &ox, &oy);
+        for (int i = 0; i < add; i++)
+            place_unit_near(g, who, types[i % n_types_seen], ox, oy);
+    }
 }
 
 /* place_unit_near の BFS は全面をなめる（距離制限なし・進入不可セルも踏む）ので、
@@ -570,15 +613,17 @@ int campaign_setup_map(Game *g, const Campaign *c, const CampaignState *s,
         return -1;
 
     g->fog = true;                 /* キャンペーンは常時ON（仕様書 5.8） */
+    /* 陣営0 は常に人間。残りはノードの指定（無指定はCPU普通）。
+     * 多陣営マップでは援軍も敵の援軍もここで難易度を決める。
+     * チーム分け（誰が味方か）は .map の team0..4 側の責任。 */
     g->ctrl[0] = CTRL_HUMAN;
-    g->ctrl[1] = node->enemy;
-    /* 指揮官: 自軍はキャンペーンで選んだもの、敵はノード指定（無ければ既定） */
+    for (int p = 1; p < MAX_PLAYERS; p++) g->ctrl[p] = node->ctrl[p];
+    /* 指揮官: 自軍はキャンペーンで選んだもの、他はノード指定（無ければ既定） */
     g->co_id[0] = (int8_t)(g->n_cos > 0 ? (s->player_co >= 0 ? s->player_co : 0) : -1);
-    if (g->n_cos > 0) {
-        int e = node->enemy_co[0] ? data_find_commander(g, node->enemy_co) : -1;
-        g->co_id[1] = (int8_t)(e >= 0 ? e : 0);
-    } else {
-        g->co_id[1] = -1;
+    for (int p = 1; p < MAX_PLAYERS; p++) {
+        if (g->n_cos <= 0) { g->co_id[p] = -1; continue; }
+        int e = node->co[p][0] ? data_find_commander(g, node->co[p]) : -1;
+        g->co_id[p] = (int8_t)(e >= 0 ? e : 0);
     }
     /* マップイベントを流し込む。ユニットIDはここで型indexへ解決する
      * （見つからない指定は SPAWN を無効化し、メッセージだけ出す） */

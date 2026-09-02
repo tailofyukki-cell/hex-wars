@@ -67,7 +67,7 @@ static void test_data_and_battle(void)
     if (s_fail) { printf("  %s\n", err); return; }
     CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
-    CHECK(g->n_terrains == 15);   /* 地形12種 + 圏外 + 生産できない飛行場/泊地 */
+    CHECK(g->n_terrains == 17);   /* 地形12種 + 圏外 + 生産できない飛行場/泊地 + 瓦眦2種 */
     {   /* 野戦飛行場・泊地は「都市の空・海版」。
          * 補給（回復・進化）はできるが生産はできないことを固める。 */
         int as_ = -1, an_ = -1;
@@ -84,16 +84,16 @@ static void test_data_and_battle(void)
             CHECK(g->terrains[as_].capturable && g->terrains[an_].capturable);
         }
     }
-    /* 生産できる34種 + 進化先34種。進化先は no_produce なので生産に出ない。
-     * 生産側の34には夜間ユニットの3種を含み、それらも進化先を持つ。 */
-    CHECK(g->n_types == 68);
+    /* 生産できる35種 + 進化先35種。進化先は no_produce なので生産に出ない。
+     * 生産側の35には夜間ユニットの3種を含み、それらも進化先を持つ。 */
+    CHECK(g->n_types == 70);
     {
         int producible = 0, evo = 0;
         for (int i = 0; i < g->n_types; i++) {
             if (g->types[i].no_produce) evo++;
             else producible++;
         }
-        CHECK(producible == 34 && evo == 34);
+        CHECK(producible == 35 && evo == 35);
         /* 進化先を持つ種は、その進化先が実在し、生産不可であること */
         for (int i = 0; i < g->n_types; i++) {
             if (!g->types[i].evolve_to[0]) continue;
@@ -125,7 +125,7 @@ static void test_data_and_battle(void)
         }
         /* 進化先も同じ内訳で増えるので倍になる。
          * 夜間ユニットは陸・空・海に1つずつ。 */
-        CHECK(land == 30 && air == 18 && sea == 20);
+        CHECK(land == 32 && air == 18 && sea == 20);
     }
     /* 画像指定（image=）が両陣営分に読めていること */
     {
@@ -1073,6 +1073,18 @@ static void test_save_load(void)
     cs.cleared = 0x15;   /* M01/M03/M05 クリア済みの想定 */
     g->objective_count = 16;
     g->objective_player = 0;
+    /* 壊れた地形（v12）。現地形だけではなく本来の地形も保存されないと、
+     * ロード後に工兵で復旧できなくなる。 */
+    {
+        int city = -1, rubble = -1;
+        for (int i = 0; i < g->n_terrains; i++) {
+            if (!strcmp(g->terrains[i].id, "CITY"))   city = i;
+            if (!strcmp(g->terrains[i].id, "RUBBLE")) rubble = i;
+        }
+        CHECK(city >= 0 && rubble >= 0);
+        g->tiles[3][4].terrain = (uint8_t)rubble;
+        g->tiles[3][4].orig_terrain = (uint8_t)city;
+    }
 
     CHECK(save_game(g, &cs, "tests/tmp_test.sav", err, sizeof err) == 0);
 
@@ -1088,6 +1100,9 @@ static void test_save_load(void)
     CHECK(g2.turn == g->turn);
     CHECK(g2.units[0].hp == 7 && g2.units[0].exp == 44);
     CHECK(g2.tiles[2][9].owner == 0);
+    CHECK(g2.tiles[3][4].terrain == g->tiles[3][4].terrain);
+    CHECK(g2.tiles[3][4].orig_terrain == g->tiles[3][4].orig_terrain);
+    CHECK(g2.tiles[3][4].terrain != g2.tiles[3][4].orig_terrain);   /* 壊れたまま */
     CHECK(g2.rng.s == g->rng.s);
     CHECK(g2.fog == g->fog);
     CHECK(g2.ctrl[1] == CTRL_CPU_NORMAL);
@@ -1128,7 +1143,7 @@ static void test_campaign(void)
     Campaign c;
     CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
-    CHECK(c.n_nodes == 14);   /* M01-M10 + 海戦/複合4ノード(N1/N2/N3/N4) */
+    CHECK(c.n_nodes == 16);   /* M01-M10 + 海戦/複合4ノード(N1/N2/N3/N4) */
     CHECK(!strcmp(c.start, "M01"));
     const CpnNode *n1 = campaign_find_node(&c, "M01");
     CHECK(n1 && !strcmp(n1->next_win, "M02"));
@@ -1575,6 +1590,197 @@ static void test_commanders(void)
         CHECK(game_co_activate(g, 0));
         CHECK(game_co_move_bonus(g, 0, &g->units[ha])
               == base_b + g->cos[dieter].power_val);
+    }
+}
+
+/* キャンペーンの多陣営ノード（第3段階）。
+ * .cpn の ctrl2/co2 が読めて、マップ側の team と組み合わさること。 */
+static void test_campaign_multi(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    Campaign c;
+    CampaignState cs;
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_commanders(g, "data/commanders.def", err, sizeof err) == 0);
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    if (s_fail) { printf("  %s\n", err); return; }
+
+    /* --- M11: 2対2のチーム戦 --- */
+    const CpnNode *n = campaign_find_node(&c, "M11");
+    CHECK(n != NULL);
+    if (!n) return;
+    CHECK(n->ctrl[1] == CTRL_CPU_NORMAL);
+    CHECK(n->ctrl[2] == CTRL_CPU_NORMAL);
+    CHECK(n->ctrl[3] == CTRL_CPU_EASY);      /* ctrl3 = EASY が読めている */
+    CHECK(n->co[2][0] != 0 && n->co[3][0] != 0);
+    CHECK(data_find_commander(g, n->co[2]) >= 0);
+    CHECK(data_find_commander(g, n->co[3]) >= 0);
+
+    memset(&cs, 0, sizeof cs);
+    cs.active = true;
+    cs.player_co = 0;
+    snprintf(cs.node, sizeof cs.node, "M11");
+    CHECK(campaign_setup_map(g, &c, &cs, "", err, sizeof err) == 0);
+    if (s_fail) { printf("  %s\n", err); return; }
+    campaign_begin(g, &c, &cs, 11, NULL);
+
+    CHECK(g->ctrl[0] == CTRL_HUMAN);         /* キャンペーンの自軍は常に人間 */
+    for (int p = 1; p < MAX_PLAYERS; p++) CHECK(g->ctrl[p] != CTRL_HUMAN);
+    CHECK(g->ctrl[3] == CTRL_CPU_EASY);
+    CHECK(g->co_id[2] == (int8_t)data_find_commander(g, n->co[2]));
+    /* チームは .map 側が決める */
+    CHECK(game_same_team(g, 0, 2) && game_same_team(g, 1, 3));
+    CHECK(game_is_enemy(g, 0, 1) && game_is_enemy(g, 2, 3));
+    CHECK(!game_is_enemy(g, 0, 2));
+    CHECK(game_team_leader(g, game_team_of(g, 0)) == 0);
+    CHECK(game_team_leader(g, game_team_of(g, 1)) == 1);
+    for (int p = 0; p < 4; p++) CHECK(game_player_in_play(g, p));
+    CHECK(g->winner == WINNER_NONE);         /* 開幕で決着しない */
+
+    /* 援軍(3)を消しても主力(1)が健在なら続く */
+    for (int i = 0; i < g->n_units; i++)
+        if (g->units[i].owner == 3) g->units[i].flags &= (uint8_t)~UF_ALIVE;
+    game_check_victory(g);
+    CHECK(g->winner == WINNER_NONE);
+
+    /* --- M12: 3陣営の乱戦 --- */
+    n = campaign_find_node(&c, "M12");
+    CHECK(n != NULL);
+    if (!n) return;
+    memset(&cs, 0, sizeof cs);
+    cs.active = true;
+    cs.player_co = 0;
+    snprintf(cs.node, sizeof cs.node, "M12");
+    CHECK(campaign_setup_map(g, &c, &cs, "", err, sizeof err) == 0);
+    if (s_fail) { printf("  %s\n", err); return; }
+    campaign_begin(g, &c, &cs, 12, NULL);
+
+    int np = 0;
+    for (int p = 0; p < MAX_PLAYERS; p++) if (game_player_in_play(g, p)) np++;
+    CHECK(np == 3);
+    /* team 指定が無いので全員が敵同士（乱戦） */
+    CHECK(game_is_enemy(g, 0, 1) && game_is_enemy(g, 0, 2) && game_is_enemy(g, 1, 2));
+    CHECK(g->winner == WINNER_NONE);
+    /* 拠点確保による勝利口がある（三つ巴の引き分け対策） */
+    CHECK(g->objective_count > 0 && g->objective_player == 0);
+}
+
+/* 工作（地形の破壊と復旧）。工兵が隣接ヘクスに対して行う。 */
+static void test_terrain_work(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    if (s_fail) return;
+    g->fog = false;
+    game_start(g, 1);
+    g->n_units = 0;
+
+    int city = -1, hq = -1, rubble = -1, plain = -1, road = -1;
+    for (int i = 0; i < g->n_terrains; i++) {
+        if (!strcmp(g->terrains[i].id, "CITY"))   city = i;
+        if (!strcmp(g->terrains[i].id, "HQ"))     hq = i;
+        if (!strcmp(g->terrains[i].id, "RUBBLE")) rubble = i;
+        if (!strcmp(g->terrains[i].id, "PLAIN"))  plain = i;
+        if (!strcmp(g->terrains[i].id, "ROAD"))   road = i;
+    }
+    CHECK(city >= 0 && hq >= 0 && rubble >= 0 && plain >= 0 && road >= 0);
+    if (s_fail) return;
+
+    /* 地形定義側: 拠点は瓦礫になり、首都と瓦礫は壊せない */
+    CHECK(g->terrains[city].breaks_idx == rubble);
+    /* **破壊で通行可否を変えないこと**。港を陸の瓦礫にしてしまうと
+     * 艦船が入れなくなり、海峡や運河を工兵一つで永久に塞げてしまう。 */
+    for (int i = 0; i < g->n_terrains; i++) {
+        int to = g->terrains[i].breaks_idx;
+        if (to < 0) continue;
+        for (int mc = 0; mc < MC_COUNT; mc++)
+            CHECK((g->terrains[i].mcost[mc] > 0) == (g->terrains[to].mcost[mc] > 0));
+    }
+    CHECK(g->terrains[road].breaks_idx == plain);
+    CHECK(g->terrains[hq].breaks_idx < 0);
+    CHECK(g->terrains[rubble].breaks_idx < 0);
+    CHECK(g->terrains[city].repair_cost > 0);
+    CHECK(!g->terrains[rubble].capturable);
+
+    int eng = data_find_unit_type(g, "ENGINEER");
+    int inf = data_find_unit_type(g, "INFANTRY");
+    CHECK(eng >= 0 && inf >= 0);
+    if (s_fail) return;
+    CHECK(g->types[eng].engineer == 1);
+    CHECK(g->types[eng].can_capture == 0);   /* 占領はさせない */
+    CHECK(g->types[inf].engineer == 0);
+
+    /* 盤面を作る: (5,5)に工兵、隣の(6,5)に自軍の都市 */
+    g->tiles[5][6].terrain = (uint8_t)city;
+    g->tiles[5][6].orig_terrain = (uint8_t)city;
+    g->tiles[5][6].owner = 0;
+    int ui = game_spawn_unit(g, 0, eng, 5, 5, 10);
+    CHECK(ui >= 0);
+    if (ui < 0) return;
+
+    CHECK(game_unit_is_engineer(g, ui));
+    CHECK(game_work_kind_at(g, ui, 6, 5) == WORK_DEMOLISH);
+    /* 自分の足元は対象外（壊して自滕する事故を防ぐ） */
+    CHECK(game_work_kind_at(g, ui, 5, 5) == WORK_NONE);
+    /* 隣接していないヘクスも不可 */
+    CHECK(game_work_kind_at(g, ui, 9, 9) == WORK_NONE);
+    /* 人の居るヘクスは触らない */
+    {
+        int pi = game_spawn_unit(g, 1, inf, 6, 5, 10);
+        CHECK(pi >= 0);
+        CHECK(game_work_kind_at(g, ui, 6, 5) == WORK_NONE);
+        g->units[pi].flags &= (uint8_t)~UF_ALIVE;
+    }
+    /* 首都は壊せない。壊せると工兵一つで勝敗がついてしまう。 */
+    {
+        uint8_t save = g->tiles[5][6].terrain;
+        g->tiles[5][6].terrain = (uint8_t)hq;
+        g->tiles[5][6].orig_terrain = (uint8_t)hq;
+        CHECK(game_work_kind_at(g, ui, 6, 5) == WORK_NONE);
+        g->tiles[5][6].terrain = save;
+        g->tiles[5][6].orig_terrain = save;
+    }
+
+    /* 破壊: 瓦礫になり、所有も消え、工兵の手番が終わる */
+    int before_funds = g->funds[0];
+    CHECK(game_do_work(g, ui, 6, 5) == WORK_DEMOLISH);
+    CHECK(g->tiles[5][6].terrain == rubble);
+    CHECK(g->tiles[5][6].orig_terrain == city);   /* 本来の地形は覚えている */
+    CHECK(g->tiles[5][6].owner == -1);
+    CHECK(g->funds[0] == before_funds);           /* 破壊は無料 */
+    CHECK(g->units[ui].flags & UF_DONE);
+
+    /* 復旧: 資金が要る。足りなければできない。 */
+    g->units[ui].flags &= (uint8_t)~UF_DONE;
+    CHECK(game_work_kind_at(g, ui, 6, 5) == WORK_REPAIR);
+    int cost = game_work_cost(g, 6, 5);
+    CHECK(cost == g->terrains[city].repair_cost);
+    g->funds[0] = cost - 1;
+    CHECK(game_do_work(g, ui, 6, 5) == WORK_NONE);
+    CHECK(g->tiles[5][6].terrain == rubble);      /* 失敗しても盤面は変わらない */
+    g->funds[0] = cost + 100;
+    CHECK(game_do_work(g, ui, 6, 5) == WORK_REPAIR);
+    CHECK(g->tiles[5][6].terrain == city);
+    CHECK(g->funds[0] == 100);
+    /* 戻しても持ち主は中立。改めて占領し直す必要がある。 */
+    CHECK(g->tiles[5][6].owner == -1);
+
+    /* 工兵以外は何もできない */
+    {
+        g->n_units = 0;
+        int ii = game_spawn_unit(g, 0, inf, 5, 5, 10);
+        CHECK(ii >= 0);
+        CHECK(!game_unit_is_engineer(g, ii));
+        CHECK(game_work_kind_at(g, ii, 6, 5) == WORK_NONE);
+        uint8_t xs[8], ys[8];
+        CHECK(game_work_targets(g, ii, xs, ys, 8) == 0);
     }
 }
 
@@ -2589,9 +2795,9 @@ static void test_campaign_enemy_co(void)
         if (!nd->map[0]) continue;      /* WIN/LOSE などの終端ノード */
         n_nodes++;
         /* 指揮官IDが書かれていること（空だと既定に落ちる） */
-        CHECK(nd->enemy_co[0] != 0);
+        CHECK(nd->co[1][0] != 0);
         /* commanders.def に実在すること（誤記だと -1 → 既定に落ちる） */
-        int co = data_find_commander(g, nd->enemy_co);
+        int co = data_find_commander(g, nd->co[1]);
         CHECK(co >= 0);
         if (co < 0) continue;
         if (!seen[co]) { seen[co] = 1; n_distinct++; }
@@ -3345,6 +3551,8 @@ int main(void)
     test_daynight();
     test_multiplayer();
     test_teams();
+    test_campaign_multi();
+    test_terrain_work();
     test_enemy_reinforce();
     test_join();
     test_ai_co_power();

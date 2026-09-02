@@ -1,0 +1,101 @@
+# c16 三つ巴の要衝 - キャンペーン用の3陣営乱戦。
+# 陣営0(自軍) / 陣営1(東方連邦) / 陣営2(南方連合) がそれぞれ独立。
+# team 指定が無いので team[p]=p、つまりAI同士も戦う。
+# 地形は m05_threeway と同じ。中央の高地と拠点群を奪い合う。
+[map]
+name             = 三つ巴の要衝
+width            = 40
+height           = 30
+turns            = 90
+timeout_winner   = -1
+funds0           = 2600
+funds1           = 3000
+funds2           = 3000
+# 拠点確保でも勝てるようにする。三つ巴で「2陣営とも完全に潰す」だけだと
+# ターン上限の引き分け＝作戦失敗になりやすい。拠点は全部28個。
+objective_count  = 17
+objective_player = 0
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxx...............xxxxxxxxxxxx
+row = xxxxxxxxxxx...................xxxxxxxxxx
+row = xxxxxxxxx.=...................=.xxxxxxxx
+row = xxxxxxxwcw=w..................=cwxxxxxxx
+row = xxxxxxHwww=ww................w=wwwHxxxxx
+row = xxxxxcwwww=w................ww=wwwwcxxxx
+row = xxxxa..fw.=..................w=wawwwfxxx
+row = xxx.......=...................=.w.....xx
+row = xxx..c....=..c.............c..=...c...xx
+row = xx........=...................=........x
+row = xx........=.........c.........=........x
+row = xx........=......fhhhhh.......=........x
+row = xx........=......hhhhhhh......=........x
+row = x.....==========c===c===c=========......
+row = xx........=......hhhhhhh......=........x
+row = xx........=.......hhhhhf......=........x
+row = xx........=..w......c.......w.=........x
+row = xx........=wwwww..........wwww=........x
+row = xxx.......=wwwwww........wwwww=w......xx
+row = xxx.......=wwwww....c.....wwww=.......xx
+row = xxxx......=..w..............w.=......xxx
+row = xxxxx.....=...................=.....xxxx
+row = xxxxxx....=......c..w..c......=....xxxxx
+row = xxxxxxx...=.....wwwwHwwww.....=...xxxxxx
+row = xxxxxxxxx.=....wwwwwwwwwww....=.xxxxxxxx
+row = xxxxxxxxxxx.....wwawwwfww.....xxxxxxxxxx
+row = xxxxxxxxxxxxx.......w.......xxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxcxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 6,6,0
+own = 7,8,0
+own = 4,8,0
+own = 8,5,0
+own = 5,7,0
+own = 5,10,0
+own = 34,6,1
+own = 36,8,1
+own = 32,8,1
+own = 35,7,1
+own = 31,5,1
+own = 34,10,1
+own = 20,25,2
+own = 22,27,2
+own = 18,27,2
+own = 23,24,2
+own = 17,24,2
+own = 20,29,2
+
+[units]
+unit = 0,INFANTRY,5,7
+unit = 0,INFANTRY,6,6
+unit = 0,AT_INFANTRY,7,5
+unit = 0,TANK,7,6
+unit = 0,TANK,8,5
+unit = 0,MECH_INF,4,8
+unit = 0,ARTILLERY,5,8
+unit = 0,AA_TANK,6,7
+unit = 0,RECON,7,7
+unit = 0,FIGHTER,7,7
+unit = 1,INFANTRY,32,5
+unit = 1,INFANTRY,32,6
+unit = 1,AT_INFANTRY,33,6
+unit = 1,TANK,34,6
+unit = 1,TANK,34,7
+unit = 1,MECH_INF,32,7
+unit = 1,ARTILLERY,33,7
+unit = 1,AA_TANK,35,7
+unit = 1,RECON,34,8
+unit = 1,FIGHTER,35,7
+unit = 2,INFANTRY,18,24
+unit = 2,INFANTRY,19,24
+unit = 2,AT_INFANTRY,20,24
+unit = 2,TANK,21,24
+unit = 2,TANK,22,24
+unit = 2,MECH_INF,18,26
+unit = 2,ARTILLERY,19,26
+unit = 2,AA_TANK,20,26
+unit = 2,RECON,21,26
+unit = 2,FIGHTER,22,26

@@ -1,0 +1,116 @@
+# c15 共同戦線 - キャンペーン用の2対2チーム戦。
+# team0 = 陣営0(自軍)+陣営2(南方連合) / team1 = 陣営1(東方連邦)+陣営3(北方同盟)。
+# **主力の首都が落ちれば援軍が健在でもそのチームの負け**。
+# 地形は m06_alliance と同じ180度回転対称。odd-rヘクスでは左右反転が
+# 距離を保たない（約39%%の組で変わる）ため、鏡像にしてはいけない。
+[map]
+name             = 共同戦線
+width            = 46
+height           = 32
+turns            = 100
+timeout_winner   = -1
+# キャンペーンは持越しの精鋭を連れて来るので、自軍側の初期資金を少し下げる
+funds0           = 2600
+funds1           = 3000
+funds2           = 2600
+funds3           = 3000
+team0            = 0
+team1            = 1
+team2            = 0
+team3            = 1
+leader0          = 0
+leader1          = 1
+# 首都を落とす以外の勝利口。拠点は全部28個だが、
+# 援軍の分は数えないので半分を目安にする。
+objective_count  = 14
+objective_player = 0
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxx................................xxxxxxx
+row = xxxx......................................xxxx
+row = xxx....c=.w.............=...w.............cxxx
+row = xx....ww=wwwwww.........=wwwwwww............xx
+row = xx...www=wwwwwww.......c=...w....w..........xx
+row = xx...Hww=wwwwwwc........=.....wwwwwww...H...xx
+row = x.......=.w.............=....wwwwwwwww.......x
+row = x.......=.............w.=.....wwwwwww........x
+row = x...====f=================================.f.x
+row = x...c.w.=......hhhhh..w.=.....c........c.....x
+row = x....www=......hhhhh....=....................x
+row = x...wwww=.....hhhhhhh...=....................x
+row = x....www=...c..hhhhh...c=....................x
+row = x.....w.=......hhhhh....=....................x
+row = x.......=........h.f....=....................x
+row = x....................=....f.h........=.......x
+row = x....................=....hhhhh......=.w.....x
+row = x....................=c...hhhhh..c...=www....x
+row = x....................=...hhhhhhh.....=wwww...x
+row = x....................=....hhhhh......=www....x
+row = x.....c........c.....=.w..hhhhh......=.w.c...x
+row = x.f.=================================f====...x
+row = x........wwwwwww.....=.w.............=.......x
+row = x.......wwwwwwwww....=.............w.=.......x
+row = xx...H...wwwwwww.....=........cwwwwww=wwH...xx
+row = xx..........w....w...=c.......wwwwwww=www...xx
+row = xx............wwwwwww=.........wwwwww=ww....xx
+row = xxxc.............w...=.............w.=c....xxx
+row = xxxx......................................xxxx
+row = xxxxxxx................................xxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 5,6,0
+own = 40,25,2
+own = 8,9,0
+own = 37,22,2
+own = 7,3,0
+own = 38,28,2
+own = 4,10,0
+own = 41,21,2
+own = 40,6,1
+own = 5,25,3
+own = 43,9,1
+own = 2,22,3
+own = 42,3,1
+own = 3,28,3
+own = 39,10,1
+own = 6,21,3
+
+[units]
+unit = 0,INFANTRY,4,7
+unit = 2,INFANTRY,41,24
+unit = 0,INFANTRY,5,7
+unit = 2,INFANTRY,40,24
+unit = 0,AT_INFANTRY,6,7
+unit = 2,AT_INFANTRY,39,24
+unit = 0,TANK,7,7
+unit = 2,TANK,38,24
+unit = 0,TANK,4,8
+unit = 2,TANK,41,23
+unit = 0,MECH_INF,5,8
+unit = 2,MECH_INF,40,23
+unit = 0,ARTILLERY,6,8
+unit = 2,ARTILLERY,39,23
+unit = 0,AA_TANK,7,8
+unit = 2,AA_TANK,38,23
+unit = 0,RECON,4,9
+unit = 2,RECON,41,22
+unit = 1,INFANTRY,39,7
+unit = 3,INFANTRY,6,24
+unit = 1,INFANTRY,40,7
+unit = 3,INFANTRY,5,24
+unit = 1,AT_INFANTRY,41,7
+unit = 3,AT_INFANTRY,4,24
+unit = 1,TANK,42,7
+unit = 3,TANK,3,24
+unit = 1,TANK,39,8
+unit = 3,TANK,6,23
+unit = 1,MECH_INF,40,8
+unit = 3,MECH_INF,5,23
+unit = 1,ARTILLERY,41,8
+unit = 3,ARTILLERY,4,23
+unit = 1,AA_TANK,42,8
+unit = 3,AA_TANK,3,23
+unit = 1,RECON,39,9
+unit = 3,RECON,6,22

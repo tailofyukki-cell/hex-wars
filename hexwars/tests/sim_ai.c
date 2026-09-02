@@ -222,7 +222,10 @@ int main(void)
         } else {
             /* N3/N4 は後から追加したイベント種別（TERRAIN/COPOWER/WEATHER）を
              * 使っているので、実戦で発火するか見ておく */
-            const char *nodes[] = { "M01", "M05", "M09", "N3", "N4", "M10" };
+            /* M11(2対2のチーム戦) と M12(三つ巴) は多陣営を
+             * キャンペーンに組み込んだノード。決着するかを見ておく。 */
+            const char *nodes[] = { "M01", "M05", "M09", "M11", "M12",
+                                    "N3", "N4", "M10" };
             int n_nodes = (int)(sizeof nodes / sizeof nodes[0]);
             for (int i = 0; i < n_nodes; i++)
                 if (run_campaign_node(&cc, nodes[i], 700 + (uint32_t)i) == -100) fail++;

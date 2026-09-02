@@ -79,6 +79,7 @@
 | `gfx/units/missile_boat.png` | MISSILE_BOAT ほか1件 | ○ | 96x96 |
 | `gfx/units/supply_ship.png` | SUPPLY_SHIP ほか1件 | ○ | 96x96 |
 | `gfx/units/t_plane.png` | T_PLANE ほか1件 | ○ | 96x96 |
+| `gfx/units/engineer.png` | ENGINEER ほか1件（工兵） | **未** | - |
 | `gfx/units/night_inf.png` | NIGHT_INF ほか1件（夜間忍兵） | **未** | - |
 | `gfx/units/night_boat.png` | NIGHT_BOAT ほか1件（夜間突撃艦） | **未** | - |
 | `gfx/units/night_fighter.png` | NIGHT_FIGHTER ほか1件（夜間迎撃機） | **未** | - |
@@ -138,6 +139,13 @@
 |---|---|
 | `gfx/terrain/airstrip.png` | AIRSTRIP（野戦飛行場） |
 | `gfx/terrain/anchorage.png` | ANCHORAGE（泊地） |
+| `gfx/units/engineer.png` | ENGINEER（工兵） |
+| `gfx/terrain/rubble.png` | RUBBLE（瓦礫。工兵に壊された拠点） |
+| `gfx/terrain/rubble_port.png` | RUBBLE_PORT（破壊された港湾） |
+| `gfx/brief/m11.png` | 第8作戦「共同戦線」のブリーフィング絵 |
+| `gfx/brief/m12.png` | 第12作戦「三つ巴の要衝」のブリーフィング絵 |
+| `gfx/reward/m11.png` | 第8作戦のクリア絵 |
+| `gfx/reward/m12.png` | 第12作戦のクリア絵 |
 | `gfx/units/night_inf.png` | NIGHT_INF（夜間忍兵） |
 | `gfx/units/night_boat.png` | NIGHT_BOAT（夜間突撃艦） |
 | `gfx/units/night_fighter.png` | NIGHT_FIGHTER（夜間迎撃機） |

@@ -88,6 +88,7 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
             w_i8(w, t->owner);
             w_u8(w, t->cap_hp);
             w_i16(w, t->capturer);
+            w_u8(w, t->orig_terrain);
         }
     /* ユニット */
     w_u16(w, (uint16_t)g->n_units);
@@ -200,7 +201,10 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
             t->owner = r_i8(r);
             t->cap_hp = r_u8(r);
             t->capturer = r_i16(r);
+            /* v11以前は壊れた地形という概念が無いので、現地形＝本来の地形。 */
+            t->orig_terrain = (ver >= 12) ? r_u8(r) : t->terrain;
             if (t->terrain >= g->n_terrains) return -1;
+            if (t->orig_terrain >= g->n_terrains) return -1;
         }
     g->n_units = r_u16(r);
     if (g->n_units > MAX_UNITS) return -1;

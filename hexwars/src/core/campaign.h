@@ -42,8 +42,11 @@ typedef struct {
     char next_lose[24];
     int  carry;               /* 1=ユニット持越し有効 */
     int  bonus;               /* 勝利ボーナス資金 */
-    uint8_t enemy;            /* PlayerCtrl（P1のCPU難易度） */
-    char    enemy_co[24];     /* 敵指揮官のID（空=既定） */
+    /* 陣営ごとのCPU難易度と指揮官。[0] はキャンペーンでは常に人間なので未使用。
+     * .cpn では enemy=/enemy_co= が [1]、ctrl2=/co2= のように番号付きで [2..4]。
+     * マップに居るのに指定が無い陣営は CPU普通＋既定指揮官になる。 */
+    uint8_t ctrl[MAX_PLAYERS];
+    char    co[MAX_PLAYERS][24];
     int     par_turns;        /* 作戦評価の基準ターン（0=マップから自動算出） */
     int     no_reinforce;     /* 1=この作戦では敵に増援を与えない */
     SubObjective subs[MAX_SUBS];

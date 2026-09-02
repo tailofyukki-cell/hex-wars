@@ -125,6 +125,7 @@ typedef struct {
     uint8_t  anti_sub;       /* 1=対潜能力あり */
     uint8_t  is_sub;         /* 1=潜水艦 */
     uint8_t  supply;         /* 1=隣接味方に燃料・弾薬を補給できる（補給車等） */
+    uint8_t  engineer;       /* 1=隣接ヘクスの地形を破壊・復旧できる（工兵） */
     /* 維持コストと燃料切れの扱い。既定は class から決まる（従来の挙動）ので、
      * 現代戦以外（飛竜・浮遊要塞など）では .def で明示して上書きする。 */
     uint8_t  upkeep;         /* 補給施設の外にいる間、毎ターン減る燃料。UPKEEP_AUTO=未指定 */
@@ -173,6 +174,11 @@ typedef struct {
     uint8_t  supplies;            /* 補給対象 MoveClass のビットマスク */
     uint8_t  hide;                /* 1=隣接しないと中の敵を視認不可 */
     uint8_t  is_hq;               /* 1=首都 */
+    /* 工兵による破壊と復旧。breaks_to が空の地形は壊せない。
+     * repair_cost は「この地形に戻す」のに要る資金（元の地形側に書く）。 */
+    char     breaks_to[24];       /* 壊されたときになる地形ID（空=破壊不可） */
+    int16_t  breaks_idx;          /* 上を解決した index（-1=なし） */
+    int16_t  repair_cost;         /* この地形へ復旧する費用 */
     uint32_t color;               /* 0xRRGGBB 描画色 */
     /* 斜め見下ろし表示での起伏（見た目のみ。ルールには一切影響しない）。
      * ヘクス半径32px基準のpx値で、山=高く/海=負=沈む。描画時にズーム倍率で拡縮する。 */
@@ -277,6 +283,10 @@ typedef struct {
     int8_t  owner;     /* -1=中立 / 0..1=陣営 */
     uint8_t cap_hp;    /* 占領残耐久（満タン=CAPTURE_HP） */
     int16_t capturer;  /* 占領中ユニット index、-1=なし */
+    /* マップ本来の地形。工兵の破壊やイベントで terrain が変わっても
+     * ここは動かない。terrain != orig_terrain なら「壊れている」状態で、
+     * 工兵の復旧でこの地形に戻る。 */
+    uint8_t orig_terrain;
 } Tile;
 
 #define CAPTURE_HP 20

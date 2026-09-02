@@ -545,6 +545,24 @@ static void act_unit(Game *g, AiState *s, int ui)
         return;
     }
 
+    /* 工兵: 隣接に自陣営側の壊れた地形があって資金が届くなら直す。
+     * **破壊はCPUにやらせない**。自分の進路を自分で潰しかねないし、
+     * 壊す価値のある地形を見分けるには盤面全体の読みが要る。
+     * 復旧だけなら、やって損をすることがない。 */
+    if (game_unit_is_engineer(g, ui)) {
+        for (int d = 0; d < HEX_DIRS; d++) {
+            int nx, ny;
+            hex_neighbor(u->pos.x, u->pos.y, d, &nx, &ny);
+            if (game_work_kind_at(g, ui, nx, ny) != WORK_REPAIR) continue;
+            if (g->funds[me] < game_work_cost(g, nx, ny)) continue;
+            if (game_do_work(g, ui, nx, ny) != WORK_NONE) {
+                s->last_unit = ui;
+                s->last_target = -1;
+                return;
+            }
+        }
+    }
+
     path_move_range(g, ui, &s_mr);
 
     /* このユニットが受ける脅威は「自分の装甲カテゴリ」で引く。
