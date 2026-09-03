@@ -263,6 +263,8 @@ int main(int argc, char *argv[])
                 a->campaign_mode = true;
                 snprintf(a->cps.node, sizeof a->cps.node, "%s",
                          (argc >= 4) ? argv[3] : a->cpn.start);
+                /* 第3引数に win を足すと勝利直後の幕間を出す */
+                a->story_is_win = (argc >= 5 && !strcmp(argv[4], "win"));
                 a->next_screen = SCREEN_STORY;
             }
         }

@@ -27,6 +27,9 @@ typedef struct {
     char    desc[96];    /* 画面に出す説明文 */
 } SubObjective;
 
+/* 幕間の1行 */
+typedef struct { char who[24]; char text[128]; } CpnLine;
+
 typedef struct {
     char id[24];
     char title[64];
@@ -35,10 +38,13 @@ typedef struct {
     char reward[64];          /* クリア時のご褒美画像（assets/ 相対。空=なし） */
     char reward_video[64];    /* クリア時の動画（mp4/GIF。指定時は画像より優先） */
     char brief[MAX_BRIEF_LINES][128];
-    /* 幕間（作戦前のひとこま）。who が空なら地の文。
-     * 全行を一枚に出して 1キーで進むだけなので、読み飛ばしても困らない。 */
-    struct { char who[24]; char text[128]; } story[MAX_STORY_LINES];
+    /* 幕間。who が空なら地の文。
+     * 全行を一枚に出して 1キーで進むだけなので、読み飛ばしても困らない。
+     * story = 作戦前 / story_win = 勝利直後。 */
+    CpnLine story[MAX_STORY_LINES];
     int  n_story;
+    CpnLine story_win[MAX_STORY_LINES];
+    int  n_story_win;
     int  n_brief;
     char next_win[24];
     char next_win_fast[24];   /* 早期勝利ルート（空文字=なし） */

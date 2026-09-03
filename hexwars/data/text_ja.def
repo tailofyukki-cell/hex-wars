@@ -86,6 +86,7 @@ BRIEF_STORE_FMT = 倉庫に %d ユニット保管中（生産拠点で無料で�
 BRIEF_GO        = Z / クリックで出撃
 STORY_GO        = Z / クリックで作戦ブリーフィングへ
 STORY_SKIP      = Enter / クリックで全文を表示
+STORY_WIN_GO    = Z / クリックで作戦結果へ
 BRIEF_NONODE    = （ノードなし）
 
 # --- ご褒美画像 ---

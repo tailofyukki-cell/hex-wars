@@ -1558,8 +1558,15 @@ void battle_update(App *a)
 
     if (a->bs == BS_GAMEOVER) {
         if (a->banner_timer == 0) {
+            /* キャンペーンで勝ったらまず幕間。行が無ければ story_enter が
+             * そのままご褒美/結果へ送るので、ここでは有無を見ない。
+             * cps.node はまだ今済ませた作戦のまま（進むのは result_enter）。 */
+            if (a->campaign_mode && g->winner == 0) {
+                a->story_is_win = true;
+                a->next_screen = SCREEN_STORY;
+            }
             /* 勝利時はご褒美画面を挟む（キャンペーン=作戦別画像 / フリー=汎用画像） */
-            if (reward_available(a))
+            else if (reward_available(a))
                 a->next_screen = SCREEN_REWARD;
             else
                 a->next_screen = SCREEN_RESULT;

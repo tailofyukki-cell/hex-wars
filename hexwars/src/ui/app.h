@@ -200,9 +200,12 @@ struct App {
     /* ターンメニュー */
     int   tmenu_idx;
     /* 未行動ユニット一覧 */
-    /* 幕間のタイプ表示。story_all は「途中で押されて全文出した」状態。 */
+    /* 幕間のタイプ表示。story_all は「途中で押されて全文出した」状態。
+     * story_is_win で作戦前(story)と勝利直後(story_win)を切り替える。
+     * 画面の中身は同じなので、別画面にしていない。 */
     int   story_frames;
     bool  story_all;
+    bool  story_is_win;
     int   ulist[MAX_UNITS];
     int   ulist_n, ulist_idx, ulist_scroll;
     /* セーブメニュー */

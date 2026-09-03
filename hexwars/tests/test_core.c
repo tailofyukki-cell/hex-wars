@@ -1593,6 +1593,64 @@ static void test_commanders(void)
     }
 }
 
+/* CPUの生産判断: 敵の装甲構成に対する有効打で選ぶこと。
+ * 4カテゴリの攻撃力を単純に足していた頃は、何にでも当たる
+ * 爆撃機が常に勝ち、敵に航空がいても戦闘機を一度も作らなかった。 */
+static void test_ai_production_mix(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    if (s_fail) { printf("  %s\n", err); return; }
+
+    int airport = -1;
+    for (int i = 0; i < g->n_terrains; i++)
+        if (!strcmp(g->terrains[i].id, "AIRPORT")) airport = i;
+    int bomber = data_find_unit_type(g, "BOMBER");
+    int inf    = data_find_unit_type(g, "INFANTRY");
+    CHECK(airport >= 0 && bomber >= 0 && inf >= 0);
+    if (s_fail) return;
+
+    g->fog = false;
+    g->ctrl[0] = CTRL_CPU_NORMAL;
+    g->ctrl[1] = CTRL_CPU_NORMAL;
+    game_start(g, 3);
+
+    /* 陣営0 の飛行場を用意し、資金を潤沢にする */
+    g->tiles[5][5].terrain = (uint8_t)airport;
+    g->tiles[5][5].owner = 0;
+    g->funds[0] = 20000;
+    g->turn = 8;                       /* 序盤補正を抜けたところ */
+
+    /* 自軍は対空手段の無い歩兵だけ。敵は爆撃機を揃えている。 */
+    g->n_units = 0;
+    for (int i = 0; i < 4; i++) CHECK(game_spawn_unit(g, 0, inf, 3 + i, 3, 10) >= 0);
+    for (int i = 0; i < 4; i++) CHECK(game_spawn_unit(g, 1, bomber, 20 + i, 12, 10) >= 0);
+    game_update_vision(g);
+    int before = g->n_units;
+
+    AiState ai;
+    memset(&ai, 0, sizeof ai);
+    g->current = 0;
+    ai_begin_turn(g, &ai);
+    for (int step = 0; step < 200 && ai_step(g, &ai); step++) { }
+
+    /* 作られた航空ユニットに、対空できるものが含まれること。 */
+    int made_air = 0, made_anti_air = 0;
+    for (int i = before; i < g->n_units; i++) {
+        if (g->units[i].owner != 0) continue;
+        const UnitType *t = &g->types[g->units[i].type];
+        if (t->mclass != MC_AIR) continue;
+        made_air++;
+        if (t->atk[ARMOR_AIR] > 0) made_anti_air++;
+    }
+    CHECK(made_air > 0);          /* 飛行場があるので何かは作る */
+    CHECK(made_anti_air > 0);     /* 敵が航空なら対空できる機を選ぶ */
+}
+
 /* 幕間（キャンペーンのひとこま）。
  * 読み飛ばせるのが前提なので、無いノードがあっても壊れてはいけない。 */
 static void test_campaign_story(void)
@@ -1602,11 +1660,18 @@ static void test_campaign_story(void)
     CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
 
-    int with_story = 0;
+    int with_story = 0, with_win = 0;
     for (int i = 0; i < c.n_nodes; i++) {
         const CpnNode *n = &c.nodes[i];
         CHECK(n->n_story >= 0 && n->n_story <= MAX_STORY_LINES);
+        CHECK(n->n_story_win >= 0 && n->n_story_win <= MAX_STORY_LINES);
         if (n->n_story > 0) with_story++;
+        if (n->n_story_win > 0) with_win++;
+        for (int k = 0; k < n->n_story_win; k++) {
+            CHECK(n->story_win[k].text[0] != 0);
+            CHECK(strlen(n->story_win[k].who) +
+                  strlen(n->story_win[k].text) <= 120);
+        }
         for (int k = 0; k < n->n_story; k++) {
             /* 本文が空の行は無い（話者だけ書いてしまった事故を拾う） */
             CHECK(n->story[k].text[0] != 0);
@@ -1617,6 +1682,7 @@ static void test_campaign_story(void)
     }
     /* 全作戦にひとこまがあること。抜けるとその作戦だけ話が飛ぶ。 */
     CHECK(with_story == c.n_nodes);
+    CHECK(with_win == c.n_nodes);   /* 勝利直後のひとこまも全作戦分 */
 }
 
 /* キャンペーンの多陣営ノード（第3段階）。
@@ -3577,6 +3643,7 @@ int main(void)
     test_daynight();
     test_multiplayer();
     test_teams();
+    test_ai_production_mix();
     test_campaign_story();
     test_campaign_multi();
     test_terrain_work();

@@ -194,6 +194,28 @@ static int parse_sub(CpnNode *n, const char *val)
     return 0;
 }
 
+/* 幕間の1行を追加する。書式は「話者|セリフ」で、
+ * 「|」が無ければ地の文。戻り値は新しい行数。 */
+static int story_push(CpnLine *dst, int n, const char *val)
+{
+    if (n >= MAX_STORY_LINES) return n;
+    const char *bar = strchr(val, '|');
+    if (bar) {
+        int k = (int)(bar - val);
+        while (k > 0 && (val[k - 1] == ' ' || val[k - 1] == '\t')) k--;
+        if (k > (int)sizeof dst[n].who - 1) k = (int)sizeof dst[n].who - 1;
+        memcpy(dst[n].who, val, (size_t)k);
+        dst[n].who[k] = '\0';
+        const char *body = bar + 1;
+        while (*body == ' ' || *body == '\t') body++;
+        snprintf(dst[n].text, sizeof dst[n].text, "%s", body);
+    } else {
+        dst[n].who[0] = '\0';
+        snprintf(dst[n].text, sizeof dst[n].text, "%s", val);
+    }
+    return n + 1;
+}
+
 /* .cpn の EASY/NORMAL/HARD を PlayerCtrl に直す。誤記は普通扱い。 */
 static uint8_t ctrl_from_word(const char *val)
 {
@@ -275,29 +297,10 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         else if (!strcmp(key, "next_lose"))     snprintf(cur->next_lose, sizeof cur->next_lose, "%s", val);
         else if (!strcmp(key, "enemy_co"))
             snprintf(cur->co[1], sizeof cur->co[1], "%s", val);
-        else if (!strcmp(key, "story")) {
-            /* story = 話者|セリフ。「|」が無ければ地の文。 */
-            if (cur->n_story < MAX_STORY_LINES) {
-                const char *bar = strchr(val, '|');
-                if (bar) {
-                    int n = (int)(bar - val);
-                    while (n > 0 && (val[n - 1] == ' ' || val[n - 1] == '\t')) n--;
-                    if (n > (int)sizeof cur->story[0].who - 1)
-                        n = (int)sizeof cur->story[0].who - 1;
-                    memcpy(cur->story[cur->n_story].who, val, (size_t)n);
-                    cur->story[cur->n_story].who[n] = '\0';
-                    const char *body = bar + 1;
-                    while (*body == ' ' || *body == '\t') body++;
-                    snprintf(cur->story[cur->n_story].text,
-                             sizeof cur->story[0].text, "%s", body);
-                } else {
-                    cur->story[cur->n_story].who[0] = '\0';
-                    snprintf(cur->story[cur->n_story].text,
-                             sizeof cur->story[0].text, "%s", val);
-                }
-                cur->n_story++;
-            }
-        }
+        else if (!strcmp(key, "story"))
+            cur->n_story = story_push(cur->story, cur->n_story, val);
+        else if (!strcmp(key, "story_win"))
+            cur->n_story_win = story_push(cur->story_win, cur->n_story_win, val);
         else if (!strcmp(key, "carry"))         cur->carry = atoi(val);
         else if (!strcmp(key, "bonus"))         cur->bonus = atoi(val);
         else if (!strcmp(key, "enemy")) cur->ctrl[1] = ctrl_from_word(val);

@@ -1084,12 +1084,14 @@ static void cpnmap_event(App *a, const SDL_Event *e)
         SDL_Rect cr = cpnmap_co_rect();
         if (SDL_PointInRect(&p, &cr)) { cpnmap_cycle_co(a); return; }
         snd_se(SE_OK);
+        a->story_is_win = false;
         a->next_screen = SCREEN_STORY;
         return;
     }
     if (e->type == SDL_KEYDOWN &&
         (e->key.keysym.sym == SDLK_z || e->key.keysym.sym == SDLK_RETURN)) {
         snd_se(SE_OK);
+        a->story_is_win = false;
         a->next_screen = SCREEN_STORY;
     }
     if (e->type == SDL_KEYDOWN &&
@@ -2009,24 +2011,34 @@ static int utf8_prefix(const char *s, int n)
 
 #define STORY_FRAMES_PER_CHAR 2   /* 60fps で毎秒30文字 */
 
-static int story_total_chars(const CpnNode *node)
+/* 今出すべき行群（作戦前 / 勝利直後） */
+static const CpnLine *story_lines(const App *a, const CpnNode *node, int *n)
 {
-    int n = 0;
-    for (int i = 0; i < node->n_story; i++) n += utf8_len(node->story[i].text);
+    *n = a->story_is_win ? node->n_story_win : node->n_story;
+    return a->story_is_win ? node->story_win : node->story;
+}
+
+static int story_total_chars(const App *a, const CpnNode *node)
+{
+    int n = 0, cnt = 0;
+    const CpnLine *L = story_lines(a, node, &cnt);
+    for (int i = 0; i < cnt; i++) n += utf8_len(L[i].text);
     return n;
 }
 
 /* 今何文字まで出していいか */
 static int story_shown(const App *a, const CpnNode *node)
 {
-    if (a->story_all) return story_total_chars(node);
+    if (a->story_all) return story_total_chars(a, node);
     return a->story_frames / STORY_FRAMES_PER_CHAR;
 }
 
 static bool story_finished(const App *a, const CpnNode *node)
 {
-    return story_shown(a, node) >= story_total_chars(node);
+    return story_shown(a, node) >= story_total_chars(a, node);
 }
+
+static void story_go(App *a);
 
 static void story_enter(App *a)
 {
@@ -2035,8 +2047,10 @@ static void story_enter(App *a)
     a->story_frames = 0;
     a->story_all = false;
     const CpnNode *node = campaign_find_node(&a->cpn, a->cps.node);
-    if (!node || node->n_story == 0) {
-        a->next_screen = SCREEN_BRIEFING;
+    int cnt = 0;
+    if (node) story_lines(a, node, &cnt);
+    if (!node || cnt == 0) {
+        story_go(a);
         return;
     }
     if (node->art[0])
@@ -2047,7 +2061,10 @@ static void story_enter(App *a)
 static void story_go(App *a)
 {
     brief_free_art(a);
-    a->next_screen = SCREEN_BRIEFING;
+    /* 作戦前はブリーフィングへ、勝利直後はご褪美/結果へ戻る。 */
+    if (!a->story_is_win) { a->next_screen = SCREEN_BRIEFING; return; }
+    a->story_is_win = false;
+    a->next_screen = reward_available(a) ? SCREEN_REWARD : SCREEN_RESULT;
 }
 
 static void story_event(App *a, const SDL_Event *e)
@@ -2084,7 +2101,9 @@ static void story_draw(App *a)
     const CpnNode *node = campaign_find_node(&a->cpn, a->cps.node);
     /* 話が無いノードは story_enter が即ブリーフィングへ送る。
      * 切り替わるのは次のフレームなので、その1枚を空の箱で出さない。 */
-    if (!node || node->n_story == 0) return;
+    if (!node) return;
+    int cnt = 0;
+    const CpnLine *L = story_lines(a, node, &cnt);
 
     /* 作戦の1枚絵を背景に敷く（暗く落とす）。
      * 話専用の絵を別に用意しなくても雰囲気が出る。 */
@@ -2099,10 +2118,11 @@ static void story_draw(App *a)
 
     draw_text_center(a, a->font_s, WIN_W / 2, 40, COL_DIM, a->cpn.name);
     draw_text_center(a, a->font_l, WIN_W / 2, 62, COL_WHITE, node->title);
+    if (cnt == 0) return;
 
     /* 本文の箱。行数に合わせて高さを決め、下寄せで置く。 */
     const int lh = 40;
-    int bh = 40 + node->n_story * lh;
+    int bh = 40 + cnt * lh;
     int bx = 140, by = WIN_H - 118 - bh, bw = WIN_W - 280;
     if (by < 150) by = 150;
     fill_rect(a, bx, by, bw, bh, (SDL_Color){ 22, 26, 34, 235 });
@@ -2112,21 +2132,21 @@ static void story_draw(App *a)
     const SDL_Color LINE = { 232, 232, 226, 255 };  /* セリフ */
     const SDL_Color NARR = { 168, 172, 180, 255 };  /* 地の文 */
     int budget = story_shown(a, node);
-    for (int i = 0; i < node->n_story; i++) {
-        int len = utf8_len(node->story[i].text);
+    for (int i = 0; i < cnt; i++) {
+        int len = utf8_len(L[i].text);
         if (budget <= 0) break;                 /* まだこの行は出ない */
         int show = budget < len ? budget : len;
         budget -= show;
         char part[160];
-        int nb = utf8_prefix(node->story[i].text, show);
+        int nb = utf8_prefix(L[i].text, show);
         if (nb > (int)sizeof part - 1) nb = (int)sizeof part - 1;
-        memcpy(part, node->story[i].text, (size_t)nb);
+        memcpy(part, L[i].text, (size_t)nb);
         part[nb] = 0;
 
         int y = by + 20 + i * lh;
-        if (node->story[i].who[0]) {
+        if (L[i].who[0]) {
             char who[40];
-            snprintf(who, sizeof who, "%s", node->story[i].who);
+            snprintf(who, sizeof who, "%s", L[i].who);
             draw_text(a, a->font_m, bx + 24, y, WHO, who);
             int w = text_width(a, a->font_m, who);
             char buf[200];
@@ -2139,7 +2159,9 @@ static void story_draw(App *a)
     }
 
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 60, COL_YELLOW,
-                     story_finished(a, node) ? tx("STORY_GO") : tx("STORY_SKIP"));
+                     story_finished(a, node)
+                         ? tx(a->story_is_win ? "STORY_WIN_GO" : "STORY_GO")
+                         : tx("STORY_SKIP"));
 }
 
 /* ------------------------------------------------------------------ */
