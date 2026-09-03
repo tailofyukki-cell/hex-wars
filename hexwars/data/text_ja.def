@@ -84,6 +84,8 @@ CPNMAP_HINT     = Z:出撃準備へ  C:指揮官変更  ↑↓/ホイール:ス�
 BRIEF_CARRY_FMT = 持越し部隊: %d ユニット   持越し資金: +%dG
 BRIEF_STORE_FMT = 倉庫に %d ユニット保管中（生産拠点で無料で出撃可）
 BRIEF_GO        = Z / クリックで出撃
+STORY_GO        = Z / クリックで作戦ブリーフィングへ
+STORY_SKIP      = Enter / クリックで全文を表示
 BRIEF_NONODE    = （ノードなし）
 
 # --- ご褒美画像 ---
@@ -273,6 +275,7 @@ CPNMAP_CO_FMT      = 指揮官: %s   （C キー / ここをクリックで変�
 # --- 未行動ユニット一覧 ---
 ULIST_TITLE_FMT = 未行動ユニット （%d体）
 ULIST_ROW_FMT   = HP%2d  %s  (%d,%d)
+ULIST_EXP_FMT   = 経験%3d (ランク%d)
 ULIST_EMPTY     = 未行動のユニットはありません
 
 # --- 出撃部隊の編成（持越しが上限を超えたとき）---

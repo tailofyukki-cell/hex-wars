@@ -751,7 +751,8 @@ static void next_unit(App *a)
 /* ------------------------------------------------------------------ */
 static SDL_Rect ulist_rect(App *a, int i)
 {
-    SDL_Rect r = { WIN_W / 2 - 300, 150 + (i - a->ulist_scroll) * 42, 600, 38 };
+    /* 幅は「名前 / 経験値 / HP・地形・座標」の3列が重ならない長さ。 */
+    SDL_Rect r = { WIN_W / 2 - 340, 150 + (i - a->ulist_scroll) * 42, 680, 38 };
     return r;
 }
 
@@ -2117,8 +2118,8 @@ static void draw_menus(App *a)
         int shown = scrollable ? UNITLIST_VISIBLE : a->ulist_n;
         if (shown < 1) shown = 1;
         int ph = 50 + shown * 42 + (scrollable ? 24 : 12);
-        fill_rect(a, WIN_W / 2 - 320, 100, 640, ph, (SDL_Color){ 28, 32, 38, 246 });
-        outline_rect(a, WIN_W / 2 - 320, 100, 640, ph, COL_DIM);
+        fill_rect(a, WIN_W / 2 - 360, 100, 720, ph, (SDL_Color){ 28, 32, 38, 246 });
+        outline_rect(a, WIN_W / 2 - 360, 100, 720, ph, COL_DIM);
         char title[96];
         snprintf(title, sizeof title, tx("ULIST_TITLE_FMT"), a->ulist_n);
         draw_text_center(a, a->font_m, WIN_W / 2, 108, COL_WHITE, title);
@@ -2128,7 +2129,7 @@ static void draw_menus(App *a)
                              tx("ULIST_EMPTY"));
         } else {
             if (a->ulist_scroll > 0)
-                draw_text_center(a, a->font_s, WIN_W / 2 + 290, 108, COL_YELLOW, "▲");
+                draw_text_center(a, a->font_s, WIN_W / 2 + 330, 108, COL_YELLOW, "▲");
             if (a->ulist_scroll + UNITLIST_VISIBLE < a->ulist_n)
                 draw_text_center(a, a->font_s, WIN_W / 2, 100 + ph - 20, COL_YELLOW, "▼");
             int end = a->ulist_scroll + UNITLIST_VISIBLE;
@@ -2147,11 +2148,18 @@ static void draw_menus(App *a)
                          layer_tag(unit_layer(ut->mclass)), ut->name);
                 draw_text(a, a->font_s, r.x + 12, r.y + 9,
                           sel ? COL_WHITE : COL_GRAY, buf);
+                /* 経験値。どの部隊を動かすかの判断材料なので、
+                 * 育っているものは出撃編成画面と同じく緑で目立たせる。 */
+                int rank = unit_rank(u);
+                snprintf(buf, sizeof buf, tx("ULIST_EXP_FMT"), u->exp, rank);
+                draw_text(a, a->font_s, r.x + 300, r.y + 9,
+                          rank > 0 ? (SDL_Color){ 160, 240, 160, 255 }
+                                   : (sel ? COL_WHITE : COL_GRAY), buf);
                 /* 位置と状態（HPが減っていれば黄色で警告的に） */
                 snprintf(buf, sizeof buf, tx("ULIST_ROW_FMT"),
                          u->hp, game_terrain_at(g, u->pos.x, u->pos.y)->name,
                          u->pos.x, u->pos.y);
-                draw_text(a, a->font_s, r.x + r.w - 300, r.y + 9,
+                draw_text(a, a->font_s, r.x + r.w - 200, r.y + 9,
                           u->hp < 10 ? COL_YELLOW : (sel ? COL_WHITE : COL_GRAY), buf);
             }
         }
