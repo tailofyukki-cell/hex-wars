@@ -16,6 +16,7 @@
 #define MAX_TERRAIN      32   /* 同上。ファンタジー等で地形を増やす余地 */
 #define MAX_COMMANDERS   16
 #define MAX_CAMPAIGN_MAPS 20
+#define MAX_STORY_LINES   10   /* 1作戦の幕間の行数。長くしないための上限 */
 /* 次の作戦へ引き継げるユニット数と、倉庫の容量。
  * 生き残った部隊は上限なく引き継げる方針なので、1マップに存在しうる最大数
  * （MAX_UNITS）まで取ってある＝実質無制限。セーブは件数を先に書く形式なので、

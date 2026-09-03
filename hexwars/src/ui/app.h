@@ -27,6 +27,7 @@ typedef enum {
     SCREEN_REWARD,     /* クリア時のご褒美画像/動画 */
     SCREEN_ENDROLL,    /* キャンペーン全クリア後のエンドロール */
     SCREEN_DEPLOY,     /* 出撃部隊の編成（持越しが上限を超えるとき） */
+    SCREEN_STORY,      /* 幕間（作戦前のひとこま。飛ばせる） */
     SCREEN_COUNT
 } ScreenId;
 
@@ -199,6 +200,9 @@ struct App {
     /* ターンメニュー */
     int   tmenu_idx;
     /* 未行動ユニット一覧 */
+    /* 幕間のタイプ表示。story_all は「途中で押されて全文出した」状態。 */
+    int   story_frames;
+    bool  story_all;
     int   ulist[MAX_UNITS];
     int   ulist_n, ulist_idx, ulist_scroll;
     /* セーブメニュー */

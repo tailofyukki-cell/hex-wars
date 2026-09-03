@@ -13,6 +13,18 @@
 
 static App s_app; /* 静的確保（仕様書 1.2） */
 
+/* 今の描画内容を HWSHOT のパスへ PNG で落として終了を予約する */
+static void save_shot(App *a)
+{
+    SDL_Surface *sf = SDL_CreateRGBSurfaceWithFormat(0, WIN_W, WIN_H, 32,
+                                                     SDL_PIXELFORMAT_RGBA32);
+    if (sf && SDL_RenderReadPixels(a->ren, NULL, SDL_PIXELFORMAT_RGBA32,
+                                   sf->pixels, sf->pitch) == 0)
+        IMG_SavePNG(sf, getenv("HWSHOT"));
+    if (sf) SDL_FreeSurface(sf);
+    a->quit = true;
+}
+
 static int load_defs(App *a)
 {
     char path[600], err[256];
@@ -241,6 +253,19 @@ int main(int argc, char *argv[])
                 a->next_screen = SCREEN_BRIEFING;
             }
         }
+        else if (!strcmp(argv[2], "story")) {
+            /* 幕間の確認用: --screen story [ノードID] */
+            char path[600], err[256];
+            snprintf(path, sizeof path, "%sdata/campaign/main.cpn", a->base_path);
+            if (campaign_load(&a->cpn, path, err, sizeof err) == 0) {
+                memset(&a->cps, 0, sizeof a->cps);
+                a->cps.active = true;
+                a->campaign_mode = true;
+                snprintf(a->cps.node, sizeof a->cps.node, "%s",
+                         (argc >= 4) ? argv[3] : a->cpn.start);
+                a->next_screen = SCREEN_STORY;
+            }
+        }
         else if (!strcmp(argv[2], "cpnmap")) {
             /* 作戦全体図の確認用: --screen cpnmap [現在ノードID] */
             char path[600], err[256];
@@ -280,16 +305,11 @@ int main(int argc, char *argv[])
     SDL_RenderPresent(a->ren);
     /* 環境変数 HWSHOT にパスを入れて起動すると、最初の1フレームを
      * PNG に保存して即終了する。画面レイアウトの確認に使う。
-     *   例) set HWSHOT=shot.png && hexwars.exe --screen result   */
-    if (getenv("HWSHOT")) {
-        SDL_Surface *sf = SDL_CreateRGBSurfaceWithFormat(0, WIN_W, WIN_H, 32,
-                                                         SDL_PIXELFORMAT_RGBA32);
-        if (sf && SDL_RenderReadPixels(a->ren, NULL, SDL_PIXELFORMAT_RGBA32,
-                                       sf->pixels, sf->pitch) == 0)
-            IMG_SavePNG(sf, getenv("HWSHOT"));
-        if (sf) SDL_FreeSurface(sf);
-        a->quit = true;
-    }
+     *   例) set HWSHOT=shot.png && hexwars.exe --screen result
+     * HWSHOT_FRAME=N を付けると N フレーム後に撮る。
+     * 幕間のタイプ表示のような「時間で変わる画面」の途中を見るため。 */
+    if (getenv("HWSHOT") && !getenv("HWSHOT_FRAME"))
+        save_shot(a);
     SDL_ShowWindow(a->win);
     SDL_RaiseWindow(a->win);
 
@@ -312,6 +332,9 @@ int main(int argc, char *argv[])
         SCREENS[a->screen].draw(a);
         SDL_RenderPresent(a->ren);
         a->frame++;
+        if (getenv("HWSHOT") && getenv("HWSHOT_FRAME") &&
+            (int)a->frame >= atoi(getenv("HWSHOT_FRAME")))
+            save_shot(a);
         /* vsync が効かない環境（ソフトウェア描画など）では毎フレーム全力で回って
          * しまい、ちらつきやCPU浪費の原因になるので約60fpsに抑える。 */
         uint32_t el = SDL_GetTicks() - frame_start;

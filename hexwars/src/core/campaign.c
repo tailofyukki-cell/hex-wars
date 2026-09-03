@@ -275,6 +275,29 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         else if (!strcmp(key, "next_lose"))     snprintf(cur->next_lose, sizeof cur->next_lose, "%s", val);
         else if (!strcmp(key, "enemy_co"))
             snprintf(cur->co[1], sizeof cur->co[1], "%s", val);
+        else if (!strcmp(key, "story")) {
+            /* story = 話者|セリフ。「|」が無ければ地の文。 */
+            if (cur->n_story < MAX_STORY_LINES) {
+                const char *bar = strchr(val, '|');
+                if (bar) {
+                    int n = (int)(bar - val);
+                    while (n > 0 && (val[n - 1] == ' ' || val[n - 1] == '\t')) n--;
+                    if (n > (int)sizeof cur->story[0].who - 1)
+                        n = (int)sizeof cur->story[0].who - 1;
+                    memcpy(cur->story[cur->n_story].who, val, (size_t)n);
+                    cur->story[cur->n_story].who[n] = '\0';
+                    const char *body = bar + 1;
+                    while (*body == ' ' || *body == '\t') body++;
+                    snprintf(cur->story[cur->n_story].text,
+                             sizeof cur->story[0].text, "%s", body);
+                } else {
+                    cur->story[cur->n_story].who[0] = '\0';
+                    snprintf(cur->story[cur->n_story].text,
+                             sizeof cur->story[0].text, "%s", val);
+                }
+                cur->n_story++;
+            }
+        }
         else if (!strcmp(key, "carry"))         cur->carry = atoi(val);
         else if (!strcmp(key, "bonus"))         cur->bonus = atoi(val);
         else if (!strcmp(key, "enemy")) cur->ctrl[1] = ctrl_from_word(val);

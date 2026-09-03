@@ -1593,6 +1593,32 @@ static void test_commanders(void)
     }
 }
 
+/* 幕間（キャンペーンのひとこま）。
+ * 読み飛ばせるのが前提なので、無いノードがあっても壊れてはいけない。 */
+static void test_campaign_story(void)
+{
+    Campaign c;
+    char err[256];
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    if (s_fail) { printf("  %s\n", err); return; }
+
+    int with_story = 0;
+    for (int i = 0; i < c.n_nodes; i++) {
+        const CpnNode *n = &c.nodes[i];
+        CHECK(n->n_story >= 0 && n->n_story <= MAX_STORY_LINES);
+        if (n->n_story > 0) with_story++;
+        for (int k = 0; k < n->n_story; k++) {
+            /* 本文が空の行は無い（話者だけ書いてしまった事故を拾う） */
+            CHECK(n->story[k].text[0] != 0);
+            /* 一枚に全行出すので、長すぎる行は箱からはみ出す。
+             * UTF-8の日本語は1字3バイトなので、話者＋本文でおおよそ40字以内。 */
+            CHECK(strlen(n->story[k].who) + strlen(n->story[k].text) <= 120);
+        }
+    }
+    /* 全作戦にひとこまがあること。抜けるとその作戦だけ話が飛ぶ。 */
+    CHECK(with_story == c.n_nodes);
+}
+
 /* キャンペーンの多陣営ノード（第3段階）。
  * .cpn の ctrl2/co2 が読めて、マップ側の team と組み合わさること。 */
 static void test_campaign_multi(void)
@@ -3551,6 +3577,7 @@ int main(void)
     test_daynight();
     test_multiplayer();
     test_teams();
+    test_campaign_story();
     test_campaign_multi();
     test_terrain_work();
     test_enemy_reinforce();

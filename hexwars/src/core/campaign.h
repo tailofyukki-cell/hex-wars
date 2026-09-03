@@ -35,6 +35,10 @@ typedef struct {
     char reward[64];          /* クリア時のご褒美画像（assets/ 相対。空=なし） */
     char reward_video[64];    /* クリア時の動画（mp4/GIF。指定時は画像より優先） */
     char brief[MAX_BRIEF_LINES][128];
+    /* 幕間（作戦前のひとこま）。who が空なら地の文。
+     * 全行を一枚に出して 1キーで進むだけなので、読み飛ばしても困らない。 */
+    struct { char who[24]; char text[128]; } story[MAX_STORY_LINES];
+    int  n_story;
     int  n_brief;
     char next_win[24];
     char next_win_fast[24];   /* 早期勝利ルート（空文字=なし） */

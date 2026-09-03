@@ -1084,13 +1084,13 @@ static void cpnmap_event(App *a, const SDL_Event *e)
         SDL_Rect cr = cpnmap_co_rect();
         if (SDL_PointInRect(&p, &cr)) { cpnmap_cycle_co(a); return; }
         snd_se(SE_OK);
-        a->next_screen = SCREEN_BRIEFING;
+        a->next_screen = SCREEN_STORY;
         return;
     }
     if (e->type == SDL_KEYDOWN &&
         (e->key.keysym.sym == SDLK_z || e->key.keysym.sym == SDLK_RETURN)) {
         snd_se(SE_OK);
-        a->next_screen = SCREEN_BRIEFING;
+        a->next_screen = SCREEN_STORY;
     }
     if (e->type == SDL_KEYDOWN &&
         (e->key.keysym.sym == SDLK_x || e->key.keysym.sym == SDLK_ESCAPE)) {
@@ -1982,6 +1982,167 @@ static void deploy_draw(App *a)
 }
 
 /* ------------------------------------------------------------------ */
+/* 幕間（作戦前のひとこま）                                       */
+/* ------------------------------------------------------------------ */
+/* 全行を一枚に出して、進むのは1キーだけ。
+ * 1行ずつ送る形式にしないのは、読み飛ばしたい人に
+ * 連打を強いないため。話が無いノードはそのままブリーフィングへ抜ける。 */
+/* タイプ表示は**文字単位**で切ること。バイトで切ると
+ * 日本語（3バイト）の途中で切れて文字化けになる。 */
+static int utf8_step(unsigned char c)
+{
+    return (c < 0x80) ? 1 : (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+}
+static int utf8_len(const char *s)
+{
+    int n = 0;
+    for (int i = 0; s[i]; ) { i += utf8_step((unsigned char)s[i]); n++; }
+    return n;
+}
+/* 先頭 n 文字分のバイト数 */
+static int utf8_prefix(const char *s, int n)
+{
+    int i = 0;
+    while (n > 0 && s[i]) { i += utf8_step((unsigned char)s[i]); n--; }
+    return i;
+}
+
+#define STORY_FRAMES_PER_CHAR 2   /* 60fps で毎秒30文字 */
+
+static int story_total_chars(const CpnNode *node)
+{
+    int n = 0;
+    for (int i = 0; i < node->n_story; i++) n += utf8_len(node->story[i].text);
+    return n;
+}
+
+/* 今何文字まで出していいか */
+static int story_shown(const App *a, const CpnNode *node)
+{
+    if (a->story_all) return story_total_chars(node);
+    return a->story_frames / STORY_FRAMES_PER_CHAR;
+}
+
+static bool story_finished(const App *a, const CpnNode *node)
+{
+    return story_shown(a, node) >= story_total_chars(node);
+}
+
+static void story_enter(App *a)
+{
+    snd_music(HWM_TITLE, true);
+    brief_free_art(a);
+    a->story_frames = 0;
+    a->story_all = false;
+    const CpnNode *node = campaign_find_node(&a->cpn, a->cps.node);
+    if (!node || node->n_story == 0) {
+        a->next_screen = SCREEN_BRIEFING;
+        return;
+    }
+    if (node->art[0])
+        a->brief_tex = sprite_load_file(a, node->art,
+                                        &a->brief_tex_w, &a->brief_tex_h);
+}
+
+static void story_go(App *a)
+{
+    brief_free_art(a);
+    a->next_screen = SCREEN_BRIEFING;
+}
+
+static void story_event(App *a, const SDL_Event *e)
+{
+    bool pressed =
+        (e->type == SDL_KEYDOWN &&
+         (e->key.keysym.sym == SDLK_z || e->key.keysym.sym == SDLK_RETURN ||
+          e->key.keysym.sym == SDLK_KP_ENTER ||
+          e->key.keysym.sym == SDLK_x || e->key.keysym.sym == SDLK_ESCAPE ||
+          e->key.keysym.sym == SDLK_SPACE)) ||
+        e->type == SDL_MOUSEBUTTONDOWN;
+    if (!pressed) return;
+
+    const CpnNode *node = campaign_find_node(&a->cpn, a->cps.node);
+    /* 流れている途中ならまず全文を出す。
+     * この一拍が無いと、連打したときに読まずに飛ばしてしまう。 */
+    if (node && !story_finished(a, node)) {
+        a->story_all = true;
+        snd_se(SE_CURSOR);
+        return;
+    }
+    snd_se(SE_OK);
+    story_go(a);
+}
+
+static void story_update(App *a)
+{
+    if (!a->story_all) a->story_frames++;
+}
+
+static void story_draw(App *a)
+{
+    fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 18, 22, 28, 255 });
+    const CpnNode *node = campaign_find_node(&a->cpn, a->cps.node);
+    /* 話が無いノードは story_enter が即ブリーフィングへ送る。
+     * 切り替わるのは次のフレームなので、その1枚を空の箱で出さない。 */
+    if (!node || node->n_story == 0) return;
+
+    /* 作戦の1枚絵を背景に敷く（暗く落とす）。
+     * 話専用の絵を別に用意しなくても雰囲気が出る。 */
+    if (a->brief_tex) {
+        int dw = WIN_W;
+        int dh = a->brief_tex_h * dw / (a->brief_tex_w ? a->brief_tex_w : 1);
+        SDL_Rect dst = { 0, 60, dw, dh };
+        SDL_SetTextureColorMod(a->brief_tex, 90, 96, 110);
+        SDL_RenderCopy(a->ren, a->brief_tex, NULL, &dst);
+        SDL_SetTextureColorMod(a->brief_tex, 255, 255, 255);
+    }
+
+    draw_text_center(a, a->font_s, WIN_W / 2, 40, COL_DIM, a->cpn.name);
+    draw_text_center(a, a->font_l, WIN_W / 2, 62, COL_WHITE, node->title);
+
+    /* 本文の箱。行数に合わせて高さを決め、下寄せで置く。 */
+    const int lh = 40;
+    int bh = 40 + node->n_story * lh;
+    int bx = 140, by = WIN_H - 118 - bh, bw = WIN_W - 280;
+    if (by < 150) by = 150;
+    fill_rect(a, bx, by, bw, bh, (SDL_Color){ 22, 26, 34, 235 });
+    outline_rect(a, bx, by, bw, bh, COL_DIM);
+
+    const SDL_Color WHO = { 150, 210, 255, 255 };   /* 話者名 */
+    const SDL_Color LINE = { 232, 232, 226, 255 };  /* セリフ */
+    const SDL_Color NARR = { 168, 172, 180, 255 };  /* 地の文 */
+    int budget = story_shown(a, node);
+    for (int i = 0; i < node->n_story; i++) {
+        int len = utf8_len(node->story[i].text);
+        if (budget <= 0) break;                 /* まだこの行は出ない */
+        int show = budget < len ? budget : len;
+        budget -= show;
+        char part[160];
+        int nb = utf8_prefix(node->story[i].text, show);
+        if (nb > (int)sizeof part - 1) nb = (int)sizeof part - 1;
+        memcpy(part, node->story[i].text, (size_t)nb);
+        part[nb] = 0;
+
+        int y = by + 20 + i * lh;
+        if (node->story[i].who[0]) {
+            char who[40];
+            snprintf(who, sizeof who, "%s", node->story[i].who);
+            draw_text(a, a->font_m, bx + 24, y, WHO, who);
+            int w = text_width(a, a->font_m, who);
+            char buf[200];
+            /* 閉じ括弧は出し切ってから。途中で出すと行が伸び縮みして見える。 */
+            snprintf(buf, sizeof buf, "「%s%s", part, show == len ? "」" : "");
+            draw_text(a, a->font_m, bx + 24 + w + 6, y, LINE, buf);
+        } else {
+            draw_text(a, a->font_m, bx + 40, y, NARR, part);
+        }
+    }
+
+    draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 60, COL_YELLOW,
+                     story_finished(a, node) ? tx("STORY_GO") : tx("STORY_SKIP"));
+}
+
+/* ------------------------------------------------------------------ */
 const Screen SCREENS[SCREEN_COUNT] = {
     { title_enter,  title_event,  title_update,  title_draw  },
     { setup_enter,  setup_event,  setup_update,  setup_draw  },
@@ -1994,4 +2155,5 @@ const Screen SCREENS[SCREEN_COUNT] = {
     { reward_enter, reward_event, reward_update, reward_draw },
     { endroll_enter, endroll_event, endroll_update, endroll_draw },
     { deploy_enter,  deploy_event,  deploy_update,  deploy_draw  },
+    { story_enter,   story_event,   story_update,   story_draw   },
 };
