@@ -966,13 +966,25 @@ static int pick_production(Game *g, AiState *s, int x, int y)
 {
     int me = g->current;
 
-    /* 自軍構成を数える */
+    /* 自軍構成を数えると同時に、敵の装甲構成と
+     * 「そのカテゴリにこちらが出せる火力」も集める。 */
+    int foe[ARMOR_COUNT] = { 0 }, mine[ARMOR_COUNT] = { 0 }, foe_total = 0;
     int n_cap = 0, n_combat = 0, n_supplier = 0;
     int n_transport = 0, n_riders = 0, n_truck = 0, n_slow = 0;
     for (int i = 0; i < g->n_units; i++) {
         const Unit *u = &g->units[i];
-        if (!(u->flags & UF_ALIVE) || u->owner != me) continue;
+        if (!(u->flags & UF_ALIVE)) continue;
+        if (u->owner != me) {
+            const UnitType *et = &g->types[u->type];
+            /* 見えていない敵は数えない（脅威マップと揃える） */
+            if (!game_is_enemy(g, me, u->owner)) continue;
+            if (!game_unit_visible_to(g, me, u)) continue;
+            foe[et->armor] += et->cost;
+            foe_total += et->cost;
+            continue;
+        }
         const UnitType *t = &g->types[u->type];
+        for (int c = 0; c < ARMOR_COUNT; c++) mine[c] += t->atk[c];
         if (t->supply) n_supplier++;
         else if (t->can_capture) n_cap++;
         else n_combat++;
@@ -996,6 +1008,20 @@ static int pick_production(Game *g, AiState *s, int x, int y)
                 open_bldgs++;
 
     bool want_capture = (n_cap < 3 && open_bldgs > 0);
+
+    /* 装甲カテゴリごとの「需要」。
+     * **4カテゴリの攻撃力を単純に足してはいけない**。足すと
+     * 何にでも当たる万能機ばかりが高得点になり、戦闘機や対空車のような
+     * 一点特化が永久に選ばれなくなる（敵の航空部隊が放置される）。 */
+    int dem[ARMOR_COUNT];
+    for (int c = 0; c < ARMOR_COUNT; c++) {
+        if (foe_total <= 0) { dem[c] = 25; continue; }  /* 何も見えていない間は横並び */
+        int share = foe[c] * 100 / foe_total;
+        /* そのカテゴリを撃てる手札が薄いほど需要を上げる。
+         * 「敵に航空が居るのにこちらは対空手段ゼロ」を拾うのが目的。 */
+        int mult = (mine[c] < 60) ? 4 : (mine[c] < 150) ? 2 : 1;
+        dem[c] = share * mult;
+    }
 
     int best = -1, best_sc = -1;
     for (int t = 0; t < g->n_types; t++) {
@@ -1026,10 +1052,13 @@ static int pick_production(Game *g, AiState *s, int x, int y)
         } else if (ut->can_capture) {
             sc = 100; /* 占領枠は足りている */
         } else {
-            /* 火力とコストで選ぶ（序盤=ターン数少は安め優先） */
+            /* 敵の構成に対する有効打で選ぶ（序盤=ターン数少は安め優先）。
+             * 価格項は控えめにすること。大きくすると、有効打を見ずに
+             * 高いユニットを選ぶだけの挙動に戻ってしまう。 */
             int power = 0;
-            for (int c = 0; c < ARMOR_COUNT; c++) power += ut->atk[c];
-            sc = power + (g->turn >= 6 ? ut->cost / 4 : -ut->cost / 4);
+            for (int c = 0; c < ARMOR_COUNT; c++) power += ut->atk[c] * dem[c];
+            power /= 100;
+            sc = power * 3 + (g->turn >= 6 ? ut->cost / 8 : -ut->cost / 8);
         }
         if (sc > best_sc) { best_sc = sc; best = t; }
     }
