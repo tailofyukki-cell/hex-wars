@@ -124,6 +124,8 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
     w_u8(w, g->weather_on);
     for (int i = 0; i < WX_COUNT; i++) w_i16(w, g->wx_pct[i]);
     w_u8(w, g->night_on);            /* v9 以降 */
+    w_u8(w, g->day_turns);           /* v13 以降 */
+    w_u8(w, g->night_turns);
     /* v10: 3陣営目以降。陣営0/1 は上で既に書いているので続きだけ。
      * この位置に入れるのは、下の指揮官ループの長さ自体が
      * 版によって変わるため（旧版は2、v10は MAX_PLAYERS）。 */
@@ -245,6 +247,15 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
     for (int i = 0; i < WX_COUNT; i++) g->wx_pct[i] = r_i16(r);
     /* v9 で昼夜を追加。古いセーブはマップの既定（有効）のまま読む */
     if (ver >= 9) g->night_on = r_u8(r);
+    /* v12以前は周期を持たないので既定（昼3・夜2）で埋める。
+     * 0 のままにするとゼロ除算になるので必ず入れること。 */
+    if (ver >= 13) {
+        g->day_turns = r_u8(r);
+        g->night_turns = r_u8(r);
+    } else {
+        g->day_turns = DAY_TURNS;
+        g->night_turns = NIGHT_TURNS;
+    }
     if (ver >= 10) {
         for (int p = 2; p < MAX_PLAYERS; p++) {
             g->funds[p] = r_i32(r);

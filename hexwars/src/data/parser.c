@@ -358,6 +358,8 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
     /* 天候は既定で有効・確率60/30/10。マップ側で weather=0 なら無効化できる */
     g->weather_on = 1;
     g->night_on = 1;      /* 既定で有効。.map で night=0 にできる */
+    g->day_turns = DAY_TURNS;
+    g->night_turns = NIGHT_TURNS;
     /* チームの既定は「各自が自分のチーム」＝全軍独立の乱戦。
      * .map で team1 = 0 のように書くと陣営1がチーム0に入る。 */
     for (int p = 0; p < MAX_PLAYERS; p++) {
@@ -410,6 +412,9 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
             else if (!strcmp(key, "income_scale")) g->income_scale = atoi(val);
             else if (!strcmp(key, "weather"))        g->weather_on = (uint8_t)(atoi(val) != 0);
             else if (!strcmp(key, "night"))          g->night_on = (uint8_t)(atoi(val) != 0);
+            /* 昼夜の周期をマップごとに変える。day_turns=0 で常夜。 */
+            else if (!strcmp(key, "day_turns"))      g->day_turns = (uint8_t)atoi(val);
+            else if (!strcmp(key, "night_turns"))    g->night_turns = (uint8_t)atoi(val);
             /* team0..team4 = 所属チーム / leader0..leader4 = そのチームの主力陣営 */
             else if (!strncmp(key, "team", 4) && key[4] >= '0' &&
                      key[4] <= '0' + MAX_PLAYERS - 1 && key[5] == 0) {

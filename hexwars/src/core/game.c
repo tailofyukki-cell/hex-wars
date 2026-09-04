@@ -397,24 +397,32 @@ int game_weather_move_mod(const Game *g, const Unit *u)
  * 今の天候と同じものを予報に出してしまうと「晴（次:晴）」のような
  * 意味のない表示になり、切り替わっても見た目が変わらないので除外する。 */
 /* --- 昼夜 ---
- * 周期が固定なのでターン数から引ける。状態を持たないので
- * セーブ形式も変わらず、ロード後にズレる心配もない。 */
+ * 今が昼か夜かはターン数から引ける（状態を持たない）。
+ * 周期の長さだけマップごとに持ち、day_turns=0 で常夜になる。 */
+static int daynight_cycle(const Game *g, int *day)
+{
+    int d = g->day_turns, n = g->night_turns;
+    if (d + n <= 0) { d = DAY_TURNS; n = NIGHT_TURNS; }   /* 保険 */
+    *day = d;
+    return d + n;
+}
+
 bool game_is_night(const Game *g)
 {
     if (!g->night_on) return false;
-    int cyc = DAY_TURNS + NIGHT_TURNS;
+    int day, cyc = daynight_cycle(g, &day);
     int pos = (g->turn - 1) % cyc;
     if (pos < 0) pos += cyc;
-    return pos >= DAY_TURNS;
+    return pos >= day;
 }
 
 int game_phase_left(const Game *g)
 {
     if (!g->night_on) return 0;
-    int cyc = DAY_TURNS + NIGHT_TURNS;
+    int day, cyc = daynight_cycle(g, &day);
     int pos = (g->turn - 1) % cyc;
     if (pos < 0) pos += cyc;
-    return (pos < DAY_TURNS) ? (DAY_TURNS - pos) : (cyc - pos);
+    return (pos < day) ? (day - pos) : (cyc - pos);
 }
 
 /* 夜の攻撃補正。
