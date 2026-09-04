@@ -1,30 +1,24 @@
-# f01 四面楚歌 - 1対4。陣営0が中央の砦、陣営1..4が四方から攻める。
-# 陣営1..4 は同一チーム（team=1）で、主力は陣営1（北）。
-# **主力の首都を落とせば、残り3陣営が健在でもその時点で決着**する。
-# 60ターン耐え切っても陣営0の勝ち（timeout_winner=0）。攻めるか凌ぐかを選べる。
+# f01 四面楚歌 - 5陣営の乱戦。陣営0が中央の砦、陣営1..4が四方。
+# **全陣営が独立**しており、四方の4陣営同士も戦う。
+# 中央は囲まれているが、周りがぶつかり合うのを待てるのが強み。
+# 人間は中央（陣営0）を想定した配分だが、フリー対戦なので設定で変えられる。
 #
-# 中央は山の環で囲い、門を四方に1つずつだけ開けてある。
+# 中央は山の環で囲い、門を四方に1つずつ（幅2）開けてある。
 # 開けた盤面だと4方向から同時に殴られて中央は何をしても保たない
-# （最初の版は実測5ターンで陥落した）。門で受けられる形にして初めて成立する。
-# 資金も 8000 対 1800x4 と非対称にしてある。
+# （4陣営が同盟していた版では実測5ターンで陥落した）。
+# 門で受けられる形にして初めて成立する。
+# 中央の資金だけ少し多い（4500 対 2600x4）。
 [map]
 name             = 四面楚歌
 width            = 52
 height           = 34
 turns            = 60
-timeout_winner   = 0
-funds0           = 6000
-funds1           = 3000
-funds2           = 1800
-funds3           = 1800
-funds4           = 1800
-team0            = 0
-team1            = 1
-team2            = 1
-team3            = 1
-team4            = 1
-leader0          = 0
-leader1          = 1
+timeout_winner   = -1
+funds0           = 4500
+funds1           = 2600
+funds2           = 2600
+funds3           = 2600
+funds4           = 2600
 
 [terrain]
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -100,24 +94,29 @@ unit = 0,SUPPLY,27,15
 unit = 0,FIGHTER,26,17
 unit = 1,TANK,26,4
 unit = 1,TANK,25,3
-unit = 1,HTANK,26,3
+unit = 1,LTANK,26,3
 unit = 1,ARTILLERY,27,3
-unit = 1,ROCKET,25,4
-unit = 1,AT_INFANTRY,27,4
-unit = 1,MECH_INF,25,5
-unit = 1,INFANTRY,26,5
+unit = 1,AT_INFANTRY,25,4
+unit = 1,MECH_INF,27,4
+unit = 1,INFANTRY,25,5
 unit = 2,TANK,47,17
-unit = 2,LTANK,46,16
-unit = 2,ARTILLERY,47,16
-unit = 2,AT_INFANTRY,48,16
-unit = 2,INFANTRY,46,17
+unit = 2,TANK,46,16
+unit = 2,LTANK,47,16
+unit = 2,ARTILLERY,48,16
+unit = 2,AT_INFANTRY,46,17
+unit = 2,MECH_INF,48,17
+unit = 2,INFANTRY,46,18
 unit = 3,TANK,26,29
-unit = 3,LTANK,25,28
-unit = 3,ARTILLERY,26,28
-unit = 3,AT_INFANTRY,27,28
-unit = 3,INFANTRY,25,29
+unit = 3,TANK,25,28
+unit = 3,LTANK,26,28
+unit = 3,ARTILLERY,27,28
+unit = 3,AT_INFANTRY,25,29
+unit = 3,MECH_INF,27,29
+unit = 3,INFANTRY,25,30
 unit = 4,TANK,4,17
-unit = 4,LTANK,3,16
-unit = 4,ARTILLERY,4,16
-unit = 4,AT_INFANTRY,5,16
-unit = 4,INFANTRY,3,17
+unit = 4,TANK,3,16
+unit = 4,LTANK,4,16
+unit = 4,ARTILLERY,5,16
+unit = 4,AT_INFANTRY,3,17
+unit = 4,MECH_INF,5,17
+unit = 4,INFANTRY,3,18

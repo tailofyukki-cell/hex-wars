@@ -1,0 +1,88 @@
+# f05 常夜の戦場 - day_turns=0 でずっと夜のマップ。
+# **夜は陸VS陸・海VS海・空VS空しか成立しない**ので、
+# 戦闘機で地上を叩く／対空戦車で航空を落とす、といった支援が一切効かない。
+# 陸・海・空がそれぞれ別の戦いを同時に進める形になる。
+# 夜間ユニット（夜間忍兵・夜間突撃艦・夜間迎撃機）は攻撃+50%かつ視界が落ちず、
+# 通常ユニットは攻撃-20%・視界-2・間接射程-1。夜専用部隊が主役になる。
+# 中央の海の帯に橋は無く、陸は渡れない。180度回転対称。
+[map]
+name             = 常夜の戦場
+width            = 44
+height           = 28
+turns            = 70
+timeout_winner   = -1
+night            = 1
+day_turns        = 0
+night_turns      = 5
+funds0           = 3500
+funds1           = 3500
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxx..............................xxxxxxx
+row = xxxx................w...................xxxx
+row = xxx........cw....wwwwwww.................xxx
+row = xxx.....fwwwwwwwwwwwwwwww..........^.....xxx
+row = xxx...H.wwwwwwwwwwwwwcww.........^^^^^...xxx
+row = xx.......wwwwwwwhhh.w...........^^^^^^^...xx
+row = xx..........whhhhhhh.............^^^^^....xx
+row = xx...a........hhhhh................^......xx
+row = xx..............h......................c..xx
+row = xx....p...................................xx
+row = xx..~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..xx
+row = xx.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.xx
+row = xx.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.xx
+row = xx..~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..xx
+row = xx...................................p....xx
+row = xx..c......................h..............xx
+row = xx......^................hhhhh........a...xx
+row = xx....^^^^^.............hhhhhhhw..........xx
+row = xx...^^^^^^^...........w.hhhwwwwwww.......xx
+row = xxx...^^^^^.........wwcwwwwwwwwwwwww.H...xxx
+row = xxx.....^..........wwwwwwwwwwwwwwwwf.....xxx
+row = xxx.................wwwwwww....wc........xxx
+row = xxxx...................w................xxxx
+row = xxxxxxx..............................xxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 6,6,0
+own = 37,21,1
+own = 8,5,0
+own = 35,22,1
+own = 5,9,0
+own = 38,18,1
+own = 6,11,0
+own = 37,16,1
+own = 11,4,0
+own = 32,23,1
+own = 4,17,0
+own = 39,10,1
+
+[units]
+unit = 0,NIGHT_INF,8,8
+unit = 1,NIGHT_INF,35,19
+unit = 0,NIGHT_INF,7,7
+unit = 1,NIGHT_INF,36,20
+unit = 0,MECH_INF,8,7
+unit = 1,MECH_INF,35,20
+unit = 0,TANK,9,7
+unit = 1,TANK,34,20
+unit = 0,ARTILLERY,7,8
+unit = 1,ARTILLERY,36,19
+unit = 0,AA_TANK,9,8
+unit = 1,AA_TANK,34,19
+unit = 0,INFANTRY,7,9
+unit = 1,INFANTRY,36,18
+unit = 0,NIGHT_FIGHTER,8,8
+unit = 1,NIGHT_FIGHTER,35,19
+unit = 0,FIGHTER,7,7
+unit = 1,FIGHTER,36,20
+unit = 0,NIGHT_BOAT,6,11
+unit = 1,NIGHT_BOAT,37,16
+unit = 0,DESTROYER,4,12
+unit = 1,DESTROYER,39,15
+unit = 0,SUPPLY,8,9
+unit = 1,SUPPLY,35,18

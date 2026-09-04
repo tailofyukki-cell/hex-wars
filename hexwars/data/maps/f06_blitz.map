@@ -1,0 +1,80 @@
+# f06 電撃戦 - 32x22・25ターン・最初から大軍の短期決戦。
+# **工場を置いていない**ので、生産できるのは首都の上だけ。
+# 初期資金 800・収入は首都の 300/ターンだけなので、欠けた分を
+# 埋めるペースにはまったく追いつかない。手持ちの16部隊をどう使い切るかで決まる。
+# 25ターンで決着しなければ引き分け。占領している暇はほとんど無い。
+# 180度回転対称。
+[map]
+name             = 電撃戦
+width            = 32
+height           = 22
+turns            = 25
+timeout_winner   = -1
+funds0           = 800
+funds1           = 800
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxx......................xxxxx
+row = xxx.............=............xxx
+row = xxx........w....=............xxx
+row = xx.......wwwww..=......h......xx
+row = xx......wwwwwww.c....hhhhh....xx
+row = xx....c..wwwww..=......h......xx
+row = xx.........w....w........c....xx
+row = xx............wwwww...........xx
+row = xx..H........wwwwwww..........xx
+row = xx..........wwwwwww........H..xx
+row = xx...........wwwww............xx
+row = xx....c........w....w.........xx
+row = xx......h......=..wwwww..c....xx
+row = xx....hhhhh....c.wwwwwww......xx
+row = xx......h......=..wwwww.......xx
+row = xxx............=....w........xxx
+row = xxx............=.............xxx
+row = xxxxx......................xxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 4,10,0
+own = 27,11,1
+own = 6,7,0
+own = 25,14,1
+own = 6,13,0
+own = 25,8,1
+
+[units]
+unit = 0,HTANK,5,10
+unit = 1,HTANK,26,11
+unit = 0,HTANK,4,9
+unit = 1,HTANK,27,12
+unit = 0,TANK,5,9
+unit = 1,TANK,26,12
+unit = 0,TANK,6,9
+unit = 1,TANK,25,12
+unit = 0,TANK,4,10
+unit = 1,TANK,27,11
+unit = 0,LTANK,6,10
+unit = 1,LTANK,25,11
+unit = 0,ARTILLERY,4,11
+unit = 1,ARTILLERY,27,10
+unit = 0,ROCKET,5,11
+unit = 1,ROCKET,26,10
+unit = 0,AA_TANK,6,11
+unit = 1,AA_TANK,25,10
+unit = 0,MECH_INF,3,8
+unit = 1,MECH_INF,28,13
+unit = 0,MECH_INF,4,8
+unit = 1,MECH_INF,27,13
+unit = 0,AT_INFANTRY,5,8
+unit = 1,AT_INFANTRY,26,13
+unit = 0,INFANTRY,6,8
+unit = 1,INFANTRY,25,13
+unit = 0,INFANTRY,7,8
+unit = 1,INFANTRY,24,13
+unit = 0,RECON,3,9
+unit = 1,RECON,28,12
+unit = 0,SUPPLY,7,9
+unit = 1,SUPPLY,24,12

@@ -2078,6 +2078,32 @@ static void test_teams(void)
 
 
 /* 多陣営: 参加判定・勝敗・手番送り */
+/* 常夜マップ（day_turns=0）。周期をマップごとに持つようにしたので、
+ * ゼロ除算や「実は昼になるターンがある」を拾っておく。 */
+static void test_endless_night(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/f05_endlessnight.map", err, sizeof err) == 0);
+    if (s_fail) { printf("  %s\n", err); return; }
+
+    CHECK(g->night_on == 1);
+    CHECK(g->day_turns == 0 && g->night_turns == 5);
+    for (int t = 1; t <= 40; t++) {
+        g->turn = t;
+        CHECK(game_is_night(g));          /* 一度も昼にならない */
+        CHECK(game_phase_left(g) >= 1);   /* 残りターンは常に正 */
+    }
+    /* 周期が 0/0 でも落ちないこと（手書き .map への保険） */
+    g->day_turns = 0; g->night_turns = 0;
+    g->turn = 7;
+    (void)game_is_night(g);
+    (void)game_phase_left(g);
+}
+
 static void test_multiplayer(void)
 {
     Game *g = &s_game;
@@ -2226,6 +2252,7 @@ static void test_daynight(void)
     CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
     if (s_fail) return;
     CHECK(g->night_on == 1);              /* 既定で有効 */
+    CHECK(g->day_turns == DAY_TURNS && g->night_turns == NIGHT_TURNS);
     g->fog = false;
     game_start(g, 3);
 
@@ -3723,6 +3750,7 @@ int main(void)
     test_commanders();
     test_weather();
     test_daynight();
+    test_endless_night();
     test_multiplayer();
     test_teams();
     test_maplist();

@@ -223,6 +223,10 @@ int main(void)
                   CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     if (run_match("data/maps/f04_skyline.map", 203,
                   CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/f05_endlessnight.map", 204,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/f06_blitz.map", 205,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     for (int s5 = 0; s5 < 5; s5++)
         if (run_match_ffa("data/maps/f01_lastStand.map", 210 + (uint32_t)s5,
                           CTRL_CPU_NORMAL) == -100) fail++;
