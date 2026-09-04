@@ -1,0 +1,123 @@
+# f01 四面楚歌 - 1対4。陣営0が中央の砦、陣営1..4が四方から攻める。
+# 陣営1..4 は同一チーム（team=1）で、主力は陣営1（北）。
+# **主力の首都を落とせば、残り3陣営が健在でもその時点で決着**する。
+# 60ターン耐え切っても陣営0の勝ち（timeout_winner=0）。攻めるか凌ぐかを選べる。
+#
+# 中央は山の環で囲い、門を四方に1つずつだけ開けてある。
+# 開けた盤面だと4方向から同時に殴られて中央は何をしても保たない
+# （最初の版は実測5ターンで陥落した）。門で受けられる形にして初めて成立する。
+# 資金も 8000 対 1800x4 と非対称にしてある。
+[map]
+name             = 四面楚歌
+width            = 52
+height           = 34
+turns            = 60
+timeout_winner   = 0
+funds0           = 6000
+funds1           = 3000
+funds2           = 1800
+funds3           = 1800
+funds4           = 1800
+team0            = 0
+team1            = 1
+team2            = 1
+team3            = 1
+team4            = 1
+leader0          = 0
+leader1          = 1
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxx....................................xxxxxxxx
+row = xxxxx..........................................xxxxx
+row = xxxx....................c.H.f...................xxxx
+row = xxx..............................................xxx
+row = xxx..............................................xxx
+row = xxx................w.............w...............xxx
+row = xx...............wwwww.........wwwww..............xx
+row = xx..............wwwwwww.......wwwwwww.............xx
+row = xx...........w...wwwww.........wwwww...w..........xx
+row = xx.........wwwww...w......=......w...wwwww........xx
+row = xx........wwwwwww.....^^^^==^^^.....wwwwwww.......xx
+row = xx.........wwwww....^^^hhhhh..^^^....wwwww........xx
+row = xx...........w.....^^hhhhh......^^.....w..........xx
+row = xx................^^..h......chhh^^...............xx
+row = xx................^^....f.......h^^...............xx
+row = xxc.H.f..........==..c....H....c..==.........c.H.fxx
+row = xx................==h.......a....==...............xx
+row = xx................^^hhhc.......h.^^...............xx
+row = xx...........w.....^^.......hhhh^^.....w..........xx
+row = xx.........wwwww....^^^...hhhh^^^....wwwww........xx
+row = xx........wwwwwww.....^^^^==^^^.....wwwwwww.......xx
+row = xx.........wwwww...w......=......w...wwwww........xx
+row = xx...........w...wwwww.........wwwww...w..........xx
+row = xx..............wwwwwww.......wwwwwww.............xx
+row = xxx..............wwwww.........wwwww.............xxx
+row = xxx................w.............w...............xxx
+row = xxx..............................................xxx
+row = xxxx....................c.H.f...................xxxx
+row = xxxxx..........................................xxxxx
+row = xxxxxxxx....................................xxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 26,17,0
+own = 24,16,0
+own = 28,18,0
+own = 23,19,0
+own = 29,15,0
+own = 21,17,0
+own = 31,17,0
+own = 26,4,1
+own = 28,4,1
+own = 24,4,1
+own = 47,17,2
+own = 49,17,2
+own = 45,17,2
+own = 26,29,3
+own = 28,29,3
+own = 24,29,3
+own = 4,17,4
+own = 6,17,4
+own = 2,17,4
+
+[units]
+unit = 0,HTANK,26,17
+unit = 0,HTANK,25,16
+unit = 0,TANK,26,16
+unit = 0,TANK,27,16
+unit = 0,ARTILLERY,25,17
+unit = 0,ROCKET,27,17
+unit = 0,AA_TANK,25,18
+unit = 0,MECH_INF,26,18
+unit = 0,MECH_INF,27,18
+unit = 0,INFANTRY,24,15
+unit = 0,INFANTRY,25,15
+unit = 0,AT_INFANTRY,26,15
+unit = 0,SUPPLY,27,15
+unit = 0,FIGHTER,26,17
+unit = 1,TANK,26,4
+unit = 1,TANK,25,3
+unit = 1,HTANK,26,3
+unit = 1,ARTILLERY,27,3
+unit = 1,ROCKET,25,4
+unit = 1,AT_INFANTRY,27,4
+unit = 1,MECH_INF,25,5
+unit = 1,INFANTRY,26,5
+unit = 2,TANK,47,17
+unit = 2,LTANK,46,16
+unit = 2,ARTILLERY,47,16
+unit = 2,AT_INFANTRY,48,16
+unit = 2,INFANTRY,46,17
+unit = 3,TANK,26,29
+unit = 3,LTANK,25,28
+unit = 3,ARTILLERY,26,28
+unit = 3,AT_INFANTRY,27,28
+unit = 3,INFANTRY,25,29
+unit = 4,TANK,4,17
+unit = 4,LTANK,3,16
+unit = 4,ARTILLERY,4,16
+unit = 4,AT_INFANTRY,5,16
+unit = 4,INFANTRY,3,17

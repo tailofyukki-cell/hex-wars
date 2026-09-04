@@ -20,7 +20,9 @@ int data_load_commanders(Game *g, const char *path, char *err, int errlen);
 int data_find_commander(const Game *g, const char *id);
 
 /* マップ一覧（maplist.txt: 「ファイル名|表示名」行） */
-#define MAX_MAPLIST 16
+/* フリー対戦で選べるマップの上限。
+ * 超えた分は黙って捨てられるので、maplist.txt を増やしたらここも見ること。 */
+#define MAX_MAPLIST 32
 typedef struct {
     char file[MAX_MAPLIST][64];
     char name[MAX_MAPLIST][64];

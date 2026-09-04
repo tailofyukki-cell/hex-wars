@@ -14,3 +14,8 @@ maps/c14_bastion.map|湾岸の要塞（56x32・総力戦）
 maps/c04_capital.map|首都攻略（42x29・最終決戦）
 maps/m05_threeway.map|三国志の丘（40x30・3陣営の乱戦）
 maps/m06_alliance.map|連合軍の反攻（46x32・2対2のチーム戦）
+# --- フリー対戦専用（キャンペーンには出てこない尖ったルールのマップ） ---
+maps/f01_lastStand.map|四面楚歌（44x30・1対4／東方連邦の首都を落とせ）
+maps/f02_defile.map|隘路の死闘（40x26・陸戦のみ）
+maps/f03_wolfpack.map|群狼の海（46x30・海戦のみ）
+maps/f04_skyline.map|蒼穹の戦列（46x30・航空戦のみ）

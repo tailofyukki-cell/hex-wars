@@ -1,6 +1,7 @@
 /* sim_ai.c - CPU同士の自動対戦シミュレーション（ヘッドレス統合テスト） */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "../src/core/game.h"
 #include "../src/core/ai.h"
 #include "../src/core/campaign.h"
@@ -17,9 +18,19 @@ static int run_match(const char *map, uint32_t seed, int ctrl0, int ctrl1)
     return run_match_co(map, seed, ctrl0, ctrl1, NULL, NULL);
 }
 
+/* 環境変数 HWSIM で回すマップを絞る（部分一致）。
+ * 1枚だけ調整したいときに全部回すと十分以上かかるため。
+ *   例) HWSIM=f01 sim_ai.exe */
+static int sim_skip(const char *map)
+{
+    const char *only = getenv("HWSIM");
+    return only && *only && !strstr(map, only);
+}
+
 /* 多陣営の乱戦。参加している陣営をすべてCPUにして回す。 */
 static int run_match_ffa(const char *map, uint32_t seed, int ctrl)
 {
+    if (sim_skip(map)) return 0;
     Game *g = &s_game;
     memset(g, 0, sizeof *g);
     char err[256];
@@ -61,6 +72,7 @@ static int run_match_ffa(const char *map, uint32_t seed, int ctrl)
 static int run_match_co(const char *map, uint32_t seed, int ctrl0, int ctrl1,
                         const char *co0, const char *co1)
 {
+    if (sim_skip(map)) return 0;
     Game *g = &s_game;
     memset(g, 0, sizeof *g);
     char err[256];
@@ -201,6 +213,19 @@ int main(void)
                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "DIETER", "NOEL") == -100) fail++;
     if (run_match_co("data/maps/c09_cities.map", 5106,
                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL, "EAGLE", "GRAF") == -100) fail++;
+
+    printf("== フリー対戦専用マップ ==\n");
+    /* 陸だけ / 海だけ / 空だけは「占領で盤面が動く」という AI の前提が
+     * 崩れるので、止まらない・落ちないことを見ておく。 */
+    if (run_match("data/maps/f02_defile.map", 201,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/f03_wolfpack.map", 202,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/f04_skyline.map", 203,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    for (int s5 = 0; s5 < 5; s5++)
+        if (run_match_ffa("data/maps/f01_lastStand.map", 210 + (uint32_t)s5,
+                          CTRL_CPU_NORMAL) == -100) fail++;
 
     printf("== 多陣営の乱戦 ==\n");
     for (int s3 = 0; s3 < 3; s3++)

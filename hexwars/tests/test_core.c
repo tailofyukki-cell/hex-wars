@@ -1593,6 +1593,88 @@ static void test_commanders(void)
     }
 }
 
+/* フリー対戦のマップ一覧。全部読めて、開幕で決着しないこと。
+ * **首都が1つでもあるマップでは、参加全陣営が首都を持つ必要がある**。
+ * 持たない陣営は game_player_defeated が即敗北と見なし、
+ * 手番すら回ってこない（マップを作るときに踏みやすい罠）。 */
+static void test_maplist(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    FILE *f = fopen("data/maps/maplist.txt", "rb");
+    CHECK(f != NULL);
+    if (!f) return;
+
+    char line[512];
+    int n_maps = 0;
+    while (fgets(line, sizeof line, f)) {
+        char *hash = strchr(line, '#');
+        if (hash) *hash = 0;
+        char *s2 = line;
+        while (*s2 == ' ' || *s2 == 0x09) s2++;
+        char *bar = strchr(s2, '|');
+        if (!bar) continue;
+        *bar = 0;
+        char *e = s2 + strlen(s2);
+        while (e > s2 && (e[-1] == ' ' || e[-1] == 0x09)) *--e = 0;
+        if (!*s2) continue;
+
+        char path[256];
+        snprintf(path, sizeof path, "data/%s", s2);
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        if (data_load_map(g, path, err, sizeof err) != 0) {
+            printf("  %s: %s\n", path, err);
+            CHECK(0);
+            continue;
+        }
+        n_maps++;
+        g->fog = false;
+        game_start(g, 9);
+
+        int parts = 0;
+        for (int p = 0; p < MAX_PLAYERS; p++) if (game_player_in_play(g, p)) parts++;
+        if (parts < 2) printf("  %s: 参加陣営が %d\n", path, parts);
+        CHECK(parts >= 2);
+
+        bool any_hq = false;
+        for (int y = 0; y < g->h && !any_hq; y++)
+            for (int x = 0; x < g->w && !any_hq; x++)
+                if (g->terrains[g->tiles[y][x].terrain].is_hq) any_hq = true;
+        for (int p = 0; p < MAX_PLAYERS; p++) {
+            if (!game_player_in_play(g, p)) continue;
+            if (any_hq) {
+                int mine = 0;
+                for (int y = 0; y < g->h; y++)
+                    for (int x = 0; x < g->w; x++)
+                        if (g->terrains[g->tiles[y][x].terrain].is_hq &&
+                            g->tiles[y][x].owner == (int8_t)p) mine++;
+                if (mine == 0) printf("  %s: 陣営%d に首都が無い\n", path, p);
+                CHECK(mine > 0);
+            }
+            if (game_player_defeated(g, p))
+                printf("  %s: 陣営%d が開幕で敗北扱い\n", path, p);
+            CHECK(!game_player_defeated(g, p));
+        }
+        game_check_victory(g);
+        if (g->winner != WINNER_NONE)
+            printf("  %s: 開幕で決着している (winner=%d)\n", path, g->winner);
+        CHECK(g->winner == WINNER_NONE);
+    }
+    fclose(f);
+    CHECK(n_maps >= 15);
+
+    /* **一覧の上限を超えていないこと**。data_load_maplist は
+     * MAX_MAPLIST を超えた行を黙って捨てるので、
+     * マップを追加してもゲームに出てこない事故になる。 */
+    {
+        MapList ml;
+        CHECK(data_load_maplist(&ml, "data/maps/maplist.txt") == 0);
+        CHECK(ml.n == n_maps);
+    }
+}
+
 /* CPUの生産判断: 敵の装甲構成に対する有効打で選ぶこと。
  * 4カテゴリの攻撃力を単純に足していた頃は、何にでも当たる
  * 爆撃機が常に勝ち、敵に航空がいても戦闘機を一度も作らなかった。 */
@@ -3643,6 +3725,7 @@ int main(void)
     test_daynight();
     test_multiplayer();
     test_teams();
+    test_maplist();
     test_ai_production_mix();
     test_campaign_story();
     test_campaign_multi();
