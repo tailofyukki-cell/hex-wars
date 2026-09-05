@@ -53,6 +53,7 @@ static void audio_defaults(void)
     snprintf(s_mus_file[HWM_TITLE],   sizeof s_mus_file[0], "bgm/bgm_title.wav");
     snprintf(s_mus_file[HWM_VICTORY], sizeof s_mus_file[0], "bgm/bgm_victory.wav");
     snprintf(s_mus_file[HWM_DEFEAT],  sizeof s_mus_file[0], "bgm/bgm_defeat.wav");
+    snprintf(s_mus_file[HWM_ENDING],  sizeof s_mus_file[0], "bgm/bgm_ending.wav");
     s_n_battle = 0;
 }
 
@@ -94,6 +95,7 @@ static int load_audio_def(const char *base_path)
                 if      (!strcmp(key + 6, "TITLE"))   { kind = 3; idx = HWM_TITLE; }
                 else if (!strcmp(key + 6, "VICTORY")) { kind = 3; idx = HWM_VICTORY; }
                 else if (!strcmp(key + 6, "DEFEAT"))  { kind = 3; idx = HWM_DEFEAT; }
+                else if (!strcmp(key + 6, "ENDING"))  { kind = 3; idx = HWM_ENDING; }
                 else SDL_Log("audio.def: 未知の music 名 [%s]", key);
             } else if (!strcmp(key, "battle")) {
                 if (s_n_battle < MAX_BATTLE_TRACKS) {
@@ -216,6 +218,11 @@ void snd_music(int id, bool loop)
     Mix_HaltMusic();
     Mix_PlayMusic(s_mus[id], loop ? -1 : 1);
     s_current_mus = id;
+}
+
+bool snd_music_available(int id)
+{
+    return s_enabled && id >= 0 && id < HWM_COUNT && s_mus[id] != NULL;
 }
 
 void snd_music_stop(void)

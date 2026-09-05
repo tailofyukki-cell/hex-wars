@@ -1710,7 +1710,12 @@ static void endroll_enter(App *a)
     /* 背景動画（任意）。assets/gfx/anim/endroll.mp4 か .gif があれば再生 */
     if (!uanim_get_path(a, "gfx/anim/endroll.mp4"))
         uanim_get_path(a, "gfx/anim/endroll.gif");
-    snd_music(HWM_VICTORY, false);
+    /* エンディング曲（audio.def の [music ENDING]）があればそれをループさせる。
+     * 無ければ従来どおり勝利ジングルを1回だけ。
+     * **ループさせるのはエンディング曲のときだけ**。短いジングルを
+     * 繰り返すとスタッフロールの間々と合わず逃しくなる。 */
+    if (snd_music_available(HWM_ENDING)) snd_music(HWM_ENDING, true);
+    else                                 snd_music(HWM_VICTORY, false);
 }
 
 static UnitAnim *endroll_video(App *a)

@@ -25,12 +25,15 @@ typedef enum {
 #define MAX_BATTLE_TRACKS 12
 #define MAX_SE_SETS        6
 
-/* 固定枠（TITLE/VICTORY/DEFEAT）＋ 戦闘BGM（可変長） */
+/* 固定枠（TITLE/VICTORY/DEFEAT/ENDING）＋ 戦闘BGM（可変長）。
+ * 番号は保存されない（オプションに残るのは戦闘BGMの「何曲目か」だけ）ので、
+ * 固定枠を途中に増やしても既存の設定は壊れない。 */
 typedef enum {
     HWM_NONE = -1,
     HWM_TITLE = 0,
     HWM_VICTORY,
     HWM_DEFEAT,
+    HWM_ENDING,          /* キャンペーン全クリア後のスタッフロール */
     HWM_BATTLE0,
     HWM_COUNT = HWM_BATTLE0 + MAX_BATTLE_TRACKS
 } MusId;
@@ -43,6 +46,11 @@ void snd_se(int id);
 /* 同じ曲が再生中なら何もしない。loop=false は1回のみ */
 void snd_music(int id, bool loop);
 void snd_music_stop(void);
+
+/* その曲が実際に読めているか。
+ * snd_music は無い曲を渡されると何もせずに戻る（前の曲が鳴り続ける）ので、
+ * 代替を選びたい側はこれで先に確かめる。 */
+bool snd_music_available(int id);
 
 /* 音量 0..10（仕様書 10章）。人の耳に合わせて2乗カーブで効かせる */
 void snd_apply_volumes(int bgm, int se);
