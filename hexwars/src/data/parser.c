@@ -369,6 +369,7 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
     g->wx_pct[WX_CLEAR] = 60;
     g->wx_pct[WX_CLOUDY] = 30;
     g->wx_pct[WX_RAIN] = 10;
+    g->weather_fixed = -1;
     g->objective_player = 0;
     g->map_name[0] = '\0';
     memset(g->tiles, 0, sizeof g->tiles);
@@ -437,6 +438,8 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
             else if (!strcmp(key, "weather_clear"))  g->wx_pct[WX_CLEAR]  = (int16_t)atoi(val);
             else if (!strcmp(key, "weather_cloudy")) g->wx_pct[WX_CLOUDY] = (int16_t)atoi(val);
             else if (!strcmp(key, "weather_rain"))   g->wx_pct[WX_RAIN]   = (int16_t)atoi(val);
+            /* 天候を固定する（0=晴 1=曇 2=雨）。常時雨のマップなど。 */
+            else if (!strcmp(key, "weather_fixed"))  g->weather_fixed = (int8_t)atoi(val);
             else if (!strcmp(key, "objective_count"))  g->objective_count = atoi(val);
             else if (!strcmp(key, "objective_player")) g->objective_player = atoi(val);
             else { set_err(err, errlen, path, ln, "不明なキー"); fclose(f); return -1; }

@@ -1751,8 +1751,13 @@ static void draw_topbar(App *a)
          * 残りターン数を出さないと「次は晴なのに雨が続く」と誤読される。
          * weather_left は「この先何回 continue するか」なので、今ターンを含めて +1。 */
         int wleft = g->weather_left + 1;
-        snprintf(buf, sizeof buf, tx("TOP_WEATHER_FMT"),
-                 tx(WXK[w]), wleft, tx(WXK[nx]));
+        /* 天候が固定のマップで予報を出すと「あと1ターンで雨→雨」と
+         * 変わるかのように見えるので、天候名だけにする。 */
+        if (g->weather_fixed >= 0)
+            snprintf(buf, sizeof buf, tx("TOP_WEATHER_FIXED_FMT"), tx(WXK[w]));
+        else
+            snprintf(buf, sizeof buf, tx("TOP_WEATHER_FMT"),
+                     tx(WXK[w]), wleft, tx(WXK[nx]));
         render_weather_icon(a, 620, 9, (int)w);
         draw_text(a, a->font_s, 644, 9, wc, buf);
     }

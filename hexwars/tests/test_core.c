@@ -2104,6 +2104,44 @@ static void test_endless_night(void)
     (void)game_phase_left(g);
 }
 
+/* 天候固定のマップ。重みだけでは常時雨にできない（game_start が必ず晴で始め、
+ * 抽選は今と同じ天候を除外する）ので、固定が本当に効いているか見る。 */
+static void test_fixed_weather(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/f07_stormstrait.map", err, sizeof err) == 0);
+    if (s_fail) { printf("  %s\n", err); return; }
+
+    CHECK(g->weather_on == 1);
+    CHECK(g->weather_fixed == WX_RAIN);
+    g->ctrl[0] = CTRL_HUMAN; g->ctrl[1] = CTRL_HUMAN;
+    g->turn_limit = 0;
+    game_start(g, 4);
+    CHECK(game_weather(g) == WX_RAIN);     /* 開幕から雨 */
+    for (int i = 0; i < 60; i++) {
+        game_end_turn(g);
+        CHECK(game_weather(g) == WX_RAIN); /* 一度も変わらない */
+    }
+    /* 雨は「片方だけが空」の攻撃を封じる。空戦どうしは通る。 */
+    {
+        int fig = data_find_unit_type(g, "FIGHTER");
+        int tank = data_find_unit_type(g, "TANK");
+        CHECK(fig >= 0 && tank >= 0);
+        g->n_units = 0;
+        int a1 = game_spawn_unit(g, 0, fig, 9, 9, 10);
+        int b1 = game_spawn_unit(g, 1, tank, 10, 9, 10);
+        int b2 = game_spawn_unit(g, 1, fig, 8, 9, 10);
+        CHECK(a1 >= 0 && b1 >= 0 && b2 >= 0);
+        game_update_vision(g);
+        CHECK(game_weather_atk_pct(g, &g->units[a1], &g->units[b1]) == 0);
+        CHECK(game_weather_atk_pct(g, &g->units[a1], &g->units[b2]) == 100);
+    }
+}
+
 static void test_multiplayer(void)
 {
     Game *g = &s_game;
@@ -3751,6 +3789,7 @@ int main(void)
     test_weather();
     test_daynight();
     test_endless_night();
+    test_fixed_weather();
     test_multiplayer();
     test_teams();
     test_maplist();

@@ -1,0 +1,91 @@
+# f07 嵐の海峡 - weather_fixed=2 でずっと雨のマップ。
+# **雨は「片方だけが空」の攻撃を封じる**ので、航空機は艦も地上も叩けず、
+# 逆に対空砲も航空機を落とせない。空戦どうしだけが成立する。
+# つまり制空権を取っても水上戦には一切効かず、勝負は海と陸だけでつく。
+# 飛行場はあえて置いてあるので、無駄と分かっていて航空に金を割くか選べる。
+# 雨は視界-2・地上の移動-1 も常時かかるので、鈍く見通しの悪い戦いになる。
+# 180度回転対称。
+[map]
+name             = 嵐の海峡
+width            = 48
+height           = 30
+turns            = 80
+timeout_winner   = -1
+weather          = 1
+weather_fixed    = 2
+funds0           = 3500
+funds1           = 3500
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxx..............w.....................xxxxxx
+row = xxxx.............wwwwwww....................xxxx
+row = xxx.......w..c..wwwwwwwww....................xxx
+row = xxx....wwfwwww...wwwwwww......^..............xxx
+row = xx....wwwwwwwww.....w.......^^^^^.............xx
+row = xx....Hwwwwwwwh........c...^^^^^^^............xx
+row = xx........w.hhhhh...........^^^^^.............xx
+row = xx.........hhhhhhh............^...............xx
+row = xx..a.......hhhhh..........................c..xx
+row = xx.....p......h...............................xx
+row = xx...~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...xx
+row = xx..~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..xx
+row = xx.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.xx
+row = xx.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.xx
+row = xx..~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..xx
+row = xx...~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...xx
+row = xx...............................h......p.....xx
+row = xx..c..........................hhhhh.......a..xx
+row = xx...............^............hhhhhhh.........xx
+row = xx.............^^^^^...........hhhhh.w........xx
+row = xx............^^^^^^^...c........hwwwwwwwH....xx
+row = xx.............^^^^^.......w.....wwwwwwwww....xx
+row = xxx..............^......wwwwwww...wwwwfww....xxx
+row = xxx....................wwwwwwwww..c..w.......xxx
+row = xxxx....................wwwwwww.............xxxx
+row = xxxxxx.....................w..............xxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 6,7,0
+own = 41,22,1
+own = 9,5,0
+own = 38,24,1
+own = 4,10,0
+own = 43,19,1
+own = 7,11,0
+own = 40,18,1
+own = 13,4,0
+own = 34,25,1
+own = 4,19,0
+own = 43,10,1
+
+[units]
+unit = 0,TANK,8,9
+unit = 1,TANK,39,20
+unit = 0,ARTILLERY,7,8
+unit = 1,ARTILLERY,40,21
+unit = 0,AA_TANK,8,8
+unit = 1,AA_TANK,39,21
+unit = 0,MECH_INF,9,8
+unit = 1,MECH_INF,38,21
+unit = 0,INFANTRY,7,9
+unit = 1,INFANTRY,40,20
+unit = 0,INFANTRY,9,9
+unit = 1,INFANTRY,38,20
+unit = 0,T_SHIP,7,11
+unit = 1,T_SHIP,40,18
+unit = 0,DESTROYER,5,12
+unit = 1,DESTROYER,42,17
+unit = 0,CRUISER,6,12
+unit = 1,CRUISER,41,17
+unit = 0,MISSILE_BOAT,7,12
+unit = 1,MISSILE_BOAT,40,17
+unit = 0,SUBMARINE,8,12
+unit = 1,SUBMARINE,39,17
+unit = 0,FIGHTER,8,9
+unit = 1,FIGHTER,39,20
+unit = 0,SUPPLY,7,10
+unit = 1,SUPPLY,40,19

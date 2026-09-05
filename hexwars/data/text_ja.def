@@ -124,6 +124,7 @@ TOP_FACTION_FMT = %s軍
 TOP_FUNDS_FMT   = 資金 %dG
 TOP_OBJ_FMT     = 拠点確保: %s %d/%d
 TOP_WEATHER_FMT = %s あと%dターン（次:%s）
+TOP_WEATHER_FIXED_FMT = %s（変わらない）
 WX_CLEAR        = 晴
 WX_CLOUDY       = 曇り
 WX_RAIN         = 雨

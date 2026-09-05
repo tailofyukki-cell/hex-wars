@@ -484,6 +484,7 @@ static uint8_t weather_pick(Game *g, int except)
 static void weather_advance(Game *g)
 {
     if (!g->weather_on) return;
+    if (g->weather_fixed >= 0) return;      /* このマップは天候が変わらない */
     if (g->weather_left > 0) { g->weather_left--; return; }
     /* 予報していた天候へ切り替え、次の予報を引く。
      * **次の予報は今の天候と別のものにする。** 同じ天候を引き直せてしまうと
@@ -1440,8 +1441,14 @@ void game_start(Game *g, uint32_t seed)
         g->wx_pct[WX_CLOUDY] = 30;
         g->wx_pct[WX_RAIN] = 10;
     }
-    g->weather = WX_CLEAR;
-    g->weather_left = (int8_t)(g->weather_on ? rng_range(&g->rng, 2, 4) : 0);
+    if (g->weather_fixed >= 0 && g->weather_fixed < WX_COUNT) {
+        g->weather = (uint8_t)g->weather_fixed;
+        g->weather_next = (uint8_t)g->weather_fixed;
+        g->weather_left = 0;
+    } else {
+        g->weather = WX_CLEAR;
+        g->weather_left = (int8_t)(g->weather_on ? rng_range(&g->rng, 2, 4) : 0);
+    }
     /* 最初の予報も晴以外から引く（開幕から「晴（次:晴）」では予報の意味がない） */
     g->weather_next = weather_pick(g, WX_CLEAR);
     for (int y = 0; y < g->h; y++)

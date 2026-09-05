@@ -227,6 +227,13 @@ int main(void)
                   CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     if (run_match("data/maps/f06_blitz.map", 205,
                   CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/f07_stormstrait.map", 206,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/f08_citadel.map", 207,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    for (uint32_t s9 = 0; s9 < 3; s9++)
+        if (run_match("data/maps/f09_drylines.map", 208 + s9 * 31,
+                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     for (int s5 = 0; s5 < 5; s5++)
         if (run_match_ffa("data/maps/f01_lastStand.map", 210 + (uint32_t)s5,
                           CTRL_CPU_NORMAL) == -100) fail++;

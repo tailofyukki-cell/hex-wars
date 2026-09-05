@@ -1,0 +1,76 @@
+# f09 涸れた戦線 - 拠点が1つも無いマップ。
+# 収入も生産も補給も回復も無く、**手持ちの部隊だけで決着をつける**。
+# 首都が無いので敗北条件は全滅のみ。初期資金も0。
+# 弾薬が切れた部隊は攻撃できなくなるので、補給車の物資が生命線になる
+# （その補給車も使い切ればただの的）。撃つ相手を選ぶ戦い。
+# 航空ユニットは燃料切れで墜落するため置いていない（補給できる場所が無い）。
+# 180度回転対称。
+[map]
+name             = 涸れた戦線
+width            = 38
+height           = 26
+turns            = 45
+timeout_winner   = -1
+funds0           = 0
+funds1           = 0
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxx..........................xxxxxx
+row = xxxx..............................xxxx
+row = xxx................................xxx
+row = xxx.........w......................xxx
+row = xx.......wwwwwww......h.............xx
+row = xx......wwwwwwwww...hhhhh...........xx
+row = xx.......wwwwwww...hhhhhhh..........xx
+row = xx..........w.......hhhhh...........xx
+row = xx........h...........h.............xx
+row = xx......hhhhh.....w.................xx
+row = xx.....hhhhhhh.wwwwwww..............xx
+row = xx..............wwwwwww.hhhhhhh.....xx
+row = xx.................w.....hhhhh......xx
+row = xx.............h...........h........xx
+row = xx...........hhhhh.......w..........xx
+row = xx..........hhhhhhh...wwwwwww.......xx
+row = xx...........hhhhh...wwwwwwwww......xx
+row = xx.............h......wwwwwww.......xx
+row = xxx......................w.........xxx
+row = xxx................................xxx
+row = xxxx..............................xxxx
+row = xxxxxx..........................xxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+
+[units]
+unit = 0,HTANK,6,13
+unit = 1,HTANK,31,12
+unit = 0,TANK,5,12
+unit = 1,TANK,32,13
+unit = 0,TANK,6,12
+unit = 1,TANK,31,13
+unit = 0,LTANK,7,12
+unit = 1,LTANK,30,13
+unit = 0,ARTILLERY,5,13
+unit = 1,ARTILLERY,32,12
+unit = 0,AT_INFANTRY,7,13
+unit = 1,AT_INFANTRY,30,12
+unit = 0,MECH_INF,5,14
+unit = 1,MECH_INF,32,11
+unit = 0,MECH_INF,6,14
+unit = 1,MECH_INF,31,11
+unit = 0,INFANTRY,7,14
+unit = 1,INFANTRY,30,11
+unit = 0,INFANTRY,4,11
+unit = 1,INFANTRY,33,14
+unit = 0,RECON,5,11
+unit = 1,RECON,32,14
+unit = 0,SUPPLY,6,11
+unit = 1,SUPPLY,31,14
+unit = 0,SUPPLY,7,11
+unit = 1,SUPPLY,30,14
+unit = 1,TANK,29,10
+unit = 1,AT_INFANTRY,30,10
+unit = 1,MECH_INF,31,10

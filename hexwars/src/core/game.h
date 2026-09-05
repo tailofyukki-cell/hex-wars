@@ -76,6 +76,10 @@ typedef struct Game {
     uint8_t weather;        /* Weather */
     uint8_t weather_next;   /* 次に変わる天候（予報として表示する） */
     int8_t  weather_left;   /* 残りラウンド数（0で weather_next へ切替） */
+    /* 天候を固定するマップ（.map の weather_fixed）。-1=固定しない。
+     * 重みだけでは常時雨にできない。game_start は必ず晴で始めるし、
+     * 抽選は「今と同じ天候」を除外するので必ず別の天候へ移る。 */
+    int8_t  weather_fixed;
     uint8_t weather_on;     /* 0=このマップは天候なし（.map の weather=0） */
     /* 天候の抽選重み（既定 60/30/10。.map の weather_clear/cloudy/rain で上書き可）。
      * 切り替え時は「今の天候を除いて」この重みで引くので、

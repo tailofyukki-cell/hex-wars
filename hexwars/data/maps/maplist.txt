@@ -21,3 +21,6 @@ maps/f03_wolfpack.map|群狼の海（46x30・海戦のみ）
 maps/f04_skyline.map|蒼穹の戦列（46x30・航空戦のみ）
 maps/f05_endlessnight.map|常夜の戦場（44x28・ずっと夜／同じ領域同士しか戦えない）
 maps/f06_blitz.map|電撃戦（32x22・25ターンの短期決戦）
+maps/f07_stormstrait.map|嵐の海峡（48x30・常時雨／航空は水上に手を出せない）
+maps/f08_citadel.map|城塞の攻防（42x28・非対称／守りは40ターン耐える・攻めは拠点10個）
+maps/f09_drylines.map|涸れた戦線（38x26・拠点なし／手持ちの部隊だけで決める）

@@ -1,0 +1,93 @@
+# f08 城塞の攻防 - 目的が左右で違う非対称マップ。
+# 守備側(陣営0)は山に囲まれた城塞に少数で籠もる。**40ターン耐えれば守備側の勝ち**
+# （timeout_winner=0）。攻撃側(陣営1)は数で押し、**拠点を10個確保すれば勝ち**
+# （objective_count=10 / objective_player=1）。
+# 拠点は全部で16個あり、守備側は最初から8個持っている。
+# 攻撃側は守備側の拠点を半分以上剥がさないと届かない計算。
+# 対称ではない。左右で戦力も資金も目的も違う。
+[map]
+name             = 城塞の攻防
+width            = 42
+height           = 28
+turns            = 40
+timeout_winner   = 0
+objective_count  = 10
+objective_player = 1
+funds0           = 2200
+funds1           = 5000
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxx..............................xxxxxx
+row = xxxx..................................xxxx
+row = xxx......................^^............xxx
+row = xxx...........w..........^^............xxx
+row = xx.........wwwwwwc.......^^...h.........xx
+row = xx........wwwwwwwww......^^.hhhhh.......xx
+row = xx..c......wwwwwww.........hhhhhhc......xx
+row = xx............w.............hhhhh.......xx
+row = xx.....f.................^^...h.........xx
+row = xx.......................^^.........c...xx
+row = xx.................w.....^^.....f.......xx
+row = xx..............wwwwwww.................xx
+row = xx...H.........wcwwwwwww..........H...c.xx
+row = xx..............wwwwwww..^^.............xx
+row = xx.................w.....^^.........a...xx
+row = xx.......................^^....c........xx
+row = xx.....f.................^^...h.........xx
+row = xx............w.............hhhhh.......xx
+row = xx..c......wwwwwww.........hhhhhhc......xx
+row = xx........wwwwwwwww......^^.hhhhh.......xx
+row = xxx........wwwwwwc.......^^...h........xxx
+row = xxx...........w..........^^............xxx
+row = xxxx..................................xxxx
+row = xxxxxx..............................xxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 34,14,0
+own = 32,12,0
+own = 36,16,0
+own = 31,17,0
+own = 36,11,0
+own = 33,20,0
+own = 33,8,0
+own = 38,14,0
+own = 5,14,1
+own = 7,10,1
+own = 7,18,1
+own = 4,8,1
+own = 4,20,1
+
+[units]
+unit = 0,HTANK,34,14
+unit = 0,ARTILLERY,33,13
+unit = 0,AA_GUN,34,13
+unit = 0,AT_INFANTRY,35,13
+unit = 0,MECH_INF,33,14
+unit = 0,INFANTRY,35,14
+unit = 0,INFANTRY,33,15
+unit = 0,SUPPLY,34,15
+unit = 1,HTANK,6,14
+unit = 1,HTANK,5,13
+unit = 1,TANK,6,13
+unit = 1,TANK,7,13
+unit = 1,TANK,5,14
+unit = 1,LTANK,7,14
+unit = 1,LTANK,5,15
+unit = 1,ARTILLERY,6,15
+unit = 1,ARTILLERY,7,15
+unit = 1,ROCKET,4,12
+unit = 1,ROCKET,5,12
+unit = 1,AA_TANK,6,12
+unit = 1,MECH_INF,7,12
+unit = 1,MECH_INF,8,12
+unit = 1,AT_INFANTRY,4,13
+unit = 1,INFANTRY,8,13
+unit = 1,INFANTRY,4,14
+unit = 1,INFANTRY,8,14
+unit = 1,RECON,4,15
+unit = 1,TRUCK,8,15
+unit = 1,SUPPLY,4,16
