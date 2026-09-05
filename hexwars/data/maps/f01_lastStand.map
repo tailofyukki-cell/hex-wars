@@ -1,4 +1,5 @@
 # f01 四面楚歌 - 5陣営の乱戦。陣営0が中央の砦、陣営1..4が四方。
+# **飛行場も港も無いので陸上ユニットだけの戦い**になる。
 # **全陣営が独立**しており、四方の4陣営同士も戦う。
 # 中央は囲まれているが、周りがぶつかり合うのを待てるのが強み。
 # 人間は中央（陣営0）を想定した配分だが、フリー対戦なので設定で変えられる。
@@ -40,7 +41,7 @@ row = xx...........w.....^^hhhhh......^^.....w..........xx
 row = xxc.c.............^^..h......chhh^^............c.cxx
 row = xx................^^....f.......h^^...............xx
 row = xxf.H.f.c........==..c....H....c..==.......c.f.H.fxx
-row = xx................==h.......a....==...............xx
+row = xx................==h.......c....==...............xx
 row = xx..c.............^^hhhc.......h.^^............c..xx
 row = xx...........w.....^^.......hhhh^^.....w..........xx
 row = xx.........wwwww....^^^..chhhh^^^....wwwww........xx
@@ -100,16 +101,16 @@ unit = 0,HTANK,26,17
 unit = 0,HTANK,25,16
 unit = 0,TANK,26,16
 unit = 0,TANK,27,16
-unit = 0,ARTILLERY,25,17
-unit = 0,ROCKET,27,17
-unit = 0,AA_TANK,25,18
+unit = 0,TANK,25,17
+unit = 0,ARTILLERY,27,17
+unit = 0,ROCKET,25,18
 unit = 0,MECH_INF,26,18
 unit = 0,MECH_INF,27,18
 unit = 0,INFANTRY,24,15
 unit = 0,INFANTRY,25,15
 unit = 0,AT_INFANTRY,26,15
 unit = 0,SUPPLY,27,15
-unit = 0,FIGHTER,26,17
+unit = 0,RECON,28,15
 unit = 1,TANK,26,4
 unit = 1,TANK,25,3
 unit = 1,LTANK,26,3
