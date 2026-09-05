@@ -8,6 +8,7 @@
 # （4陣営が同盟していた版では実測5ターンで陥落した）。
 # 門で受けられる形にして初めて成立する。
 # 中央の資金だけ少し多い（4500 対 2600x4）。
+# 収入は 中央1050 対 四方1000x4。中央は砦に籠もれるぶん、地力では大きく劣る。
 [map]
 name             = 四面楚歌
 width            = 52
@@ -23,11 +24,11 @@ funds4           = 2600
 [terrain]
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-row = xxxxxxxx....................................xxxxxxxx
+row = xxxxxxxx..................c.................xxxxxxxx
 row = xxxxx..........................................xxxxx
-row = xxxx....................c.H.f...................xxxx
+row = xxxx..................c.f.H.f.c.................xxxx
 row = xxx..............................................xxx
-row = xxx..............................................xxx
+row = xxx.......................c......................xxx
 row = xxx................w.............w...............xxx
 row = xx...............wwwww.........wwwww..............xx
 row = xx..............wwwwwww.......wwwwwww.............xx
@@ -36,23 +37,23 @@ row = xx.........wwwww...w......=......w...wwwww........xx
 row = xx........wwwwwww.....^^^^==^^^.....wwwwwww.......xx
 row = xx.........wwwww....^^^hhhhh..^^^....wwwww........xx
 row = xx...........w.....^^hhhhh......^^.....w..........xx
-row = xx................^^..h......chhh^^...............xx
+row = xxc.c.............^^..h......chhh^^............c.cxx
 row = xx................^^....f.......h^^...............xx
-row = xxc.H.f..........==..c....H....c..==.........c.H.fxx
+row = xxf.H.f.c........==..c....H....c..==.......c.f.H.fxx
 row = xx................==h.......a....==...............xx
-row = xx................^^hhhc.......h.^^...............xx
+row = xx..c.............^^hhhc.......h.^^............c..xx
 row = xx...........w.....^^.......hhhh^^.....w..........xx
-row = xx.........wwwww....^^^...hhhh^^^....wwwww........xx
+row = xx.........wwwww....^^^..chhhh^^^....wwwww........xx
 row = xx........wwwwwww.....^^^^==^^^.....wwwwwww.......xx
 row = xx.........wwwww...w......=......w...wwwww........xx
 row = xx...........w...wwwww.........wwwww...w..........xx
 row = xx..............wwwwwww.......wwwwwww.............xx
 row = xxx..............wwwww.........wwwww.............xxx
-row = xxx................w.............w...............xxx
+row = xxx................w......c......w...............xxx
 row = xxx..............................................xxx
-row = xxxx....................c.H.f...................xxxx
+row = xxxx..................c.f.H.f.c.................xxxx
 row = xxxxx..........................................xxxxx
-row = xxxxxxxx....................................xxxxxxxx
+row = xxxxxxxx..................c.................xxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -64,18 +65,35 @@ own = 23,19,0
 own = 29,15,0
 own = 21,17,0
 own = 31,17,0
+own = 25,21,0
 own = 26,4,1
 own = 28,4,1
 own = 24,4,1
+own = 30,4,1
+own = 22,4,1
+own = 26,6,1
+own = 26,2,1
 own = 47,17,2
 own = 49,17,2
 own = 45,17,2
+own = 49,15,2
+own = 43,17,2
+own = 47,19,2
+own = 47,15,2
 own = 26,29,3
 own = 28,29,3
 own = 24,29,3
+own = 30,29,3
+own = 22,29,3
+own = 26,31,3
+own = 26,27,3
 own = 4,17,4
 own = 6,17,4
 own = 2,17,4
+own = 8,17,4
+own = 2,15,4
+own = 4,19,4
+own = 4,15,4
 
 [units]
 unit = 0,HTANK,26,17
