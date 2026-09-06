@@ -356,17 +356,104 @@ static int setup_back_row(const App *a)  { return setup_rows(a) - 1; }
 static void setup_refresh_parts(App *a)
 {
     a->setup_parts = 0;
+    a->setup_preview = false;
     if (a->maps.n > 0) {
-        char path[600];
+        char path[600], err[256];
         snprintf(path, sizeof path, "%sdata/%s", a->base_path,
                  a->maps.file[a->sel_map]);
-        a->setup_parts = map_participants(path);
+        /* プレビューのためにここで本読みしてしまう。地形テキストを自前で
+         * 解釈すると、実際に遊ぶ盤面とずれた縮小図を出す危険がある。
+         * 選択を変えたときだけなので重くない。a->game はどうせ開始時に
+         * 読み直される。 */
+        if (data_load_map(&a->game, path, err, sizeof err) == 0) {
+            a->setup_preview = true;
+            for (int i = 0; i < a->game.n_units; i++) {
+                int o = a->game.units[i].owner;
+                if (o >= 0 && o < MAX_PLAYERS) a->setup_parts |= 1u << o;
+            }
+            for (int y = 0; y < a->game.h; y++)
+                for (int x = 0; x < a->game.w; x++) {
+                    int o = a->game.tiles[y][x].owner;
+                    if (o >= 0 && o < MAX_PLAYERS) a->setup_parts |= 1u << o;
+                }
+        } else {
+            a->setup_parts = map_participants(path);   /* 読めなくても行数は出す */
+        }
     }
     if (a->setup_parts == 0) a->setup_parts = 0x3;   /* 読めなければ2陣営扱い */
     /* 陣営0は人間、それ以外はCPU普通を既定にする */
     for (int p = 0; p < MAX_PLAYERS; p++)
         if (a->sel_ctrl[p] > SETUP_CTRL_HUMAN) a->sel_ctrl[p] = 1;
     if (a->setup_row >= setup_rows(a)) a->setup_row = 0;
+}
+
+/* マップの縮小図。地形の color をそのまま使うので、
+ * マップを追加しても絵を用意せずに勝手に出る。
+ * 持ち主のいる拠点は陣営色で塗り、中立の拠点は白で置く。 */
+static void setup_draw_preview(App *a, int px, int py, int pw, int ph)
+{
+    fill_rect(a, px, py, pw, ph, (SDL_Color){ 20, 25, 33, 255 });
+    outline_rect(a, px, py, pw, ph, COL_DIM);
+    const Game *g = &a->game;
+    if (!a->setup_preview || g->w <= 0 || g->h <= 0) {
+        draw_text_center(a, a->font_s, px + pw / 2, py + ph / 2 - 8, COL_DIM,
+                         tx("SETUP_NOPREVIEW"));
+        return;
+    }
+    /* セルは正方形で描く。ヘクスの形まで再現してもこの大きさでは差が見えず、
+     * 地形の分布が分かれば目的は果たせる。 */
+    int pad = 6;
+    int cw = (pw - pad * 2) / g->w;
+    int ch = (ph - pad * 2) / g->h;
+    int cs = cw < ch ? cw : ch;
+    if (cs < 1) cs = 1;
+    int ox = px + (pw - cs * g->w) / 2;
+    int oy = py + (ph - cs * g->h) / 2;
+    for (int y = 0; y < g->h; y++) {
+        for (int x = 0; x < g->w; x++) {
+            const Tile *t = &g->tiles[y][x];
+            const TerrainType *tt = &g->terrains[t->terrain];
+            /* 圏外は描かない。盤の形そのものが分かるようにする。 */
+            if (tt->mcost[MC_FOOT] <= 0 && tt->mcost[MC_AIR] <= 0 &&
+                tt->mcost[MC_SEA] <= 0)
+                continue;
+            SDL_Color c = { (Uint8)(tt->color >> 16), (Uint8)(tt->color >> 8),
+                            (Uint8)tt->color, 255 };
+            if (t->owner >= 0 && t->owner < MAX_PLAYERS) c = COL_P[t->owner];
+            else if (tt->capturable) c = (SDL_Color){ 235, 235, 230, 255 };
+            fill_rect(a, ox + x * cs, oy + y * cs, cs, cs, c);
+        }
+    }
+}
+
+/* マップの見出し（広さ・陣営数・ターン上限と、普通と違うルール） */
+static void setup_draw_info(App *a, int px, int py, int pw)
+{
+    if (!a->setup_preview) return;
+    const Game *g = &a->game;
+    char buf[128];
+    snprintf(buf, sizeof buf, tx("SETUP_MAPINFO_FMT"),
+             g->w, g->h, setup_nparts(a), g->turn_limit);
+    draw_text_center(a, a->font_s, px + pw / 2, py, COL_GRAY, buf);
+
+    /* 普通と違うところだけ並べる。全部書くと読まなくなる。 */
+    char note[128];
+    note[0] = 0;
+    if (g->night_on && g->day_turns == 0)
+        snprintf(note, sizeof note, "%s", tx("SETUP_TAG_NIGHT"));
+    if (g->weather_on && g->weather_fixed >= 0) {
+        if (note[0]) strncat(note, " / ", sizeof note - strlen(note) - 1);
+        strncat(note, tx("SETUP_TAG_WXFIXED"), sizeof note - strlen(note) - 1);
+    }
+    if (g->objective_count > 0) {
+        char o[48];
+        snprintf(o, sizeof o, tx("SETUP_TAG_OBJ_FMT"), g->objective_count);
+        if (note[0]) strncat(note, " / ", sizeof note - strlen(note) - 1);
+        strncat(note, o, sizeof note - strlen(note) - 1);
+    }
+    if (note[0])
+        draw_text_center(a, a->font_s, px + pw / 2, py + 22,
+                         (SDL_Color){ 230, 200, 130, 255 }, note);
 }
 
 static void setup_enter(App *a)
@@ -382,10 +469,12 @@ static void setup_enter(App *a)
 
 static SDL_Rect setup_row_rect(const App *a, int i)
 {
+    /* 5陣営だと14行になり、46px刻みでは最下段が下のヒントに重なる。
+     * 行数に応じて3段階で詰める。 */
     int n = setup_rows(a);
-    int gap = (n <= 8) ? 62 : 46;
-    int h   = (n <= 8) ? 48 : 38;
-    int top = (n <= 8) ? 210 : 158;
+    int gap = (n <= 8) ? 62 : (n <= 12) ? 46 : 42;
+    int h   = (n <= 8) ? 48 : (n <= 12) ? 38 : 34;
+    int top = (n <= 8) ? 210 : (n <= 12) ? 158 : 148;
     SDL_Rect r = { WIN_W / 2 - 320, top + i * gap, 640, h };
     return r;
 }
@@ -549,10 +638,12 @@ static void setup_event(App *a, const SDL_Event *e)
 static void setup_draw(App *a)
 {
     fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 32, 42, 52, 255 });
-    draw_text_center(a, a->font_xl, WIN_W / 2, 100, COL_WHITE, tx("SETUP_TITLE"));
 
     int n = setup_nparts(a);
     int rows = setup_rows(a);
+    /* 5陣営だと行が14本になり、題名の下に最上段が食い込む。 */
+    draw_text_center(a, a->font_xl, WIN_W / 2, (rows > 12) ? 64 : 100,
+                     COL_WHITE, tx("SETUP_TITLE"));
     bool small = (rows > 8);
     TTF_Font *f = small ? a->font_s : a->font_m;
 
@@ -609,16 +700,21 @@ static void setup_draw(App *a)
         draw_text(a, f, r.x + 300, ty, sel ? COL_YELLOW : COL_WHITE, vbuf);
     }
 
-    /* 指揮官の行を選んでいるときだけ、その陣営の顔絵を出す */
-    if (a->game.n_cos > 0) {
-        int rr = a->setup_row - SETUP_FIXED_TOP;
-        if (rr >= n && rr < n * 2) {
-            int p = setup_part_at(a, rr - n);
-            draw_co_portrait(a, a->sel_co[p], 985, 246, 264, 352);
-            char buf[64];
-            snprintf(buf, sizeof buf, tx("SETUP_CO_FMT"), faction_name(p));
-            draw_text_center(a, a->font_s, 985 + 132, 214, COL_GRAY, buf);
-        }
+    /* 右ペイン: 指揮官の行なら顔絵、それ以外はマップの縮小図。
+     * 両方同時に出すと場所が足りないので差し替える。 */
+    int rr = a->setup_row - SETUP_FIXED_TOP;
+    bool co_row = (a->game.n_cos > 0 && rr >= n && rr < n * 2);
+    if (co_row) {
+        int p = setup_part_at(a, rr - n);
+        draw_co_portrait(a, a->sel_co[p], 985, 246, 264, 352);
+        char buf[64];
+        snprintf(buf, sizeof buf, tx("SETUP_CO_FMT"), faction_name(p));
+        draw_text_center(a, a->font_s, 985 + 132, 214, COL_GRAY, buf);
+    } else {
+        /* マップ名は「マップ」の行に出ているので、ここでは繰り返さない
+         * （長い名前が枠からはみ出すだけになる）。 */
+        setup_draw_preview(a, 985, 246, 264, 264);
+        setup_draw_info(a, 985, 522, 264);
     }
     if (!setup_has_human(a))
         draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 60,

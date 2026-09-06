@@ -109,7 +109,8 @@ struct App {
      * マップによって何陣営参加するかが変わるので、
      * setup_parts に立っている陣営の分だけ使う。 */
     uint8_t sel_ctrl[MAX_PLAYERS];
-    unsigned setup_parts;   /* 選択中マップの参加陣営ビット */
+    unsigned setup_parts;
+    bool  setup_preview;     /* 選択中マップの縮小図を出せるか（読み込めたか） */   /* 選択中マップの参加陣営ビット */
     /* 人間の陣営が全て倒れて終了したか。
      * AI同士の決着を待っても操作できることはないのでその時点で終わる。
      * winner は WINNER_NONE のままなので、結果画面はこの旗で判別する。 */
