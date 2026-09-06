@@ -285,6 +285,72 @@ static void title_draw(App *a)
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 40, COL_DIM, tx("TITLE_HINT"));
 }
 
+/* タイプ表示は**文字単位**で切ること。バイトで切ると
+ * 日本語（3バイト）の途中で切れて文字化けになる。 */
+static int utf8_step(unsigned char c)
+{
+    return (c < 0x80) ? 1 : (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+}
+static int utf8_len(const char *s)
+{
+    int n = 0;
+    for (int i = 0; s[i]; ) { i += utf8_step((unsigned char)s[i]); n++; }
+    return n;
+}
+/* 先頭 n 文字分のバイト数 */
+static int utf8_prefix(const char *s, int n)
+{
+    int i = 0;
+    while (n > 0 && s[i]) { i += utf8_step((unsigned char)s[i]); n--; }
+    return i;
+}
+
+/* 行頭に来てはいけない文字（行頭禁則）。
+ * これが無いと「。」だけが次の行に落ちて見苦しい。 */
+static bool jp_no_line_start(const char *p)
+{
+    static const char *NG[] = {
+        "。", "、", "，", "．", "）", "」", "』",
+        "】", "〕", "！", "？", "ー", "っ",
+        "ゃ", "ゅ", "ょ", "ぁ", "ぃ", "ぅ",
+        "ぇ", "ぉ", NULL
+    };
+    for (int i = 0; NG[i]; i++)
+        if (!strncmp(p, NG[i], strlen(NG[i]))) return true;
+    return false;
+}
+
+/* 幅 w に収まるところで折り返しながら描く。戻り値は次の y。
+ * 日本語は単語境界が無いので、入るところで切ってから行頭禁則で調整する。 */
+static int draw_text_wrap(App *a, TTF_Font *f, int x, int y, int w,
+                          SDL_Color c, const char *s, int lh)
+{
+    char line[256];
+    int total = utf8_len(s);
+    int from = 0;
+    while (from < total) {
+        int take = total - from;
+        for (; take > 0; take--) {
+            int b0 = utf8_prefix(s, from);
+            int b1 = utf8_prefix(s, from + take);
+            int nb = b1 - b0;
+            if (nb > (int)sizeof line - 1) continue;
+            memcpy(line, s + b0, (size_t)nb);
+            line[nb] = 0;
+            if (text_width(a, f, line) <= w) break;
+        }
+        if (take <= 0) break;             /* 1文字も入らない幅。諦める */
+        /* 次の行の先頭が禁則文字なら、1文字手前で切って押し下げる */
+        while (take > 1 && from + take < total &&
+               jp_no_line_start(s + utf8_prefix(s, from + take)))
+            take--;
+        draw_text(a, f, x, y, c, line);
+        y += lh;
+        from += take;
+    }
+    return y;
+}
+
 /* ------------------------------------------------------------------ */
 /* フリー対戦セットアップ                                              */
 /* ------------------------------------------------------------------ */
@@ -456,9 +522,64 @@ static void setup_draw_info(App *a, int px, int py, int pw)
                          (SDL_Color){ 230, 200, 130, 255 }, note);
 }
 
+/* 指揮官の能力を顔絵の下に出す。名前と一言だけでは選べないので、
+ * **常時効果の数値と必殺技**まで見せる。0 の項目は書かない（読む量を減らす）。 */
+static void setup_draw_co_detail(App *a, int ci, int px, int py, int pw)
+{
+    if (ci < 0 || ci >= a->game.n_cos) return;
+    const CommanderType *co = &a->game.cos[ci];
+    const int LH = 20;
+    char buf[192];
+    int y = py;
+
+    snprintf(buf, sizeof buf, "【%s】", co->title);
+    draw_text(a, a->font_s, px, y, COL_YELLOW, buf);
+    y += LH;
+    y = draw_text_wrap(a, a->font_s, px, y, pw, COL_GRAY, co->desc, LH);
+    y += 6;
+
+    /* 常時効果。効かない領域があるなら先に断っておく。 */
+    static const char *DOM[] = { "CO_DOM_ALL", "CO_DOM_LAND",
+                                 "CO_DOM_AIR", "CO_DOM_SEA" };
+    if (co->domain != CO_DOM_ALL && co->domain < 4) {
+        draw_text(a, a->font_s, px, y, (SDL_Color){ 230, 200, 130, 255 },
+                  tx(DOM[co->domain]));
+        y += LH;
+    }
+    struct { const char *key; int v; bool pct; } ST[] = {
+        { "CO_ST_ATK",    co->atk_pct,      true  },
+        { "CO_ST_DEF",    co->def_pct,      true  },
+        { "CO_ST_MOVE",   co->move_bonus,   false },
+        { "CO_ST_VISION", co->vision_bonus, false },
+        { "CO_ST_INCOME", co->income_pct,   true  },
+    };
+    for (int i = 0; i < 5; i++) {
+        if (ST[i].v == 0) continue;
+        snprintf(buf, sizeof buf, ST[i].pct ? "%s %+d%%" : "%s %+d",
+                 tx(ST[i].key), ST[i].v);
+        draw_text(a, a->font_s, px, y,
+                  ST[i].v > 0 ? (SDL_Color){ 150, 225, 160, 255 }
+                              : (SDL_Color){ 235, 150, 150, 255 }, buf);
+        y += LH;
+    }
+    y += 6;
+
+    if (co->power_name[0]) {
+        snprintf(buf, sizeof buf, tx("CO_POWER_FMT"),
+                 co->power_name, co->power_cost);
+        draw_text(a, a->font_s, px, y, COL_YELLOW, buf);
+        y += LH;
+        draw_text_wrap(a, a->font_s, px, y, pw, COL_GRAY, co->power_desc, LH);
+    }
+}
+
 static void setup_enter(App *a)
 {
     a->setup_row = 0;
+    if (a->setup_row_boot > 0) {         /* --screen setup <map> <row> */
+        a->setup_row = a->setup_row_boot;
+        a->setup_row_boot = 0;
+    }
     /* 旧フィールドから引き継ぐ（初回や他画面から戻ってきたとき） */
     a->sel_ctrl[0] = SETUP_CTRL_HUMAN;
     if (a->sel_ctrl[1] > SETUP_CTRL_HUMAN) a->sel_ctrl[1] = (uint8_t)a->sel_p2;
@@ -706,10 +827,13 @@ static void setup_draw(App *a)
     bool co_row = (a->game.n_cos > 0 && rr >= n && rr < n * 2);
     if (co_row) {
         int p = setup_part_at(a, rr - n);
-        draw_co_portrait(a, a->sel_co[p], 985, 246, 264, 352);
+        /* 顔絵は正方形に縮めて、空いた下を能力の表示に使う。
+         * 名前と一言だけでは、どれを選べばいいのか判断できない。 */
+        draw_co_portrait(a, a->sel_co[p], 985, 246, 264, 264);
         char buf[64];
         snprintf(buf, sizeof buf, tx("SETUP_CO_FMT"), faction_name(p));
         draw_text_center(a, a->font_s, 985 + 132, 214, COL_GRAY, buf);
+        setup_draw_co_detail(a, a->sel_co[p], 985, 522, 264);
     } else {
         /* マップ名は「マップ」の行に出ているので、ここでは繰り返さない
          * （長い名前が枠からはみ出すだけになる）。 */
@@ -2090,26 +2214,6 @@ static void deploy_draw(App *a)
 /* 全行を一枚に出して、進むのは1キーだけ。
  * 1行ずつ送る形式にしないのは、読み飛ばしたい人に
  * 連打を強いないため。話が無いノードはそのままブリーフィングへ抜ける。 */
-/* タイプ表示は**文字単位**で切ること。バイトで切ると
- * 日本語（3バイト）の途中で切れて文字化けになる。 */
-static int utf8_step(unsigned char c)
-{
-    return (c < 0x80) ? 1 : (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
-}
-static int utf8_len(const char *s)
-{
-    int n = 0;
-    for (int i = 0; s[i]; ) { i += utf8_step((unsigned char)s[i]); n++; }
-    return n;
-}
-/* 先頭 n 文字分のバイト数 */
-static int utf8_prefix(const char *s, int n)
-{
-    int i = 0;
-    while (n > 0 && s[i]) { i += utf8_step((unsigned char)s[i]); n--; }
-    return i;
-}
-
 #define STORY_FRAMES_PER_CHAR 2   /* 60fps で毎秒30文字 */
 
 /* 今出すべき行群（作戦前 / 勝利直後） */

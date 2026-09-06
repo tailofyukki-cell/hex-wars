@@ -127,10 +127,18 @@ int main(int argc, char *argv[])
     if (argc >= 3 && strcmp(argv[1], "--screen") == 0) {
         if      (!strcmp(argv[2], "options")) a->next_screen = SCREEN_OPTIONS;
         else if (!strcmp(argv[2], "setup")) {
-            /* --screen setup [maplistの番号] でマップを選んだ状態にできる */
+            /* --screen setup [maplistの番号] [行] でマップとカーソル位置を
+             * 指定できる。行を指定するのは、指揮官の行を選んだときだけ出る
+             * 右ペインを確かめるため（setup_enter が拾って一度だけ適用する）。 */
             if (argc >= 4) {
                 int mi = atoi(argv[3]);
                 if (mi >= 0 && mi < a->maps.n) a->sel_map = mi;
+            }
+            if (argc >= 5) a->setup_row_boot = atoi(argv[4]);
+            if (argc >= 6) {           /* 指揮官も選んだ状態にできる */
+                int ci = atoi(argv[5]);
+                for (int p = 0; p < MAX_PLAYERS; p++) a->sel_co[p] = ci;
+                a->sel_co0 = a->sel_co1 = ci;
             }
             a->next_screen = SCREEN_SETUP;
         }

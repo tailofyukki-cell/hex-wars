@@ -110,6 +110,7 @@ struct App {
      * setup_parts に立っている陣営の分だけ使う。 */
     uint8_t sel_ctrl[MAX_PLAYERS];
     unsigned setup_parts;
+    int   setup_row_boot;    /* --screen setup の行指定（確認用。0=なし） */
     bool  setup_preview;     /* 選択中マップの縮小図を出せるか（読み込めたか） */   /* 選択中マップの参加陣営ビット */
     /* 人間の陣営が全て倒れて終了したか。
      * AI同士の決着を待っても操作できることはないのでその時点で終わる。
