@@ -1,0 +1,137 @@
+# f10 二大陸と内海 - 陸・海・空を全部使う決戦マップ（60x42）。
+#
+# 中央に内海があり、東西に大陸が分かれている。ただし**南北は陸続き**なので、
+# 陸路（南北の回廊）・海路（内海）・空路の3つが同時に開いている。
+#   陸: 南北の陸路を山で1か所ずつに絞ってある。ここを抜けば直接殴り合える。
+#   海: 内海の島に中立の泊地と野戦飛行場があり、取れば前進基地になる。
+#   空: 島の飛行場を押さえないと、中央上空まで往復するだけで燃料が尽きる。
+#
+# 初期配置は片側26部隊（陸18・海5・空3）。生産も含めるとかなりの数になるので、
+# CPUの手番はそれなりに待つ。
+#
+# 180度回転対称。odd-rヘクスでは左右反転が距離を保たない（約39%の組で変わる）
+# ため、対になる図形を回転で置いている。
+[map]
+name             = 二大陸と内海
+width            = 60
+height           = 42
+turns            = 100
+timeout_winner   = -1
+funds0           = 5000
+funds1           = 5000
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxx............w........^^.hhhhh...............xxxxxxxx
+row = xxxxx............wwwwwww.....^^hhhhhhh.................xxxxx
+row = xxxx............wwwwwwwwwc...^^.hhhhh...................xxxx
+row = xxx..............wwwwwww.....^^...h......................xxx
+row = xxx.................w....................................xxx
+row = xxx......................................................xxx
+row = xx...........................^^..c........................xx
+row = xx......w....................^^................w..........xx
+row = xx..c.wwwww..................^^..............wwwww........xx
+row = xx...wwwwwww.................^^.............wwwwwww.......xx
+row = xx..wwwwwwwcw.............~~~~~~~~...........wwwww........xx
+row = xx...wwwwwww...........~~~~~~~~~~~~~~..........w..........xx
+row = xx....wwwww.............~~~~~~~~.~~~~~~................c..xx
+row = xx...a..w............A...~~~~~~...~~~~~~.............h....xx
+row = xx......................~~~~~~.....P~~~~~..........hhhhh..xx
+row = xx.......f........~~~.~~~~~~~~~...~~~~~~~~........hhhhhhh.xx
+row = xx............h...~~~~~~~~~~~~~~.~~~~~~~~~........fhhhhh..xx
+row = xx...........hhhp~~~~~~~~~~~~~~~~~~~~~~~~~~..h.......h....xx
+row = xx....H.....hhhhh~~~~~~~~~~~~~~~~~~~~~~~~~~.hhh...........xx
+row = xx...........hhh.~~~~~~~~~~~~~~~~~~~~~~~~~~hhhhh.....H....xx
+row = xx....h.......h..~~~~~~~~~~~~~~~~~~~~~~~~~~phhh...........xx
+row = xx..hhhhhf........~~~~~~~~~.~~~~~~~~~~~~~~...h............xx
+row = xx.hhhhhhh........~~~~~~~~...~~~~~~~~~.~~~........f.......xx
+row = xx..hhhhh..........~~~~~P.....~~~~~~......................xx
+row = xx....h.............~~~~~~...~~~~~~...A............w..a...xx
+row = xx..c................~~~~~~.~~~~~~~~.............wwwww....xx
+row = xx..........w..........~~~~~~~~~~~~~~...........wwwwwww...xx
+row = xx........wwwww...........~~~~~~~~.............wcwwwwwww..xx
+row = xx.......wwwwwww.............^^.................wwwwwww...xx
+row = xx........wwwww..............^^..................wwwww.c..xx
+row = xx..........w................^^....................w......xx
+row = xx........................c..^^...........................xx
+row = xxx......................................................xxx
+row = xxx....................................w.................xxx
+row = xxx......................h...^^.....wwwwwww..............xxx
+row = xxxx...................hhhhh.^^...cwwwwwwwww............xxxx
+row = xxxxx.................hhhhhhh^^.....wwwwwww............xxxxx
+row = xxxxxxxx...............hhhhh.^^........w............xxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 6,20,0
+own = 53,21,1
+own = 9,17,0
+own = 50,24,1
+own = 9,23,0
+own = 50,18,1
+own = 5,15,0
+own = 54,26,1
+own = 16,19,0
+own = 43,22,1
+own = 4,27,0
+own = 55,14,1
+own = 11,12,0
+own = 48,29,1
+own = 4,10,0
+own = 55,31,1
+
+[units]
+unit = 0,HTANK,8,20
+unit = 1,HTANK,51,21
+unit = 0,HTANK,7,19
+unit = 1,HTANK,52,22
+unit = 0,TANK,8,19
+unit = 1,TANK,51,22
+unit = 0,TANK,9,19
+unit = 1,TANK,50,22
+unit = 0,TANK,7,20
+unit = 1,TANK,52,21
+unit = 0,LTANK,9,20
+unit = 1,LTANK,50,21
+unit = 0,ARTILLERY,7,21
+unit = 1,ARTILLERY,52,20
+unit = 0,ARTILLERY,8,21
+unit = 1,ARTILLERY,51,20
+unit = 0,ROCKET,9,21
+unit = 1,ROCKET,50,20
+unit = 0,AA_TANK,6,18
+unit = 1,AA_TANK,53,23
+unit = 0,MECH_INF,7,18
+unit = 1,MECH_INF,52,23
+unit = 0,MECH_INF,8,18
+unit = 1,MECH_INF,51,23
+unit = 0,INFANTRY,9,18
+unit = 1,INFANTRY,50,23
+unit = 0,INFANTRY,10,18
+unit = 1,INFANTRY,49,23
+unit = 0,INFANTRY,6,19
+unit = 1,INFANTRY,53,22
+unit = 0,AT_INFANTRY,10,19
+unit = 1,AT_INFANTRY,49,22
+unit = 0,RECON,6,20
+unit = 1,RECON,53,21
+unit = 0,SUPPLY,10,20
+unit = 1,SUPPLY,49,21
+unit = 0,CRUISER,16,19
+unit = 1,CRUISER,43,22
+unit = 0,DESTROYER,17,19
+unit = 1,DESTROYER,42,22
+unit = 0,DESTROYER,17,20
+unit = 1,DESTROYER,42,21
+unit = 0,SUBMARINE,17,21
+unit = 1,SUBMARINE,42,20
+unit = 0,T_SHIP,17,22
+unit = 1,T_SHIP,42,19
+unit = 0,FIGHTER,6,15
+unit = 1,FIGHTER,53,26
+unit = 0,FIGHTER,5,14
+unit = 1,FIGHTER,54,27
+unit = 0,BOMBER,6,14
+unit = 1,BOMBER,53,27

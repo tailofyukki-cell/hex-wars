@@ -234,6 +234,9 @@ int main(void)
     for (uint32_t s9 = 0; s9 < 3; s9++)
         if (run_match("data/maps/f09_drylines.map", 208 + s9 * 31,
                       CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    /* 大型マップ。部隊数が多いので遅いが、止まらないことを見る。 */
+    if (run_match("data/maps/f10_twocontinents.map", 209,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     for (int s5 = 0; s5 < 5; s5++)
         if (run_match_ffa("data/maps/f01_lastStand.map", 210 + (uint32_t)s5,
                           CTRL_CPU_NORMAL) == -100) fail++;
