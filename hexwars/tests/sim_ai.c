@@ -237,6 +237,9 @@ int main(void)
     /* 大型マップ。部隊数が多いので遅いが、止まらないことを見る。 */
     if (run_match("data/maps/f10_twocontinents.map", 209,
                   CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    /* 5陣営×70部隊の海洋マップ。ここまで大きいと手番は遅い。 */
+    if (run_match_ffa("data/maps/f11_fiveisles.map", 215,
+                      CTRL_CPU_NORMAL) == -100) fail++;
     for (int s5 = 0; s5 < 5; s5++)
         if (run_match_ffa("data/maps/f01_lastStand.map", 210 + (uint32_t)s5,
                           CTRL_CPU_NORMAL) == -100) fail++;
