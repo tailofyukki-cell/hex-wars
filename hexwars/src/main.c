@@ -197,6 +197,15 @@ int main(int argc, char *argv[])
                     int t = atoi(argv[5]);
                     if (t >= 1) a->game.turn = t;
                 }
+                /* --screen battle <map> <天候> <ターン> <指揮官>
+                 * 指揮官ゲージを出した状態で上部バーを見るため。 */
+                if (argc >= 7 && a->game.n_cos > 0) {
+                    int ci = atoi(argv[6]);
+                    if (ci >= 0 && ci < a->game.n_cos) {
+                        a->game.co_id[0] = a->game.co_id[1] = (int8_t)ci;
+                        a->game.co_gauge[0] = 40;
+                    }
+                }
                 a->next_screen = SCREEN_BATTLE;
             } else {
                 SDL_Log("マップ読込失敗: %s", err);

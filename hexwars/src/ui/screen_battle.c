@@ -1721,23 +1721,20 @@ static void draw_topbar(App *a)
         snprintf(buf, sizeof buf, tx("TOP_TURNLIM_FMT"), g->map_name, g->turn, g->turn_limit);
     else
         snprintf(buf, sizeof buf, tx("TOP_TURN_FMT"), g->map_name, g->turn);
-    draw_text(a, a->font_m, 10, 6, COL_WHITE, buf);
+    /* **固定座標で並べないこと**。マップ名も天候の文言も長さが変わるので、
+     * 測った幅で左から詰める。以前は昼夜(862)と拠点条件(980)が
+     * 指揮官ゲージ(900〜1140)の下に潜って読めなくなっていた。 */
+    int tx_ = 10;
+    draw_text(a, a->font_m, tx_, 6, COL_WHITE, buf);
+    tx_ += text_width(a, a->font_m, buf) + 24;
 
     snprintf(buf, sizeof buf, tx("TOP_FACTION_FMT"), faction_name(g->current));
-    draw_text(a, a->font_m, 360, 6, COL_P[g->current], buf);
+    draw_text(a, a->font_m, tx_, 6, COL_P[g->current], buf);
+    tx_ += text_width(a, a->font_m, buf) + 24;
 
     snprintf(buf, sizeof buf, tx("TOP_FUNDS_FMT"), g->funds[g->current]);
-    draw_text(a, a->font_m, 500, 6, COL_YELLOW, buf);
-
-    /* 昼夜。周期が固定なので残りターン数を出すと作戦が立てられる */
-    if (g->night_on) {
-        bool nite = game_is_night(g);
-        snprintf(buf, sizeof buf, tx("TOP_PHASE_FMT"),
-                 tx(nite ? "PHASE_NIGHT" : "PHASE_DAY"), game_phase_left(g));
-        draw_text(a, a->font_s, 862, 9,
-                  nite ? (SDL_Color){ 150, 170, 235, 255 }
-                       : (SDL_Color){ 250, 220, 130, 255 }, buf);
-    }
+    draw_text(a, a->font_m, tx_, 6, COL_YELLOW, buf);
+    tx_ += text_width(a, a->font_m, buf) + 24;
 
     /* 天候と予報（悪天候は色を変えて気づけるように） */
     if (g->weather_on) {
@@ -1758,18 +1755,34 @@ static void draw_topbar(App *a)
         else
             snprintf(buf, sizeof buf, tx("TOP_WEATHER_FMT"),
                      tx(WXK[w]), wleft, tx(WXK[nx]));
-        render_weather_icon(a, 620, 9, (int)w);
-        draw_text(a, a->font_s, 644, 9, wc, buf);
+        render_weather_icon(a, tx_, 9, (int)w);
+        tx_ += 24;
+        draw_text(a, a->font_s, tx_, 9, wc, buf);
+        tx_ += text_width(a, a->font_s, buf) + 18;
     }
 
-    /* 拠点確保条件（仕様書 5.10） */
+    /* 昼夜。周期が固定なので残りターン数を出すと作戦が立てられる。
+     * 天候の隣に置く（どちらも「今の戦場の条件」なので並んでいた方が読みやすい）。 */
+    if (g->night_on) {
+        bool nite = game_is_night(g);
+        snprintf(buf, sizeof buf, tx("TOP_PHASE_FMT"),
+                 tx(nite ? "PHASE_NIGHT" : "PHASE_DAY"), game_phase_left(g));
+        draw_text(a, a->font_s, tx_, 9,
+                  nite ? (SDL_Color){ 150, 170, 235, 255 }
+                       : (SDL_Color){ 250, 220, 130, 255 }, buf);
+        tx_ += text_width(a, a->font_s, buf) + 18;
+    }
+
+    /* 拠点確保条件（仕様書 5.10）。マップ固有の情報で毎フレーム見る類ではないので、
+     * バーの中で場所を取り合わず、1段下に出す。 */
     if (g->objective_count > 0) {
         snprintf(buf, sizeof buf, tx("TOP_OBJ_FMT"),
                  faction_name(g->objective_player),
                  game_count_buildings(g, g->objective_player),
                  g->objective_count);
-        /* 天候・昼夜と並ぶのでさらに右へ */
-        draw_text(a, a->font_s, 980, 9, COL_P[g->objective_player], buf);
+        int ow = text_width(a, a->font_s, buf);
+        fill_rect(a, 8, 40, ow + 16, 22, (SDL_Color){ 24, 28, 36, 210 });
+        draw_text(a, a->font_s, 16, 42, COL_P[g->objective_player], buf);
     }
 
     /* 指揮官ゲージ（手番プレイヤーのもの）。満タンなら光らせて P で発動できる */
