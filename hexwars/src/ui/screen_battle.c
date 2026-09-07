@@ -1894,6 +1894,24 @@ static void draw_panels(App *a)
         snprintf(buf, sizeof buf, tx("PANEL_OWNER_FMT"), own);
         draw_text(a, a->font_s, 14, py + 88,
                   tile->owner < 0 ? COL_GRAY : COL_P[tile->owner], buf);
+
+        /* 占領の進み具合。**残りターン数で出す**。cap_hp は「残り耐久」で、
+         * 1ターンに削れる量は占領中の部隊のHPなので、生の数字を見せても
+         * あと何ターンで落ちるのか分からない。
+         * 占領は移動・撃破・搭乗でリセットされる（clear_capture_by）ので、
+         * capturer が残っていれば必ずその部隊がまだ上に立っている。 */
+        bool seen = !g->fog || g->visible[viewer][a->cur_y][a->cur_x];
+        if (seen && tile->capturer >= 0 && tile->capturer < g->n_units) {
+            const Unit *cu = &g->units[tile->capturer];
+            int done = CAPTURE_HP - tile->cap_hp;
+            int left = (cu->hp > 0) ? (tile->cap_hp + cu->hp - 1) / cu->hp : 0;
+            SDL_Color cc = COL_P[cu->owner];
+            snprintf(buf, sizeof buf, tx("PANEL_CAP_FMT"), left);
+            draw_text(a, a->font_s, 152, py + 88, cc, buf);
+            fill_rect(a, 14, py + 106, 272, 6, (SDL_Color){ 50, 56, 66, 255 });
+            if (done > 0)
+                fill_rect(a, 14, py + 106, 272 * done / CAPTURE_HP, 6, cc);
+        }
     }
 
     /* 右: ユニット情報 */
