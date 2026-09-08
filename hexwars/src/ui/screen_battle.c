@@ -168,6 +168,18 @@ static void run_map_events(App *a)
     snd_se(SE_CAPTURE);
 }
 
+/* CPUが1部隊動かすごとに挟む待ちフレーム。
+ * 見えないと何が起きたか分からないので0にはできないが、
+ * 部隊数の多いマップでは合計が数十秒になるので選べるようにしてある。 */
+static int cpu_wait_frames(const App *a)
+{
+    switch (a->opt_cpu_speed) {
+    case 1:  return 6;
+    case 2:  return 1;
+    default: return 14;
+    }
+}
+
 static void begin_side(App *a)
 {
     Game *g = &a->game;
@@ -187,7 +199,7 @@ static void begin_side(App *a)
     if (g->ctrl[g->current] != CTRL_HUMAN) {
         ai_begin_turn(g, &a->ai);
         a->bs = BS_CPU_TURN;
-        a->cpu_wait = 30;
+        a->cpu_wait = cpu_wait_frames(a) * 2 + 2;   /* 手番開始は少し長めに */
         set_banner(a, buf, 90);
         run_map_events(a);     /* 増援などのイベント（バナーを上書きして知らせる） */
         show_ai_co_power(a);   /* 手番開始に撃った必殺技を通知 */
@@ -1608,7 +1620,7 @@ void battle_update(App *a)
         if (!cont) {
             begin_side(a);
         } else {
-            a->cpu_wait = 14;
+            a->cpu_wait = cpu_wait_frames(a);
         }
         return;
     }

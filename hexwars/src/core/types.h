@@ -11,19 +11,27 @@
  * （開幕時にユニットか建物を持っている陣営だけが参加する）。
  * 2陣営の既存マップはそのまま動く。 */
 #define MAX_PLAYERS       5
-#define MAX_UNITS       200
+/* 盤上に同時に存在できる部隊数。死んだ枠は再利用されるので
+ * 「延べ何体作ったか」ではなく「今何体生きているか」の上限。
+ * 200 だと5陣営の大マップ（五海諸島）で実際に到達し、
+ * 生産が通らなくなったので 400（一陣営あたり80）へ上げた。
+ * ユニット番号を持つところ（cargo / Tile.capturer）は int16 なので
+ * この規模では問題ない。 */
+#define MAX_UNITS       400
 #define MAX_UNIT_TYPES   96   /* 種類数。索引は1バイトなので255まで増やせる */
 #define MAX_TERRAIN      32   /* 同上。ファンタジー等で地形を増やす余地 */
 #define MAX_COMMANDERS   16
 #define MAX_CAMPAIGN_MAPS 20
 #define MAX_STORY_LINES   10   /* 1作戦の幕間の行数。長くしないための上限 */
 /* 次の作戦へ引き継げるユニット数と、倉庫の容量。
- * 生き残った部隊は上限なく引き継げる方針なので、1マップに存在しうる最大数
- * （MAX_UNITS）まで取ってある＝実質無制限。セーブは件数を先に書く形式なので、
- * ここを増やしてもセーブ形式は変わらず、古いセーブもそのまま読める
- * （件数は u8 で書くので 255 までが上限）。 */
-#define MAX_CARRY_UNITS  MAX_UNITS
-#define MAX_STORE_UNITS  MAX_UNITS   /* 倉庫（出撃枠に入らなかった部隊の保管庫） */
+ * 生き残った部隊は上限なく引き継げる方針だが、
+ * **セーブは件数を u8 で書くので 255 を超えられない**。
+ * MAX_UNITS に紐づけていたときはそれが 200 だったので問題なかったが、
+ * MAX_UNITS を上げたので切り離してある。下の _Static_assert が見張る。 */
+#define MAX_CARRY_UNITS  200
+#define MAX_STORE_UNITS  200   /* 倉庫（出撃枠に入らなかった部隊の保管庫） */
+_Static_assert(MAX_CARRY_UNITS <= 255 && MAX_STORE_UNITS <= 255,
+               "持越し・倉庫の件数はセーブで u8 。255を超えるなら保存幅を広げること");
 /* 持越しユニットの初期配置上限 = マップ本来の自軍ユニット数 × この倍率。
  * 超過分は倉庫行き（生産拠点で無料で引き出せる） */
 #define DEPLOY_CARRY_RATIO 2

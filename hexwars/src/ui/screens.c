@@ -58,6 +58,7 @@ void options_load(App *a)
             if      (!strcmp(key, "bgm"))  a->opt_bgm = atoi(val);
             else if (!strcmp(key, "se"))   a->opt_se = atoi(val);
             else if (!strcmp(key, "bgm_track")) a->opt_bgm_track = atoi(val);
+            else if (!strcmp(key, "cpu_speed")) a->opt_cpu_speed = atoi(val);
             else if (!strcmp(key, "se_set"))    a->opt_se_set = atoi(val);
             else if (!strcmp(key, "volcurve"))  curve = atoi(val);
             else if (!strcmp(key, "anim")) a->opt_anim = atoi(val);
@@ -83,6 +84,7 @@ void options_load(App *a)
         if (a->opt_se  > 10) a->opt_se  = 10;
     }
     /* audio.def の曲数・セット数は編集で変わりうるので、実数で丸める */
+    if (a->opt_cpu_speed < 0 || a->opt_cpu_speed > 2) a->opt_cpu_speed = 0;
     if (a->opt_bgm_track < -1) a->opt_bgm_track = -1;
     if (a->opt_bgm_track >= snd_battle_track_count()) a->opt_bgm_track = -1;
     if (a->opt_se_set < 0 || a->opt_se_set >= snd_se_set_count()) a->opt_se_set = 0;
@@ -100,10 +102,11 @@ void options_save(App *a)
     if (!f) return;
     /* cutin は読み込みだけで書き出していなかったため、起動のたびに既定へ戻っていた */
     fprintf(f, "bgm = %d\nse = %d\nanim = %d\nanim_video = %d\nbgm_track = %d\n"
-               "se_set = %d\ntilt = %d\ncutin = %d\nweather_fx = %d\nvolcurve = 2\n",
+               "se_set = %d\ntilt = %d\ncutin = %d\nweather_fx = %d\n"
+               "cpu_speed = %d\nvolcurve = 2\n",
             a->opt_bgm, a->opt_se, a->opt_anim, a->opt_anim_video,
             a->opt_bgm_track, a->opt_se_set, a->opt_tilt,
-            a->opt_cutin, a->opt_weather_fx);
+            a->opt_cutin, a->opt_weather_fx, a->opt_cpu_speed);
     fclose(f);
 }
 
@@ -849,11 +852,12 @@ static void setup_draw(App *a)
 /* ------------------------------------------------------------------ */
 /* オプション画面（仕様書 10章: 音量、8.2: 戦闘アニメOFF）             */
 /* ------------------------------------------------------------------ */
-#define OPT_ROWS 10
+#define OPT_ROWS 11
 #define OPT_BACK_ROW (OPT_ROWS - 1)
 #define OPT_TILT_ROW 6
 #define OPT_CUTIN_ROW 7
 #define OPT_WXFX_ROW 8
+#define OPT_CPUSPD_ROW 9
 
 static void opt_enter(App *a) { a->opt_row = 0; }
 
@@ -866,7 +870,12 @@ static void opt_leave(App *a)
 
 static SDL_Rect opt_row_rect(int i)
 {
-    SDL_Rect r = { WIN_W / 2 - 300, 196 + i * 54, 600, 44 };
+    /* 11行だと 196+54*i では最下段が下のヒント(WIN_H-40)に食い込む。
+     * 項目を足すたびに手で調整しないで済むよう、行数から間隔を決める。 */
+    const int top = 176, bottom = WIN_H - 62, h = 42;
+    int gap = (bottom - top - h) / (OPT_ROWS - 1);
+    if (gap > 54) gap = 54;
+    SDL_Rect r = { WIN_W / 2 - 300, top + i * gap, 600, h };
     return r;
 }
 
@@ -916,6 +925,12 @@ static void opt_change(App *a, int dir)
         int v = (a->opt_cutin + dir) % 3;
         if (v < 0) v += 3;
         a->opt_cutin = v;
+        break;
+    }
+    case OPT_CPUSPD_ROW: {
+        int v = (a->opt_cpu_speed + dir) % 3;
+        if (v < 0) v += 3;
+        a->opt_cpu_speed = v;
         break;
     }
     case OPT_WXFX_ROW:
@@ -1010,7 +1025,7 @@ static void opt_draw(App *a)
     const char *labels[OPT_ROWS] = {
         tx("OPT_BGM"), tx("OPT_SE"), tx("OPT_ANIM"), tx("OPT_ANIM_VIDEO"),
         tx("OPT_BGM_TRACK"), tx("OPT_SE_SET"), tx("OPT_TILT"), tx("OPT_CUTIN"),
-        tx("OPT_WEATHER_FX"), tx("OPT_BACK")
+        tx("OPT_WEATHER_FX"), tx("OPT_CPU_SPEED"), tx("OPT_BACK")
     };
     for (int i = 0; i < OPT_ROWS; i++) {
         SDL_Rect r = opt_row_rect(i);
@@ -1059,6 +1074,15 @@ static void opt_draw(App *a)
         if (i == OPT_TILT_ROW)
             draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW,
                       tx(a->opt_tilt ? "OPT_TILT_ON" : "OPT_TILT_OFF"));
+        if (i == OPT_CPUSPD_ROW) {
+            static const char *K[3] = {
+                "OPT_CPUSPD_NORMAL", "OPT_CPUSPD_FAST", "OPT_CPUSPD_MAX"
+            };
+            int v = a->opt_cpu_speed;
+            if (v < 0 || v > 2) v = 0;
+            draw_text(a, a->font_m, r.x + 320, r.y + 11,
+                      v ? COL_YELLOW : COL_GRAY, tx(K[v]));
+        }
         if (i == OPT_CUTIN_ROW) {
             static const char *K[3] = {
                 "OPT_CUTIN_OFF", "OPT_CUTIN_ALWAYS", "OPT_CUTIN_KILL"

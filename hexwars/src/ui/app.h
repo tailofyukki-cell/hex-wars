@@ -110,6 +110,10 @@ struct App {
      * setup_parts に立っている陣営の分だけ使う。 */
     uint8_t sel_ctrl[MAX_PLAYERS];
     unsigned setup_parts;
+    /* CPUの手番の速さ。0=標準 1=速い 2=最速。
+     * 1部隊の行動ごとに待ちフレームを挟むので、部隊数が多いマップでは
+     * これが待ち時間の大半になる（80部隊なら1陣営で19秒）。 */
+    int   opt_cpu_speed;
     int   setup_row_boot;    /* --screen setup の行指定（確認用。0=なし） */
     bool  setup_preview;     /* 選択中マップの縮小図を出せるか（読み込めたか） */   /* 選択中マップの参加陣営ビット */
     /* 人間の陣営が全て倒れて終了したか。
