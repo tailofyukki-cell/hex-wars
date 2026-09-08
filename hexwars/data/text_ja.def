@@ -241,6 +241,7 @@ POP_LOST        = 損失…
 POP_CAP_DONE    = 占領完了！
 POP_CAP_PROG    = 占領中…
 POP_NOFUNDS     = 資金不足
+PROD_FULL       = 盤上の部隊数が上限に達している
 POP_PROD        = 生産完了
 POP_WITHDRAW    = 倉庫から出撃
 POP_SAVED       = セーブしました

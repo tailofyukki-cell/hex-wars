@@ -700,6 +700,9 @@ static void prod_select(App *a)
     int t = a->prod_items[a->prod_idx];
     int slot = a->prod_store[a->prod_idx];
 
+    /* **理由はバナーで出すこと**。ポップアップはマップ座標に描かれるうえ、
+     * draw_popups は draw_menus より先なので、生産拠点がパネルの裏だと
+     * 何も見えず「押しても反応しない」ようにしか見えない。 */
     if (slot >= 0) {
         /* 倉庫から無料で引き出し（経験値保持）。成功したら倉庫から除去 */
         int exp = a->cps.store[slot].exp;
@@ -708,19 +711,27 @@ static void prod_select(App *a)
             battle_add_popup(a, a->prod_x, a->prod_y, tx("POP_WITHDRAW"), COL_WHITE);
             snd_se(SE_OK);
             a->bs = BS_IDLE;
+        } else {
+            snd_se(SE_CANCEL);
+            set_banner(a, tx("PROD_FULL"), 120);
         }
         return;
     }
 
     if (g->funds[g->current] < g->types[t].cost) {
-        battle_add_popup(a, a->prod_x, a->prod_y, tx("POP_NOFUNDS"), COL_GRAY);
         snd_se(SE_CANCEL);
+        set_banner(a, tx("POP_NOFUNDS"), 100);
         return;
     }
     if (game_produce(g, a->prod_x, a->prod_y, t) >= 0) {
         battle_add_popup(a, a->prod_x, a->prod_y, tx("POP_PROD"), COL_WHITE);
         snd_se(SE_OK);
         a->bs = BS_IDLE;
+    } else {
+        /* ここへ来るのは盤上のユニット数が上限(MAX_UNITS)に達したとき。
+         * 黙って戻ると原因がまったく分からない。 */
+        snd_se(SE_CANCEL);
+        set_banner(a, tx("PROD_FULL"), 120);
     }
 }
 
