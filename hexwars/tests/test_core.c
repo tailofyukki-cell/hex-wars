@@ -2861,7 +2861,7 @@ static void test_join(void)
     g->units[a1].exp  = 80; g->units[b1].exp = 10;   /* 高い方(80)が残るはず */
     int lost0 = g->lost_units[0];
     CHECK(game_can_join(g, a1, b1) == true);
-    CHECK(game_join_units(g, a1, b1) == 0);
+    CHECK(game_join_units(g, a1, b1, 3, 3) == 0);   /* はみ出し無し＝残らない */
     CHECK(g->units[b1].hp == 7);
     CHECK(g->units[b1].fuel == 5);
     CHECK(g->units[b1].ammo == 3);
@@ -2870,15 +2870,29 @@ static void test_join(void)
     CHECK(!(g->units[a1].flags & UF_ALIVE));             /* 動いた側は消える */
     CHECK(g->lost_units[0] == lost0);                    /* 撃破ではないので損失に数えない */
 
-    /* --- はみ出し分は資金で払い戻される --- */
+    /* --- はみ出し分は資金ではなく部隊として残る（8を6に合流 → 10 と 4） --- */
     g->n_units = 0;
     g->funds[0] = 0;
     int a2 = game_spawn_unit(g, 0, inf, 3, 3, 8);
     int b2 = game_spawn_unit(g, 0, inf, 3, 4, 6);
-    int refund = game_join_units(g, a2, b2);
+    int left = game_join_units(g, a2, b2, 3, 3);   /* 3,3 が合流前にいたマス */
     CHECK(g->units[b2].hp == 10);
-    CHECK(refund == it->cost * 4 / 10);                  /* 超過4HP分 */
-    CHECK(g->funds[0] == refund);
+    CHECK(left == 4);
+    CHECK(g->funds[0] == 0);                             /* 払い戻しはしない */
+    CHECK((g->units[a2].flags & UF_ALIVE) != 0);         /* 残る */
+    CHECK(g->units[a2].hp == 4);
+    CHECK(g->units[a2].pos.x == 3 && g->units[a2].pos.y == 3);
+    CHECK((g->units[a2].flags & UF_DONE) != 0);          /* 残った側も行動終了 */
+
+    /* --- 戻る場所が塞がっていたら全部吸収する（HPを捨てない） --- */
+    g->n_units = 0;
+    int a2b = game_spawn_unit(g, 0, inf, 4, 3, 8);
+    int b2b = game_spawn_unit(g, 0, inf, 4, 4, 6);
+    int blk = game_spawn_unit(g, 0, inf, 4, 2, 5);       /* 戻り先を塞ぐ */
+    CHECK(blk >= 0);
+    CHECK(game_join_units(g, a2b, b2b, 4, 2) == 0);
+    CHECK(g->units[b2b].hp == 10);
+    CHECK(!(g->units[a2b].flags & UF_ALIVE));
 
     /* --- 燃料・弾薬は種別の上限を超えない --- */
     g->n_units = 0;
@@ -2886,7 +2900,7 @@ static void test_join(void)
     int b3 = game_spawn_unit(g, 0, inf, 3, 4, 5);
     g->units[a3].fuel = it->fuel; g->units[b3].fuel = it->fuel;
     g->units[a3].ammo = it->ammo; g->units[b3].ammo = it->ammo;
-    game_join_units(g, a3, b3);
+    game_join_units(g, a3, b3, 3, 3);
     CHECK(g->units[b3].fuel == it->fuel);
     CHECK(g->units[b3].ammo == it->ammo);
 
@@ -2900,7 +2914,7 @@ static void test_join(void)
     CHECK(game_can_join(g, x1, y2) == false);
     CHECK(game_can_join(g, x1, y3) == false);
     CHECK(game_can_join(g, x1, x1) == false);
-    CHECK(game_join_units(g, x1, y1) == 0);          /* 実行しても何も起きない */
+    CHECK(game_join_units(g, x1, y1, 3, 3) == 0);    /* 実行しても何も起きない */
     CHECK((g->units[x1].flags & UF_ALIVE) != 0);
 
     /* --- 輸送中のユニットを巻き添えにしない（積載側は合流できない） --- */

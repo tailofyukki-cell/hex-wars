@@ -1039,13 +1039,14 @@ static void do_join(App *a)
         return;
     }
     int hx = g->units[tgt].pos.x, hy = g->units[tgt].pos.y;
-    int refund = game_join_units(g, ui, tgt);
+    /* はみ出した分は合流前にいたマスへ部隊として残す */
+    int left = game_join_units(g, ui, tgt, a->undo_x, a->undo_y);
     char msg[48];
     snprintf(msg, sizeof msg, tx("POP_JOIN_FMT"), g->units[tgt].hp);
     battle_add_popup(a, hx, hy, msg, COL_WHITE);
-    if (refund > 0) {
-        snprintf(msg, sizeof msg, tx("POP_REFUND_FMT"), refund);
-        battle_add_popup(a, hx, hy, msg, COL_YELLOW);
+    if (left > 0) {
+        snprintf(msg, sizeof msg, tx("POP_JOIN_LEFT_FMT"), left);
+        battle_add_popup(a, a->undo_x, a->undo_y, msg, COL_YELLOW);
     }
     snd_se(SE_OK);
     a->sel_unit = -1;
@@ -2283,7 +2284,6 @@ static void draw_menus(App *a)
         int sum = m->hp + t->hp;
         int hp = sum > 10 ? 10 : sum;
         int over = sum > 10 ? sum - 10 : 0;
-        int refund = over > 0 ? ut->cost * over / 10 : 0;
 
         int bw = 500, bh = 208;
         int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 108;
@@ -2294,14 +2294,16 @@ static void draw_menus(App *a)
         char buf[192];
         snprintf(buf, sizeof buf, tx("JOIN_TITLE_FMT"), ut->name);
         draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
-        snprintf(buf, sizeof buf, tx("JOIN_HP_FMT"), m->hp, t->hp, hp);
+        /* はみ出す場合は「10 と 5」のように結果の2部隊を見せる。
+         * 消えるのか残るのかで判断が変わるので、押す前に分かるようにする。 */
+        if (over > 0)
+            snprintf(buf, sizeof buf, tx("JOIN_HP_SPLIT_FMT"),
+                     m->hp, t->hp, hp, over);
+        else
+            snprintf(buf, sizeof buf, tx("JOIN_HP_FMT"), m->hp, t->hp, hp);
         draw_text_center(a, a->font_s, WIN_W / 2, by + 50, COL_YELLOW, buf);
-        if (refund > 0) {
-            snprintf(buf, sizeof buf, tx("JOIN_REFUND_FMT"), refund);
-            draw_text_center(a, a->font_s, WIN_W / 2, by + 72, COL_YELLOW, buf);
-        }
         draw_text_center(a, a->font_s, WIN_W / 2, by + 92, COL_GRAY,
-                         tx("JOIN_WARN"));
+                         tx(over > 0 ? "JOIN_WARN_SPLIT" : "JOIN_WARN"));
         for (int i = 0; i < 2; i++) {
             SDL_Rect r = evo_rect(i);
             bool sel = (a->amenu_idx == i);

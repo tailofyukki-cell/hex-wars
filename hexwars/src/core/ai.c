@@ -906,6 +906,8 @@ static void act_unit(Game *g, AiState *s, int ui)
     s->last_unit = ui;
     s->last_target = -1;
     int fx, fy, fuel;
+    /* 合流のはみ出しを戻す先に要るので、動く前の位置を控えておく */
+    int ox = u->pos.x, oy = u->pos.y;
     path_walk(g, ui, &s_mr, best.mx, best.my, &fx, &fy, &fuel);
     bool ambushed = (fx != best.mx || fy != best.my);
     game_move_unit(g, ui, fx, fy, fuel);
@@ -943,7 +945,7 @@ static void act_unit(Game *g, AiState *s, int ui)
     } else if (!ambushed && best.action == 6 && best.target >= 0 &&
                (g->units[best.target].flags & UF_ALIVE) &&
                game_can_join(g, ui, best.target)) {
-        game_join_units(g, ui, best.target);         /* 手負い同士を合流 */
+        game_join_units(g, ui, best.target, ox, oy); /* 手負い同士を合流 */
     } else if (!ambushed && best.action == 2) {
         game_capture(g, ui);
     } else if (!ambushed && best.action == 3) {

@@ -1178,36 +1178,64 @@ bool game_can_join(const Game *g, int mover, int target)
     return true;
 }
 
-int game_join_units(Game *g, int mover, int target)
+int game_join_units(Game *g, int mover, int target, int back_x, int back_y)
 {
     if (!game_can_join(g, mover, target)) return 0;
     Unit *m = &g->units[mover];
     Unit *t = &g->units[target];
     const UnitType *ut = &g->types[t->type];
 
-    int hp = m->hp + t->hp;
-    int over = hp > 10 ? hp - 10 : 0;
-    t->hp = (int8_t)(hp > 10 ? 10 : hp);
+    int need = 10 - t->hp;                        /* 満タンまでに要るHP */
+    int give = m->hp < need ? m->hp : need;       /* 実際に渡せる分 */
+    int left = m->hp - give;                      /* 渡したあとに残る分 */
 
-    int fuel = (int)m->fuel + (int)t->fuel;
+    /* 燃料・弾薬は渡したHPの割合ぶんだけ移す。
+     * 全部移すと残った側が空になり、全部残すとただの補給になってしまう。 */
+    int mh = m->hp;
+    int f_move = (mh > 0) ? (int)m->fuel * give / mh : 0;
+    int a_move = (mh > 0) ? (int)m->ammo * give / mh : 0;
+
+    t->hp = (int8_t)(t->hp + give);
+    int fuel = (int)t->fuel + f_move;
     t->fuel = (uint8_t)(fuel > ut->fuel ? ut->fuel : fuel);
-    int ammo = (int)m->ammo + (int)t->ammo;
+    int ammo = (int)t->ammo + a_move;
     t->ammo = (uint8_t)(ammo > ut->ammo ? ut->ammo : ammo);
     if (m->exp > t->exp) t->exp = m->exp;   /* 熟練度は高い方を引き継ぐ */
 
     /* 合流先はこのターン行動済みにする（2部隊分は動けない） */
     t->flags |= UF_DONE;
 
-    /* mover は盤上から消えるが撃破ではないので lost_units には数えない
-     * （作戦評価の「戦力温存」が合流のたびに下がってしまうため） */
+    /* **はみ出した分は資金にせず部隊として残す**（7に8を合流 → 10 と 5）。
+     * 残す場所は合流前にいたマス。合流は「重なってから」実行するので、
+     * そのままだと同じマスに2体になってしまう。 */
+    /* **自分自身は塞いでいるうちに数えない**。実際の流れでは合流前に
+     * 相手のマスへ移動済みだが、移動せずに呼ばれても正しく動くようにする。 */
+    int occ = game_in_bounds(g, back_x, back_y)
+        ? game_unit_at_layer(g, back_x, back_y,
+                             unit_layer((MoveClass)ut->mclass))
+        : target;                       /* 盤外なら塞がっている扱い */
+    bool can_stay = left > 0 && (occ < 0 || occ == mover);
+    if (left <= 0 || !can_stay) {
+        /* 戻る場所が無いときは全部吸収する（HPを捨てるよりはまし）。
+         * mover は盤上から消えるが撃破ではないので lost_units には数えない
+         * （作戦評価の「戦力温存」が合流のたびに下がってしまうため） */
+        if (left > 0) {
+            int hp2 = t->hp + left;
+            t->hp = (int8_t)(hp2 > 10 ? 10 : hp2);
+        }
+        clear_capture_by(g, mover);
+        m->flags = 0;
+        m->hp = 0;
+        return 0;
+    }
     clear_capture_by(g, mover);
-    m->flags = 0;
-    m->hp = 0;
-
-    /* HP上限を超えた分はユニット価格に応じて払い戻す */
-    int refund = over > 0 ? ut->cost * over / 10 : 0;
-    if (refund > 0) g->funds[t->owner] += refund;
-    return refund;
+    m->hp = (int8_t)left;
+    m->fuel = (uint8_t)(m->fuel - f_move);
+    m->ammo = (uint8_t)(m->ammo - a_move);
+    m->pos.x = (uint8_t)back_x;
+    m->pos.y = (uint8_t)back_y;
+    m->flags |= UF_DONE;
+    return left;
 }
 
 bool game_can_board(const Game *g, int passenger, int transport)

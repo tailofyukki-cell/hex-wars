@@ -193,7 +193,9 @@ bool game_can_join(const Game *g, int mover, int target);
 /* 合流を実行する。HP/燃料/弾薬を合算（各上限で頭打ち）、熟練度は高い方を継承。
  * target は行動終了になり mover は盤上から消える（撃破ではないので損失に数えない）。
  * 戻り値: HP上限を超えた分の払戻し資金（target 側の funds に加算済み） */
-int  game_join_units(Game *g, int mover, int target);
+/* 合流を実行する。はみ出した分は back_x,back_y（合流前にいたマス）へ
+ * 部隊として残す。戻り値は残った部隊のHP（0=全部吸収された）。 */
+int  game_join_units(Game *g, int mover, int target, int back_x, int back_y);
 void game_load_unit(Game *g, int passenger, int transport);
 /* transport の先頭搭載ユニットを (x,y) に降ろす。戻り値 0=成功 */
 int  game_unload_unit(Game *g, int transport, int x, int y);
