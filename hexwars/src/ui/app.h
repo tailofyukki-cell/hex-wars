@@ -221,7 +221,9 @@ struct App {
     int   n_work;
     int   unload_count;   /* 今回の降車で既に降ろした数（複数降車の確定判定用） */
     /* レイヤー選択ポップアップ（重なりセルの選択・攻撃対象選択） */
-    int   lpick_unit[LAYER_COUNT];   /* 候補ユニットindex（表示順） */
+    /* 候補（表示順）。**-1 は「生産」を表す**ので、レイヤー数より1つ多く取る。
+     * 自軍ユニットが乗っているセルでも生産を選べるようにするため。 */
+    int   lpick_unit[LAYER_COUNT + 1];
     int   lpick_n, lpick_idx;
     int   lpick_mode;                /* LP_SELECT=自軍選択 / LP_ATTACK=攻撃対象 */
     int   lpick_x, lpick_y;          /* ポップアップの表示基準セル（マウスで動かさない） */

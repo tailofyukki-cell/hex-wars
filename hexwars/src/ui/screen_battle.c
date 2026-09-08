@@ -864,7 +864,7 @@ static SDL_Rect lpick_rect(App *a, int i)
 
 static void open_layer_pick(App *a, const int *units, int n, int mode)
 {
-    for (int i = 0; i < n && i < LAYER_COUNT; i++) a->lpick_unit[i] = units[i];
+    for (int i = 0; i < n && i < LAYER_COUNT + 1; i++) a->lpick_unit[i] = units[i];
     a->lpick_n = n; a->lpick_idx = 0; a->lpick_mode = mode;
     a->lpick_x = a->cur_x; a->lpick_y = a->cur_y;   /* 開いたセルに固定（追従させない） */
     a->bs = BS_LAYER_PICK;
@@ -886,7 +886,8 @@ static void lpick_confirm(App *a)
 {
     int ui = a->lpick_unit[a->lpick_idx];
     snd_se(SE_OK);
-    if (a->lpick_mode == LP_SELECT) select_own_unit(a, ui);
+    if (ui < 0)                     open_production(a, a->lpick_x, a->lpick_y);
+    else if (a->lpick_mode == LP_SELECT) select_own_unit(a, ui);
     else                            execute_attack(a, ui);
 }
 
@@ -896,7 +897,7 @@ static void confirm_at(App *a, int hx, int hy)
     switch (a->bs) {
     case BS_IDLE: {
         /* 立体化: 重なりセルは自軍の行動可能ユニットをレイヤーで列挙して選ぶ */
-        int cell[LAYER_COUNT], own[LAYER_COUNT], n = 0;
+        int cell[LAYER_COUNT], own[LAYER_COUNT + 1], n = 0;
         game_units_at(g, hx, hy, cell);
         for (int L = 0; L < LAYER_COUNT; L++) {
             int u = cell[L];
@@ -904,12 +905,18 @@ static void confirm_at(App *a, int hx, int hy)
                 !(g->units[u].flags & UF_DONE))
                 own[n++] = u;
         }
+        /* **自軍ユニットが乗っていても生産は候補に残すこと**。
+         * 以前は1体でも居ると必ずそれが選ばれ、工場の上空を自軍機が
+         * 飛んでいるだけで（地上レイヤーは空いているのに）生産できなかった。
+         * -1 が「生産」を表す。 */
+        bool can_prod = game_can_produce_at(g, g->current, hx, hy);
+        if (can_prod) own[n++] = -1;
+
         if (n == 1) {
-            select_own_unit(a, own[0]);
+            if (own[0] < 0) open_production(a, hx, hy);
+            else            select_own_unit(a, own[0]);
         } else if (n >= 2) {
             open_layer_pick(a, own, n, LP_SELECT);
-        } else if (game_can_produce_at(g, g->current, hx, hy)) {
-            open_production(a, hx, hy);
         }
         break;
     }
@@ -2024,9 +2031,14 @@ static void draw_menus(App *a)
                       sel ? (SDL_Color){ 80, 110, 160, 250 }
                           : (SDL_Color){ 38, 44, 56, 250 });
             outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            char buf[96];
+            if (a->lpick_unit[i] < 0) {          /* 生産 */
+                draw_text(a, a->font_s, r.x + 12, r.y + 7,
+                          sel ? COL_WHITE : COL_YELLOW, tx("LPICK_PRODUCE"));
+                continue;
+            }
             const Unit *u = &g->units[a->lpick_unit[i]];
             const UnitType *ut = &g->types[u->type];
-            char buf[96];
             snprintf(buf, sizeof buf, "[%s] %s",
                      layer_tag(unit_layer(ut->mclass)), ut->name);
             draw_text(a, a->font_s, r.x + 12, r.y + 7,

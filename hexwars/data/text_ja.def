@@ -193,6 +193,7 @@ PANEL_DEF_FMT    = 防御補正 +%d%%
 PANEL_INCOME_FMT = 収入 %dG
 PANEL_OWNER_FMT  = 所有: %s
 PANEL_CAP_FMT    = 占領 あと%dターン
+LPICK_PRODUCE    = ＋ 生産
 PANEL_NOUNIT     = （ユニットなし）
 PANEL_HP_FMT     = HP %d/10   燃料 %d/%d   弾薬 %d/%d
 PANEL_HP_SUP_FMT = HP %d/10   燃料 %d/%d   物資 %d/%d
@@ -218,7 +219,7 @@ FC_NO_COUNTER   = 反撃なし
 FC_NOTE         = ※期待値。実際は ±15% ぶれます
 HINT_UNLOAD     = 降ろす先を選択（続けて複数降車可）  Z:決定  X:終了
 HINT_WORK       = 工作するヘクスを選択（赤=破壊 / 緑=復旧）  Z:決定  X:やめる
-HINT_LAYER_PICK = 高度を選択  ↑↓:選択  Z:決定  X:戻る
+HINT_LAYER_PICK = このマスで何をするか  ↑↓:選択  Z:決定  X:戻る
 HINT_UNITLIST   = ↑↓/ホイール:選択  Z:そのユニットへ移動  X:戻る
 LAYER_AIR       = 空
 LAYER_SURFACE   = 地上
