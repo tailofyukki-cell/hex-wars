@@ -52,6 +52,7 @@ _Static_assert(MAX_CARRY_UNITS <= 255 && MAX_STORE_UNITS <= 255,
 #define NIGHT_TURNS 2
 
 #define MAX_EVENTS 16     /* 1作戦に仕込めるイベント数（events_fired が32bitなので32が上限） */
+#define MAX_WAVES  4      /* 1作戦の段階的な敵増援の波数 */
 
 /* 移動タイプ（仕様書 5.2） */
 typedef enum {

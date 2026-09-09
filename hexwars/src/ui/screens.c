@@ -47,6 +47,10 @@ void options_load(App *a)
     a->opt_tilt = 1;         /* 既定は斜め見下ろし。平面に戻せる */
     a->opt_cutin = 1;        /* 既定は毎回。設定で「撃破時のみ」「出さない」に変えられる */
     a->opt_weather_fx = 1;   /* 既定はON。雨の雨脚が邃しければ切れる */
+    /* 既定は「速い」。大規模マップだと「標準」は1手番30秒超えになることがあり、
+     * 設定の存在に気づかないまま終盤で待たされるのを避ける。
+     * 思考の中身は変わらない（行動の間の待ちフレーム数だけ）。 */
+    a->opt_cpu_speed = 1;
     char path[600];
     snprintf(path, sizeof path, "%soptions.cfg", a->base_path);
     FILE *f = fopen(path, "rb");
@@ -84,7 +88,7 @@ void options_load(App *a)
         if (a->opt_se  > 10) a->opt_se  = 10;
     }
     /* audio.def の曲数・セット数は編集で変わりうるので、実数で丸める */
-    if (a->opt_cpu_speed < 0 || a->opt_cpu_speed > 2) a->opt_cpu_speed = 0;
+    if (a->opt_cpu_speed < 0 || a->opt_cpu_speed > 2) a->opt_cpu_speed = 1;
     if (a->opt_bgm_track < -1) a->opt_bgm_track = -1;
     if (a->opt_bgm_track >= snd_battle_track_count()) a->opt_bgm_track = -1;
     if (a->opt_se_set < 0 || a->opt_se_set >= snd_se_set_count()) a->opt_se_set = 0;

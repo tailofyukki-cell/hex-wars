@@ -182,6 +182,14 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
         w_str(w, e->msg, sizeof e->msg);
     }
 
+    /* 段階的な敵増援の予定表（到着済みかも保存。再発火させない） */
+    w_u16(w, (uint16_t)g->n_waves);
+    for (int i = 0; i < g->n_waves; i++) {
+        const ReinfWave *v = &g->waves[i];
+        w_i16(w, v->turn); w_i16(w, v->count);
+        w_u8(w, (uint8_t)v->owner); w_u8(w, (uint8_t)v->done);
+        w_str(w, v->msg, sizeof v->msg);
+    }
 }
 
 static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
@@ -329,6 +337,20 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
             e->a1 = r_i16(r); e->a2 = r_i16(r); e->a3 = r_i16(r);
             e->a4 = r_i16(r); e->a5 = r_i16(r);
             r_str(r, e->msg, sizeof e->msg);
+        }
+    }
+
+    /* v14 以前のセーブには無い。増援なしとして読む。 */
+    g->n_waves = 0;
+    memset(g->waves, 0, sizeof g->waves);
+    if (ver >= 15) {
+        g->n_waves = r_u16(r);
+        if (g->n_waves < 0 || g->n_waves > MAX_WAVES) return -1;
+        for (int i = 0; i < g->n_waves; i++) {
+            ReinfWave *v = &g->waves[i];
+            v->turn = r_i16(r); v->count = r_i16(r);
+            v->owner = (int8_t)r_u8(r); v->done = (int8_t)r_u8(r);
+            r_str(r, v->msg, sizeof v->msg);
         }
     }
 

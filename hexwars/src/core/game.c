@@ -1657,6 +1657,55 @@ static void ev_run(Game *g, const MapEvent *e)
     }
 }
 
+void game_find_origin(const Game *g, int owner, int *ox, int *oy)
+{
+    *ox = -1; *oy = -1;
+    for (int y = 0; y < g->h && *ox < 0; y++)
+        for (int x = 0; x < g->w && *ox < 0; x++)
+            if (g->tiles[y][x].owner == owner &&
+                g->terrains[g->tiles[y][x].terrain].is_hq) { *ox = x; *oy = y; }
+    for (int y = 0; y < g->h && *ox < 0; y++)
+        for (int x = 0; x < g->w && *ox < 0; x++)
+            if (g->tiles[y][x].owner == owner &&
+                g->terrains[g->tiles[y][x].terrain].capturable) { *ox = x; *oy = y; }
+    for (int i = 0; i < g->n_units && *ox < 0; i++)
+        if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == owner)
+            { *ox = g->units[i].pos.x; *oy = g->units[i].pos.y; }
+    if (*ox < 0) { *ox = 1; *oy = 1; }
+}
+
+void game_add_wave(Game *g, int owner, int turn, int count, const char *msg)
+{
+    if (g->n_waves >= MAX_WAVES || count <= 0) return;
+    ReinfWave *w = &g->waves[g->n_waves++];
+    w->turn = (int16_t)turn;
+    w->count = (int16_t)count;
+    w->owner = (int8_t)owner;
+    w->done = 0;
+    w->msg[0] = 0;
+    if (msg) { strncpy(w->msg, msg, sizeof w->msg - 1); w->msg[sizeof w->msg - 1] = 0; }
+}
+
+/* 到着した波を盤上に出す。編成はその陣営が**今**持っている顔ぶれから拾う。
+ * 開幕時の編成を固定で持つと、序盤に潰された兵種ばかり湧いて不自然になる。 */
+static int run_wave(Game *g, ReinfWave *w)
+{
+    int types[MAX_UNITS], n = 0;
+    for (int i = 0; i < g->n_units && n < MAX_UNITS; i++) {
+        const Unit *u = &g->units[i];
+        if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+        if (u->owner != w->owner) continue;
+        types[n++] = u->type;
+    }
+    if (n <= 0) return 0;          /* その陣営が全滅していれば増援も来ない */
+    int ox, oy;
+    game_find_origin(g, w->owner, &ox, &oy);
+    int made = 0;
+    for (int i = 0; i < w->count; i++)
+        if (ev_spawn_near(g, w->owner, types[i % n], ox, oy) >= 0) made++;
+    return made;
+}
+
 int game_check_events(Game *g, const char *msgs[], int max)
 {
     int fired = 0;
@@ -1667,6 +1716,16 @@ int game_check_events(Game *g, const char *msgs[], int max)
         g->events_fired |= 1u << i;
         ev_run(g, e);
         if (msgs && fired < max && e->msg[0]) msgs[fired] = e->msg;
+        fired++;
+    }
+    /* 段階的増援。イベントと同じタイミングで見るので、
+     * 呼び出し側（UI・sim）に新しい呼び出しを足さなくて済む。 */
+    for (int i = 0; i < g->n_waves && i < MAX_WAVES; i++) {
+        ReinfWave *w = &g->waves[i];
+        if (w->done || g->turn < w->turn) continue;
+        w->done = 1;
+        if (run_wave(g, w) <= 0) continue;   /* 1体も置けなければ黙っている */
+        if (msgs && fired < max && w->msg[0]) msgs[fired] = w->msg;
         fired++;
     }
     if (fired > 0) game_update_vision(g);

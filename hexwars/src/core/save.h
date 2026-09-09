@@ -6,7 +6,8 @@
 #include "campaign.h"
 
 #define SAVE_MAGIC   "HXWS"
-#define SAVE_VERSION 14  /* v14: 天候固定（常時雨のマップ用）。
+#define SAVE_VERSION 15  /* v15: 段階的な敵増援の予定表。
+                          * v14: 天候固定（常時雨のマップ用）。
                           * v13: 昼夜の周期（常夜マップ用）。
                           * v12: タイルの「本来の地形」を追加（工兵の復旧先）。
                           * v11: チームを追加。v10: 陣営を最大5へ。陣営別配列の長さが変わるため

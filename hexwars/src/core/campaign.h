@@ -59,6 +59,12 @@ typedef struct {
     char    co[MAX_PLAYERS][24];
     int     par_turns;        /* 作戦評価の基準ターン（0=マップから自動算出） */
     int     no_reinforce;     /* 1=この作戦では敵に増援を与えない */
+    /* 敵の総数を「自軍の展開数の enemy_scale %」に揃える（0=従来通り）。
+     * 開幕時は常に自軍と同数で、超過分は enemy_waves 回に分けて
+     * 2ターン目から順に到着する。接触が始まる頃には揃っている。
+     * 減らすことはしないので、マップ側の敵は自軍の初期数以下にしておくこと。 */
+    int     enemy_scale;      /* 例) 200 = 最終的に自軍の2倍 */
+    int     enemy_waves;      /* 超過分を何波に分けるか（0=全部開幕時） */
     SubObjective subs[MAX_SUBS];
     int          n_subs;
     /* マップイベント。ユニットIDは文字列のまま持ち、開戦時に型indexへ解決する */

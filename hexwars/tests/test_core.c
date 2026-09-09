@@ -2837,6 +2837,121 @@ static void test_enemy_reinforce(void)
     }
 }
 
+/* 大決戦用の敵数調整: 総数を自軍の展開数の enemy_scale% に揃え、
+ * 超過分は波に分けて2ターン目から到着させる。 */
+static void test_enemy_scale_waves(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    Campaign c;
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    if (s_fail) return;
+
+    /* M01 を一時的に大決戦仕様にして使う（仕組み単体の検証） */
+    int ni = -1;
+    for (int i = 0; i < c.n_nodes; i++)
+        if (!strcmp(c.nodes[i].id, "M01")) ni = i;
+    CHECK(ni >= 0);
+    if (s_fail) return;
+    c.nodes[ni].enemy_scale = 200;
+    c.nodes[ni].enemy_waves = 2;
+
+    int inf = data_find_unit_type(g, "INFANTRY");
+    CampaignState st;
+    memset(&st, 0, sizeof st);
+    snprintf(st.node, sizeof st.node, "M01");
+    CHECK(campaign_setup_map(g, &c, &st, "", err, sizeof err) == 0);
+    int base_p1 = 0;
+    for (int i = 0; i < g->n_units; i++)
+        if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 1) base_p1++;
+    int limit = campaign_deploy_limit(g);
+
+    /* 上限いっぱい持ち越して開戦 */
+    memset(&st, 0, sizeof st);
+    snprintf(st.node, sizeof st.node, "M01");
+    st.n_carry = limit < MAX_CARRY_UNITS ? limit : MAX_CARRY_UNITS;
+    for (int i = 0; i < st.n_carry; i++) {
+        st.carry[i].type = (uint8_t)inf;
+        st.carry[i].exp = 10;
+    }
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(campaign_setup_map(g, &c, &st, "", err, sizeof err) == 0);
+    campaign_begin(g, &c, &st, 5, NULL);
+
+    int p0 = 0, p1 = 0;
+    for (int i = 0; i < g->n_units; i++) {
+        if (!(g->units[i].flags & UF_ALIVE)) continue;
+        if (g->units[i].owner == 0) p0++; else p1++;
+    }
+    CHECK(p0 > 0);
+    /* 開幕は自軍と同数。ただしマップ側がそれより多ければ減らさない。 */
+    int expect_start = base_p1 > p0 ? base_p1 : p0;
+    CHECK(p1 == expect_start);
+
+    /* 超過分は2波。到着は2・3ターン目。 */
+    int extra = p0 * (200 - 100) / 100;
+    CHECK(g->n_waves == 2);
+    CHECK(g->waves[0].turn == 2);
+    CHECK(g->waves[1].turn == 3);
+    CHECK(g->waves[0].count + g->waves[1].count == extra);
+    CHECK(g->waves[0].owner == 1);
+
+    /* 1ターン目には来ない */
+    g->turn = 1;
+    game_check_events(g, NULL, 0);
+    int n1 = 0;
+    for (int i = 0; i < g->n_units; i++)
+        if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 1) n1++;
+    CHECK(n1 == expect_start);
+
+    /* 2ターン目・3ターン目で順に到着し、最終的に自軍の2倍 */
+    g->turn = 2;
+    CHECK(game_check_events(g, NULL, 0) == 1);
+    int n2 = 0;
+    for (int i = 0; i < g->n_units; i++)
+        if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 1) n2++;
+    CHECK(n2 == expect_start + g->waves[0].count);
+
+    g->turn = 3;
+    CHECK(game_check_events(g, NULL, 0) == 1);
+    int n3 = 0;
+    for (int i = 0; i < g->n_units; i++)
+        if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 1) n3++;
+    CHECK(n3 == expect_start + extra);
+    CHECK(n3 == p0 * 2);          /* 自軍の展開数の2倍 */
+
+    /* 一度到着した波は二度と来ない */
+    g->turn = 4;
+    CHECK(game_check_events(g, NULL, 0) == 0);
+
+    /* 増援も含めて全部進入可能な地形の上にいる */
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *u = &g->units[i];
+        if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+        MoveClass mc = (MoveClass)g->types[u->type].mclass;
+        CHECK(g->terrains[g->tiles[u->pos.y][u->pos.x].terrain].mcost[mc] > 0);
+    }
+
+    /* 予定表はセーブをまたいで残る（ロード後に再発火しない） */
+    CampaignState cs2;
+    memset(&cs2, 0, sizeof cs2);
+    CHECK(save_game(g, &st, "build/_wave.sav", err, sizeof err) == 0);
+    Game *g2 = &s_game2;
+    memset(g2, 0, sizeof *g2);
+    CHECK(data_load_terrain(g2, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g2, "data/units.def", err, sizeof err) == 0);
+    CHECK(load_game(g2, &cs2, "build/_wave.sav", err, sizeof err) == 0);
+    CHECK(g2->n_waves == 2);
+    CHECK(g2->waves[0].done == 1 && g2->waves[1].done == 1);
+    g2->turn = 5;
+    CHECK(game_check_events(g2, NULL, 0) == 0);
+}
+
 /* 合流: HP/燃料/弾薬の合算、払戻し、熟練度継承、禁止条件 */
 static void test_join(void)
 {
@@ -3812,6 +3927,7 @@ int main(void)
     test_campaign_multi();
     test_terrain_work();
     test_enemy_reinforce();
+    test_enemy_scale_waves();
     test_join();
     test_ai_co_power();
     test_campaign_enemy_co();

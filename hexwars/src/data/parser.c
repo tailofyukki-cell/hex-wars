@@ -355,6 +355,9 @@ int data_load_map(Game *g, const char *path, char *err, int errlen)
     g->timeout_winner = -1;
     g->income_scale = 100;
     g->objective_count = 0;
+    /* 段階的増援は作戦ごとに仕込み直す。ここで消さないと、
+     * キャンペーンの次にフリー対戦を始めたときに残る。 */
+    g->n_waves = 0;
     /* 天候は既定で有効・確率60/30/10。マップ側で weather=0 なら無効化できる */
     g->weather_on = 1;
     g->night_on = 1;      /* 既定で有効。.map で night=0 にできる */

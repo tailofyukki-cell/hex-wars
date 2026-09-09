@@ -1,4 +1,4 @@
-/* campaign.c - キャンペーン進行（.cpn 読込・持越し・分岐） */
+﻿/* campaign.c - キャンペーン進行（.cpn 読込・持越し・分岐） */
 #include "campaign.h"
 #include "hex.h"
 #include "../data/parser.h"
@@ -280,6 +280,8 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         else if (!strcmp(key, "fast_turns"))    cur->fast_turns = atoi(val);
         else if (!strcmp(key, "par_turns"))     cur->par_turns = atoi(val);
         else if (!strcmp(key, "no_reinforce"))  cur->no_reinforce = atoi(val);
+        else if (!strcmp(key, "enemy_scale"))   cur->enemy_scale = atoi(val);
+        else if (!strcmp(key, "enemy_waves"))   cur->enemy_waves = atoi(val);
         else if (!strcmp(key, "event")) {
             if (parse_event(cur, val) != 0) {
                 if (err) snprintf(err, (size_t)errlen,
@@ -471,21 +473,10 @@ void campaign_store_remove(CampaignState *s, int slot)
 }
 
 /* owner の首都（無ければ所有建物、無ければ既存ユニット）を展開の起点として返す */
+/* 増援の湧き出し口。波の到着（game.c）と同じ場所を使う。 */
 static void find_origin(const Game *g, int owner, int *ox, int *oy)
 {
-    *ox = -1; *oy = -1;
-    for (int y = 0; y < g->h && *ox < 0; y++)
-        for (int x = 0; x < g->w && *ox < 0; x++)
-            if (g->tiles[y][x].owner == owner &&
-                g->terrains[g->tiles[y][x].terrain].is_hq) { *ox = x; *oy = y; }
-    for (int y = 0; y < g->h && *ox < 0; y++)
-        for (int x = 0; x < g->w && *ox < 0; x++)
-            if (g->tiles[y][x].owner == owner &&
-                g->terrains[g->tiles[y][x].terrain].capturable) { *ox = x; *oy = y; }
-    for (int i = 0; i < g->n_units && *ox < 0; i++)
-        if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == owner)
-            { *ox = g->units[i].pos.x; *oy = g->units[i].pos.y; }
-    if (*ox < 0) { *ox = 1; *oy = 1; }
+    game_find_origin(g, owner, ox, oy);
 }
 
 /* (ox,oy) から最寄りの「進入可能かつ自レイヤーが空き」ヘクスへ1体配置する。
@@ -602,6 +593,95 @@ static void reinforce_enemy(Game *g, int player_extra)
     }
 }
 
+/* 陣営の部隊数を数える（輸送中の中身は除く）。 */
+static int count_units(const Game *g, int owner)
+{
+    int n = 0;
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *u = &g->units[i];
+        if ((u->flags & UF_ALIVE) && !(u->flags & UF_LOADED) && u->owner == owner)
+            n++;
+    }
+    return n;
+}
+
+/* 自軍に敵する陣営を集める。**居る陣営だけ数えること**。
+ * 既定の team[p]=p だとマップに居ない陣営も「敵」になる。 */
+static int collect_foes(const Game *g, int *foes)
+{
+    int n = 0;
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        if (!game_is_enemy(g, 0, p)) continue;
+        if (count_units(g, p) > 0) foes[n++] = p;
+    }
+    return n;
+}
+
+/* 敵を add 体分だけ増やす。陣営が複数なら均等に割る。 */
+static void add_enemies_now(Game *g, const int *foes, int n_foes, int add)
+{
+    for (int k = 0; k < n_foes && add > 0; k++) {
+        int who = foes[k];
+        int share = add / n_foes + (k < add % n_foes ? 1 : 0);
+        int types[MAX_UNITS], n = 0;
+        for (int i = 0; i < g->n_units && n < MAX_UNITS; i++) {
+            const Unit *u = &g->units[i];
+            if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+            if (u->owner == who) types[n++] = u->type;
+        }
+        if (n <= 0) continue;
+        int ox, oy;
+        find_origin(g, who, &ox, &oy);
+        for (int i = 0; i < share; i++)
+            place_unit_near(g, who, types[i % n], ox, oy);
+    }
+}
+
+/* 敵の総数を「自軍の展開数 × scale%」に揃える。
+ *
+ * 開幕時は自軍と同数までしか置かない。いきなり全量を置くと
+ * 盤面が重い上に、まだ接触もしていないうちから圧倒されて見える。
+ * 超過分は waves 回に分けて2ターン目から順に到着させるので、
+ * 実際に撃ち合いが始まる頃には数が揃っている。
+ *
+ * 減らすことはしない（マップに置いた敵を消すと地形との対応が崩れる）。
+ * マップ側の敵は自軍の初期数以下にしておくこと。 */
+static void scale_enemy(Game *g, int player_total, int scale_pct, int waves)
+{
+    if (player_total <= 0 || scale_pct <= 0) return;
+    int foes[MAX_PLAYERS];
+    int n_foes = collect_foes(g, foes);
+    if (n_foes <= 0) return;
+
+    int have = 0;
+    for (int k = 0; k < n_foes; k++) have += count_units(g, foes[k]);
+
+    /* 開幕分: 自軍と同数まで */
+    if (have < player_total)
+        add_enemies_now(g, foes, n_foes, player_total - have);
+
+    /* 残りを波に分ける */
+    int extra = player_total * (scale_pct - 100) / 100;
+    if (extra <= 0) return;
+    if (waves <= 0) { add_enemies_now(g, foes, n_foes, extra); return; }
+    if (waves > MAX_WAVES) waves = MAX_WAVES;
+
+    /* 波は陣営ごとに積むと MAX_WAVES をすぐ使い切るので、
+     * 1波は代表陣営（一番多い敵）にまとめて出す。 */
+    int lead = foes[0], lead_n = count_units(g, foes[0]);
+    for (int k = 1; k < n_foes; k++) {
+        int c = count_units(g, foes[k]);
+        if (c > lead_n) { lead = foes[k]; lead_n = c; }
+    }
+    for (int i = 0; i < waves; i++) {
+        int share = extra / waves + (i < extra % waves ? 1 : 0);
+        if (share <= 0) continue;
+        char msg[64];
+        snprintf(msg, sizeof msg, "敵の増援 %d部隊が到着した！", share);
+        game_add_wave(g, lead, 2 + i, share, msg);   /* 2ターン目から順に */
+    }
+}
+
 /* place_unit_near の BFS は全面をなめる（距離制限なし・進入不可セルも踏む）ので、
  * 「盤上のどこかに進入できるセルが1つでもあるか」と同じ意味になる。
  * 占有は見ない（選択時点ではまだ持越しを並べていないため）。 */
@@ -678,9 +758,19 @@ void campaign_begin(Game *g, const Campaign *c, CampaignState *s,
     int deployed = 0;
     if (node && node->carry)
         deployed = deploy_carry(g, s, sel);
-    /* 持越しで増えたぶんだけ敵にも増援を出す（2マップ目以降の戦力差対策） */
-    if (node && !node->no_reinforce)
+    if (node && node->enemy_scale > 0) {
+        /* 敵の総数を自軍の展開数に合わせて決める作戦（大決戦用）。
+         * こちらは持越しの増分ではなく総数で見るので、
+         * 従来の reinforce_enemy とは排他。 */
+        int player_total = 0;
+        for (int i = 0; i < g->n_units; i++)
+            if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 0)
+                player_total++;
+        scale_enemy(g, player_total, node->enemy_scale, node->enemy_waves);
+    } else if (node && !node->no_reinforce) {
+        /* 持越しで増えたぶんだけ敵にも増援を出す（2マップ目以降の戦力差対策） */
         reinforce_enemy(g, deployed);
+    }
     game_start(g, seed);
 }
 

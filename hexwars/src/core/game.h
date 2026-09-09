@@ -17,6 +17,16 @@ typedef enum {
     CTRL_CPU_HARD
 } PlayerCtrl;
 
+/* 段階的な増援の1波。編成は到着時のその陣営の顔ぶれから拾うので、
+ * ここには何を出すかを持たない（損耗した分だけ偏るのを避ける）。 */
+typedef struct {
+    int16_t turn;      /* 到着ターン */
+    int16_t count;     /* 出す部隊数 */
+    int8_t  owner;
+    int8_t  done;      /* 1=到着済み */
+    char    msg[64];   /* 画面に出す知らせ */
+} ReinfWave;
+
 typedef struct Game {
     /* 定義データ */
     TerrainType terrains[MAX_TERRAIN];
@@ -42,6 +52,13 @@ typedef struct Game {
     MapEvent events[MAX_EVENTS];
     int      n_events;
     uint32_t events_fired;
+
+    /* 段階的な敵増援。数が「自軍の展開数の何倍」で決まるので
+     * .map には書けず、出撃数が確定した campaign_begin で積む。
+     * 全量を最初から置くと盤面がいきなり重くなるため、
+     * 接触が始まる頃までに揃うよう数ターンに分けて到着させる。 */
+    ReinfWave waves[MAX_WAVES];
+    int       n_waves;
 
     /* ユニット */
     Unit  units[MAX_UNITS];
@@ -225,6 +242,10 @@ bool game_player_defeated(const Game *g, int p);
  * 手番開始時に呼ぶ。条件を満たした未発火イベントを全て実行し、発生した数を返す。
  * msgs には表示すべきメッセージへのポインタを最大 max 件入れる（NULL可）。 */
 int  game_check_events(Game *g, const char *msgs[], int max);
+/* 段階的増援を1波仕込む。到着は game_check_events が見る。 */
+void game_add_wave(Game *g, int owner, int turn, int count, const char *msg);
+/* owner の司令部（無ければ拠点・部隊）の座標。増援の湧き出し口。 */
+void game_find_origin(const Game *g, int owner, int *ox, int *oy);
 /* player が所有する占領対象建物の数 */
 int  game_count_buildings(const Game *g, int player);
 
