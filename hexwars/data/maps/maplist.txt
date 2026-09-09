@@ -26,3 +26,4 @@ maps/f08_citadel.map|城塞の攻防（非対称・攻守で目的が違う）
 maps/f09_drylines.map|涸れた戦線（拠点なし・補給なし）
 maps/f10_twocontinents.map|二大陸と内海（陸海空の決戦・大規模）
 maps/f11_fiveisles.map|五海諸島（5陣営の海洋決戦・陸海空）
+maps/f12_grandbattle.map|【試作】大決戦MAX（自軍72対敵144・待ち時間の確認用）

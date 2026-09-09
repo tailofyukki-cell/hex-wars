@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include "../src/core/game.h"
 #include "../src/core/ai.h"
 #include "../src/core/campaign.h"
@@ -9,6 +10,14 @@
 
 static Game s_game;
 static AiState s_ai;
+
+/* 1手番の思考にかかった最長時間（秒）。平均だと部隊が減った終盤に薄まるので、
+ * 部隊数が最大の序盤＝最悪値を別に見るために測る。 */
+static double s_turn_max;
+
+/* 1手番の ai_step 回数の最大。画面では1回ごとに演出待ちが入るので、
+ * これ×待ちフレーム数がそのまま「見せられる待ち時間」になる。 */
+static int s_step_max;
 
 static int run_match_co(const char *map, uint32_t seed, int ctrl0, int ctrl1,
                         const char *co0, const char *co1);
@@ -99,11 +108,17 @@ static int run_match_co(const char *map, uint32_t seed, int ctrl0, int ctrl1,
     while (g->winner == WINNER_NONE && guard < 200000) {
         int side = g->current;
         ev_fired += game_check_events(g, NULL, 0);   /* マップイベント（増援など） */
+        clock_t tt0 = clock();
         ai_begin_turn(g, &s_ai);
         if (s_ai.amphib) amphib_turns++;
-        while (ai_step(g, &s_ai) && guard < 200000)
-            guard++;
-        guard++;
+        int steps = 0;
+        while (ai_step(g, &s_ai) && guard < 200000) {
+            guard++; steps++;
+        }
+        guard++; steps++;
+        if (steps > s_step_max) s_step_max = steps;
+        double tsec = (double)(clock() - tt0) / CLOCKS_PER_SEC;
+        if (tsec > s_turn_max) s_turn_max = tsec;
         if (s_ai.co_used && side >= 0 && side < 2) co_fires[side]++;
         int loaded = 0, tr = 0;
         for (int i = 0; i < g->n_units; i++) {
@@ -240,6 +255,25 @@ int main(void)
     /* 5陣営×70部隊の海洋マップ。ここまで大きいと手番は遅い。 */
     if (run_match_ffa("data/maps/f11_fiveisles.map", 215,
                       CTRL_CPU_NORMAL) == -100) fail++;
+    /* 【試作】大決戦MAX。キャンペーン M19 の最大構成（自軍72対敵144）で
+     * CPUの手番がどれくらい待たされるかを実測する。演出を挟まない
+     * 思考時間そのものなので、ここが数秒なら遊べる。 */
+    if (!sim_skip("data/maps/f12_grandbattle.map")) {
+        clock_t t0 = clock();
+        s_turn_max = 0.0;
+        s_step_max = 0;
+        if (run_match("data/maps/f12_grandbattle.map", 216,
+                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+        double sec = (double)(clock() - t0) / CLOCKS_PER_SEC;
+        int turns = s_game.turn > 0 ? s_game.turn : 1;
+        printf("    [実測] 思考のみ 合計%.1f秒 / 手番%d = 平均%.2f秒 最悪%.2f秒\n",
+               sec, turns * 2, sec / (turns * 2), s_turn_max);
+        /* 演出待ちの見積り。60fps で 1手 cpu_wait フレーム。 */
+        printf("    [実測] 1手番の最大行動数 %d → 演出待ち "
+               "標準%.0f秒 / 速い%.0f秒 / 最速%.0f秒\n",
+               s_step_max, s_step_max * 14 / 60.0,
+               s_step_max * 6 / 60.0, s_step_max * 1 / 60.0);
+    }
     for (int s5 = 0; s5 < 5; s5++)
         if (run_match_ffa("data/maps/f01_lastStand.map", 210 + (uint32_t)s5,
                           CTRL_CPU_NORMAL) == -100) fail++;
