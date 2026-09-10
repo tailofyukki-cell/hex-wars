@@ -8,8 +8,8 @@
 static bool s_img_ready = false;
 
 /* キャッシュ: 0=未試行 / 1=読込済み / -1=失敗（毎フレームの再試行を防ぐ） */
-static SDL_Texture *s_tex[MAX_UNIT_TYPES][2];
-static int8_t       s_state[MAX_UNIT_TYPES][2];
+static SDL_Texture *s_tex[MAX_UNIT_TYPES][MAX_PLAYERS];
+static int8_t       s_state[MAX_UNIT_TYPES][MAX_PLAYERS];
 
 /* 地形セル画像のキャッシュ（ユニットの s_tex と同じ 0/1/-1 方式） */
 static SDL_Texture *s_terr_tex[MAX_TERRAIN];
@@ -49,7 +49,7 @@ void sprites_clear(void)
         s_terr_state[t] = 0;
     }
     for (int t = 0; t < MAX_UNIT_TYPES; t++)
-        for (int o = 0; o < 2; o++) {
+        for (int o = 0; o < MAX_PLAYERS; o++) {
             if (s_tex[t][o]) SDL_DestroyTexture(s_tex[t][o]);
             s_tex[t][o] = NULL;
             s_state[t][o] = 0;
@@ -85,7 +85,9 @@ SDL_Texture *sprite_get(App *a, int type, int owner)
 {
     if (!s_img_ready) return NULL;
     if (type < 0 || type >= a->game.n_types) return NULL;
-    owner = owner ? 1 : 0;
+    /* 陣営ごとに別の絵を引く。以前は 0/1 に丸めていたので、
+     * 陣営2〜4 は P1 の絵を使い回していた。 */
+    if (owner < 0 || owner >= MAX_PLAYERS) return NULL;
 
     if (s_state[type][owner] != 0)
         return s_tex[type][owner];

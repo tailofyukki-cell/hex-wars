@@ -164,6 +164,36 @@
 | `gfx/co/noel.png` | NOEL（ノエル教官） |
 | `gfx/co/dieter.png` | DIETER（ディーター大尉） |
 
+## 陣営ごとのユニット絵
+
+`units.def` の `image =` は全陣営共通。陣営ごとに別の絵にしたいときは
+`image0` 〜 `image4` を `image` の**あと**に書く（後に書いた方が勝つ）。
+
+```
+[unit TANK]
+image  = gfx/units/tank.png        # 全陣営これ
+image0 = gfx/units/tank_blue.png   # 陣営0（自軍）だけ
+image1 = gfx/units/tank_red.png    # 陣営1だけ
+```
+
+番号は陣営番号（0～4）。書かなかった陣営は `image` の絵のままになる。
+
+描画は画像に陣営色を乗せない（陣営は足元のチップの色と形で示す）ので、
+色分けされた絵が欲しければここで指定すること。
+全兵種分を揃える必要はなく、差し替えたものだけ変わる。
+
+元絵を陣営色に染めた仮絵なら `tools/gen_unit_tint.py` で一括生成できる。
+
+```bash
+python tools/gen_unit_tint.py             # 生成して、貼る行を画面に出す
+python tools/gen_unit_tint.py --apply     # units.def に直接書き込む
+python tools/gen_unit_tint.py --only INFANTRY,TANK
+```
+
+明度を保ったまま色相だけ寄せるので元絵の陰影は残る。あくまで仮絵で、
+描いた絵を同じ名前で上書きすればそのまま差し替わる。
+既に `image0` が書いてある兵種は飛ばすので、何度実行しても壊れない。
+
 ## 寸法の目安
 
 既存ファイルの実寸から。厳密でなくてよく、縦横比を保って収まるように拡縮される。

@@ -127,12 +127,14 @@ static void test_data_and_battle(void)
          * 夜間ユニットは陸・空・海に1つずつ。 */
         CHECK(land == 32 && air == 18 && sea == 20);
     }
-    /* 画像指定（image=）が両陣営分に読めていること */
+    /* 画像指定（image=）が全陣営分に読めていること。
+     * 陣営2〜4 が抜けると、乱戦マップでその陣営だけ
+     * 図形描画に戻ってしまう。 */
     {
         int inf_t = data_find_unit_type(g, "INFANTRY");
         CHECK(inf_t >= 0);
-        CHECK(strcmp(g->types[inf_t].image[0], "gfx/units/infantry.png") == 0);
-        CHECK(strcmp(g->types[inf_t].image[1], "gfx/units/infantry.png") == 0);
+        for (int pi = 0; pi < MAX_PLAYERS; pi++)
+            CHECK(strcmp(g->types[inf_t].image[pi], "gfx/units/infantry.png") == 0);
     }
 
     CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
@@ -2837,6 +2839,42 @@ static void test_enemy_reinforce(void)
     }
 }
 
+/* 陣営ごとのユニット画像。image= のあとに imageN= を書くと
+ * その陣営だけ差し替わる（書いていない陣営は image= のまま）。 */
+static void test_unit_image_per_player(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    if (s_fail) return;
+
+    /* 名前は ASCII だけにしておく（このテストでは使わない） */
+    const char *DEF =
+        "[unit ZZ_TEST]\n"
+        "name = ZZ\n"
+        "class = LAND_FOOT\n"
+        "image  = a.png\n"
+        "image0 = b.png\n"
+        "image4 = c.png\n";
+    FILE *f = fopen("build/_img.def", "wb");
+    CHECK(f != NULL);
+    if (!f) return;
+    fwrite(DEF, 1, strlen(DEF), f);
+    fclose(f);
+
+    CHECK(data_load_units(g, "build/_img.def", err, sizeof err) == 0);
+    if (s_fail) { printf("  %s\n", err); return; }
+    int t = data_find_unit_type(g, "ZZ_TEST");
+    CHECK(t >= 0);
+    if (t < 0) return;
+    CHECK(strcmp(g->types[t].image[0], "b.png") == 0);   /* image0 で上書き */
+    CHECK(strcmp(g->types[t].image[1], "a.png") == 0);   /* 未指定は image= */
+    CHECK(strcmp(g->types[t].image[2], "a.png") == 0);
+    CHECK(strcmp(g->types[t].image[3], "a.png") == 0);
+    CHECK(strcmp(g->types[t].image[4], "c.png") == 0);   /* 最後の陣営も届く */
+}
+
 /* 大決戦用の敵数調整: 総数を自軍の展開数の enemy_scale% に揃え、
  * 超過分は波に分けて2ターン目から到着させる。 */
 static void test_enemy_scale_waves(void)
@@ -3928,6 +3966,7 @@ int main(void)
     test_terrain_work();
     test_enemy_reinforce();
     test_enemy_scale_waves();
+    test_unit_image_per_player();
     test_join();
     test_ai_co_power();
     test_campaign_enemy_co();

@@ -277,11 +277,17 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "detect"))   cur->anti_sub = (uint8_t)atoi(val);
         else if (!strcmp(key, "supply"))        cur->supply = (uint8_t)atoi(val);
         else if (!strcmp(key, "image")) {
-            snprintf(cur->image[0], sizeof cur->image[0], "%s", val);
-            snprintf(cur->image[1], sizeof cur->image[1], "%s", val);
+            /* 全陣営に同じ絵。image0..image4 を後に書けば上書きされる。 */
+            for (int p = 0; p < MAX_PLAYERS; p++)
+                snprintf(cur->image[p], sizeof cur->image[p], "%s", val);
         }
-        else if (!strcmp(key, "image0")) snprintf(cur->image[0], sizeof cur->image[0], "%s", val);
-        else if (!strcmp(key, "image1")) snprintf(cur->image[1], sizeof cur->image[1], "%s", val);
+        /* image0 〜 image4: その陣営だけ別の絵にする。
+         * 番号を数字で見るので、MAX_PLAYERS を増やしてもここは直さなくていい。 */
+        else if (!strncmp(key, "image", 5) && key[5] >= '0' &&
+                 key[5] < '0' + MAX_PLAYERS && key[6] == '\0') {
+            int pi = key[5] - '0';
+            snprintf(cur->image[pi], sizeof cur->image[pi], "%s", val);
+        }
         else if (!strcmp(key, "anim"))   snprintf(cur->anim, sizeof cur->anim, "%s", val);
         else if (!strcmp(key, "cutin"))  snprintf(cur->cutin, sizeof cur->cutin, "%s", val);
         else if (!strcmp(key, "paradrop")) cur->paradrop = (uint8_t)atoi(val);

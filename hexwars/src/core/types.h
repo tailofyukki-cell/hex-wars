@@ -150,8 +150,10 @@ typedef struct {
     char     transport_by[4][24];   /* このユニットを搭載できる輸送手段ID */
     uint8_t  n_transport_by;
     /* スプライト画像（assets/ 相対パス。空=図形描画にフォールバック）
-     * image[0]=P0用 / image[1]=P1用（units.def の image は両方に設定） */
-    char     image[2][64];
+     * 陣営ごとに別の絵を持てる。units.def の `image =` は全陣営に入り、
+     * `image0 =` 〜 `image4 =` でその陣営だけ差し替えられる。
+     * 描画は色を乗せないので、色別の絵を用意するならここで指定する。 */
+    char     image[MAX_PLAYERS][64];
     /* 戦闘アニメ動画（assets/ 相対パス。アニメーションGIF/WebP）。
      * units.def の `anim =` で指定。空=動画なし（従来のHPバー演出にフォールバック） */
     char     anim[64];

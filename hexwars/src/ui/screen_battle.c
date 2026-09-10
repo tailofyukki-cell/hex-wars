@@ -1140,6 +1140,13 @@ void battle_enter(App *a)
         int hx = 0, hy = 0;
         if (cam && sscanf(cam, "%d,%d", &hx, &hy) == 2 &&
             game_in_bounds(&a->game, hx, hy)) {
+            /* 寄り具合も指定できる（HWZOOM=0..2）。
+             * スプライトの見た目を確かめるときに既定の引きだと小さすぎる。 */
+            const char *z = getenv("HWZOOM");
+            if (z && *z) {
+                int zv = atoi(z);
+                a->zoom = zv < 0 ? 0 : (zv > 2 ? 2 : zv);
+            }
             a->cur_x = hx; a->cur_y = hy;
             center_camera(a, hx, hy);
         }
