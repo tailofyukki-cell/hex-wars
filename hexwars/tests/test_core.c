@@ -1143,7 +1143,7 @@ static void test_campaign(void)
     Campaign c;
     CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
-    CHECK(c.n_nodes == 16);   /* M01-M10 + 海戦/複合4ノード(N1/N2/N3/N4) */
+    CHECK(c.n_nodes == 20);   /* M01-M10 + N1-N4 + M11-M14 + M19/M20 */
     CHECK(!strcmp(c.start, "M01"));
     const CpnNode *n1 = campaign_find_node(&c, "M01");
     CHECK(n1 && !strcmp(n1->next_win, "M02"));

@@ -1,0 +1,88 @@
+# c17 夜襲 - キャンペーン第9作戦。夜だけの戦い。
+#
+# day_turns=0 で常夜。夜は視界が縮むので、真正面からぶつかるより
+# 森の廊下を伝って回り込むほうが通る。中央は見通しの利く平地にして、
+# 「明るいところを渡るか、遠回りするか」を選ばせる。
+#
+# 敵は数で勝るが、こちらを見つけられていない。先に見つけたほうが勝つ。
+# 180度回転対称。
+[map]
+name             = 夜襲
+width            = 38
+height           = 24
+turns            = 40
+timeout_winner   = -1
+night            = 1
+day_turns        = 0
+night_turns      = 5
+funds0           = 2200
+funds1           = 2600
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxx................w.............xxxx
+row = xx.......w.......wwwwwww............xx
+row = xx..wwwwwwwwwww.wwwwwwwww...........xx
+row = x..wwwwwwwwwwwww.wwwwwww.............x
+row = x...wwwwwwwwwww.....w................x
+row = x........w.c............c............x
+row = x...............................c....x
+row = x.....f..............................x
+row = x....................................x
+row = x...........h........................x
+row = x.....====hhhhh==========h======..H..x
+row = x..H........h..........hhhhh.........x
+row = x........................h...........x
+row = x....................................x
+row = x..............................f.....x
+row = x....c...............................x
+row = x........w...c............c..........x
+row = x...wwwwwwwwwww..w...................x
+row = x..wwwwwwwwwwwwwwwwww................x
+row = xx..wwwwwwwwwwwwwwwwww..............xx
+row = xx.......w....wwwwwww...............xx
+row = xxxx.............w................xxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 3,12,0
+own = 34,11,1
+own = 6,8,0
+own = 31,15,1
+own = 5,16,0
+own = 32,7,1
+own = 11,6,0
+own = 26,17,1
+own = 13,17,0
+own = 24,6,1
+
+[units]
+unit = 0,INFANTRY,5,12
+unit = 0,INFANTRY,4,11
+unit = 0,INFANTRY,5,11
+unit = 0,INFANTRY,6,11
+unit = 0,MECH_INF,4,12
+unit = 0,MECH_INF,6,12
+unit = 0,AT_INFANTRY,4,13
+unit = 0,RECON,5,13
+unit = 0,RECON,6,13
+unit = 0,TANK,3,10
+unit = 0,TANK,4,10
+unit = 0,ARTILLERY,5,10
+unit = 0,SUPPLY,6,10
+unit = 1,INFANTRY,32,11
+unit = 1,INFANTRY,31,10
+unit = 1,INFANTRY,32,10
+unit = 1,INFANTRY,33,10
+unit = 1,INFANTRY,31,11
+unit = 1,MECH_INF,33,11
+unit = 1,MECH_INF,31,12
+unit = 1,AT_INFANTRY,32,12
+unit = 1,AT_INFANTRY,33,12
+unit = 1,RECON,30,9
+unit = 1,TANK,31,9
+unit = 1,TANK,32,9
+unit = 1,TANK,33,9
+unit = 1,ARTILLERY,34,9
+unit = 1,ARTILLERY,30,10
+unit = 1,AA_TANK,34,10

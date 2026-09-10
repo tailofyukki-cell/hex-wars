@@ -155,6 +155,10 @@ static int run_match_co(const char *map, uint32_t seed, int ctrl0, int ctrl1,
  * sim の他の節は .map を直読みするのでイベントが載らず、ここでしか検証できない。 */
 static int run_campaign_node(const Campaign *c, const char *node_id, uint32_t seed)
 {
+    /* HWSIM はノードIDでも絞れる（例: HWSIM=M19）。
+     * ここを飛ばせないと、マップを1枚見たいだけのときも
+     * キャンペーン全部が回って数分待たされる。 */
+    if (sim_skip(node_id)) return 0;
     Game *g = &s_game;
     char err[256];
     memset(g, 0, sizeof *g);
@@ -300,8 +304,11 @@ int main(void)
              * 使っているので、実戦で発火するか見ておく */
             /* M11(2対2のチーム戦) と M12(三つ巴) は多陣営を
              * キャンペーンに組み込んだノード。決着するかを見ておく。 */
+            /* M13(常夜) M14(持ちこたえる勝利) M19(段階的増援で敵が倍になる)
+             * M20(消化試合) は勝ち方や敵の数が他と違うので入れておく。 */
             const char *nodes[] = { "M01", "M05", "M09", "M11", "M12",
-                                    "N3", "N4", "M10" };
+                                    "N3", "N4", "M10",
+                                    "M13", "M14", "M19", "M20" };
             int n_nodes = (int)(sizeof nodes / sizeof nodes[0]);
             for (int i = 0; i < n_nodes; i++)
                 if (run_campaign_node(&cc, nodes[i], 700 + (uint32_t)i) == -100) fail++;
@@ -320,6 +327,14 @@ int main(void)
     if (run_match("data/maps/c10_plains.map", 110, CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     if (run_match("data/maps/c13_delta.map", 130, CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     if (run_match("data/maps/c14_bastion.map", 140, CTRL_CPU_NORMAL, CTRL_CPU_HARD) == -100) fail++;
+    if (run_match("data/maps/c17_nightraid.map", 170,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/c18_withdraw.map", 180,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    if (run_match("data/maps/c19_totalwar.map", 190,
+                  CTRL_CPU_NORMAL, CTRL_CPU_HARD) == -100) fail++;
+    if (run_match("data/maps/c20_lastlight.map", 200,
+                  CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
 
     if (fail == 0) { printf("SIMULATION OK\n"); return 0; }
     printf("%d FAILURE(S)\n", fail);

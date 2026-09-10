@@ -1,0 +1,97 @@
+# c18 後退線 - キャンペーン第13作戦。撤退戦。
+#
+# **敵を全滅させる必要はない。16ターン持ちこたえれば勝ち**
+# （turns=16 / timeout_winner=0）。
+#
+# 自軍は西の隘路に籠もる。正面（中央の谷）は狭くて守りやすいが、
+# 南北に迂回路があり、放っておくと背後を取られる。
+# 数で押されながら、どこを捨ててどこを守るかを選ばせる形。
+#
+# 敵が多いのは意図的（撤退戦なので非対称）。回転対称ではない。
+[map]
+name             = 後退線
+width            = 36
+height           = 26
+turns            = 16
+timeout_winner   = 0
+funds0           = 2400
+funds1           = 1200
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxxx.............^^.............xxxx
+row = xx...............^^...............xx
+row = xx...............^^...............xx
+row = x................^^................x
+row = x.............h..^^................x
+row = x....c......hhhhh............f.....x
+row = x.........w...h....................x
+row = x.......wwwww....^^................x
+row = x......wwwwwww...^^................x
+row = x.......wwwww....^^....w...........x
+row = x.........w..h...^^..wwwww.........x
+row = x.=H==f==c=hhhhh.^^.wwwwwww...c.H..x
+row = x............h...^^..wwwww.........x
+row = x.........w......^^....w...........x
+row = x.......wwwww....^^................x
+row = x......wwwwwww...^^................x
+row = x.......wwwww.h..^^................x
+row = x....c....w.hhhhh............f.....x
+row = x.............h....................x
+row = x................^^................x
+row = x................^^................x
+row = xx...............^^...............xx
+row = xx...............^^...............xx
+row = xxxx.............^^.............xxxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 3,12,0
+own = 6,12,0
+own = 5,6,0
+own = 5,18,0
+own = 9,12,0
+own = 32,12,1
+own = 29,6,1
+own = 29,18,1
+own = 30,12,1
+
+[units]
+unit = 0,AT_INFANTRY,12,12
+unit = 0,AT_INFANTRY,11,11
+unit = 0,AT_INFANTRY,12,11
+unit = 0,AT_INFANTRY,13,11
+unit = 0,INFANTRY,11,12
+unit = 0,INFANTRY,13,12
+unit = 0,INFANTRY,11,13
+unit = 0,INFANTRY,12,13
+unit = 0,MECH_INF,13,13
+unit = 0,MECH_INF,10,10
+unit = 0,ARTILLERY,11,10
+unit = 0,ARTILLERY,12,10
+unit = 0,ARTILLERY,13,10
+unit = 0,TANK,14,10
+unit = 0,TANK,10,11
+unit = 0,TANK,14,11
+unit = 0,AA_TANK,10,12
+unit = 0,SUPPLY,14,12
+unit = 1,TANK,26,12
+unit = 1,TANK,26,6
+unit = 1,TANK,26,18
+unit = 1,TANK,25,11
+unit = 1,TANK,25,5
+unit = 1,HTANK,25,17
+unit = 1,LTANK,26,11
+unit = 1,LTANK,26,5
+unit = 1,MECH_INF,26,17
+unit = 1,MECH_INF,27,11
+unit = 1,MECH_INF,27,5
+unit = 1,INFANTRY,27,17
+unit = 1,INFANTRY,25,12
+unit = 1,INFANTRY,25,6
+unit = 1,ARTILLERY,25,18
+unit = 1,ARTILLERY,27,12
+unit = 1,AA_TANK,27,6
+unit = 1,AA_TANK,27,18
+unit = 1,RECON,25,13
+unit = 1,RECON,25,7

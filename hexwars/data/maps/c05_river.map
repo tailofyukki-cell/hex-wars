@@ -64,3 +64,8 @@ unit = 0,ARTILLERY,8,5
 unit = 1,ARTILLERY,33,18
 unit = 0,RECON,9,5
 unit = 1,RECON,32,20
+# 工兵。橋を落として敵の機甲を止め、落とされた橋を直して渡る。
+# 歩兵は川を徒渉できるので、橋が無くても詰みにはならない。
+unit = 0,ENGINEER,7,3
+unit = 0,ENGINEER,7,5
+unit = 1,ENGINEER,33,19

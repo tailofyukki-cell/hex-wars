@@ -107,7 +107,7 @@
 | `gfx/co/noel.png` | NOEL（ノエル教官） | **未** | - |
 | `gfx/co/dieter.png` | DIETER（ディーター大尉） | **未** | - |
 
-## キャンペーン（20本）
+## キャンペーン（40本）
 
 定義場所: `data/campaign/main.cpn` の `art = / reward = / reward_video =`
 
@@ -145,10 +145,18 @@
 | `gfx/units/engineer.png` | ENGINEER（工兵） |
 | `gfx/terrain/rubble.png` | RUBBLE（瓦礫。工兵に壊された拠点） |
 | `gfx/terrain/rubble_port.png` | RUBBLE_PORT（破壊された港湾） |
-| `gfx/brief/m11.png` | 第8作戦「共同戦線」のブリーフィング絵 |
-| `gfx/brief/m12.png` | 第12作戦「三つ巴の要衝」のブリーフィング絵 |
-| `gfx/reward/m11.png` | 第8作戦のクリア絵 |
-| `gfx/reward/m12.png` | 第12作戦のクリア絵 |
+| `gfx/brief/m11.png` | 第9作戦「共同戦線」のブリーフィング絵 |
+| `gfx/brief/m12.png` | 第14作戦「三つ巴の要衝」のブリーフィング絵 |
+| `gfx/reward/m11.png` | 第9作戦のクリア絵 |
+| `gfx/reward/m12.png` | 第14作戦のクリア絵 |
+| `gfx/brief/m13.png` | 第8作戦「夜襲」のブリーフィング絵（夜の森と兵） |
+| `gfx/reward/m13.png` | 第8作戦のクリア絵 |
+| `gfx/brief/m14.png` | 第13作戦「後退線」のブリーフィング絵（隠路を塞ぐ対戦車部隊） |
+| `gfx/reward/m14.png` | 第13作戦のクリア絵（損耗しつつも線を保った部隊） |
+| `gfx/brief/m19.png` | 第19作戦「総力戦」のブリーフィング絵（ラスボス。地平線まで埋める敵軍） |
+| `gfx/reward/m19.png` | 第19作戦のクリア絵（燃える戦場と立つ自軍） |
+| `gfx/brief/m20.png` | 最終作戦「残照」のブリーフィング絵（静かな敵司令部） |
+| `gfx/reward/m20.png` | 最終作戦のクリア絵（砲声の無い朝） |
 | `gfx/units/night_inf.png` | NIGHT_INF（夜間忍兵） |
 | `gfx/units/night_boat.png` | NIGHT_BOAT（夜間突撃艦） |
 | `gfx/units/night_fighter.png` | NIGHT_FIGHTER（夜間迎撃機） |

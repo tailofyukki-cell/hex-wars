@@ -1,0 +1,57 @@
+# c20 残照 - キャンペーン第20作戦。最終作戦。
+#
+# **わざと軽くしてある**。前作戦で敵は戦力を使い切っており、
+# ここに残っているのは司令部の守備隊だけ。自軍8部隊・敵5部隊。
+# .cpn は no_reinforce=1（持越しぶんの敵増援も出さない）。
+# 歯ごたえではなく締めくくりが目的なので、このバランスは意図的。
+[map]
+name             = 残照
+width            = 28
+height           = 18
+turns            = 30
+timeout_winner   = -1
+funds0           = 3000
+funds1           = 800
+
+[terrain]
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+row = xxx......................xxx
+row = xx......w.................xx
+row = x.....wwwww................x
+row = x....cwwwwww......h..c.....x
+row = x.....wwwww.....hhhhh......x
+row = x.......w.....w...h........x
+row = x...........wwwww..........x
+row = x.=H==f====wwwwwww======H..x
+row = x...........wwwww..........x
+row = x.............w............x
+row = x.......w.........h........x
+row = x.....wwwww.....hhhhhc.....x
+row = x....wwwwwww......h........x
+row = x.....wwwww................x
+row = xx......w.................xx
+row = xxx......................xxx
+row = xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[owners]
+own = 3,8,0
+own = 6,8,0
+own = 5,4,0
+own = 24,8,1
+own = 21,4,1
+own = 21,12,1
+
+[units]
+unit = 0,TANK,7,8
+unit = 0,TANK,6,7
+unit = 0,MECH_INF,7,7
+unit = 0,MECH_INF,8,7
+unit = 0,INFANTRY,6,8
+unit = 0,INFANTRY,8,8
+unit = 0,ARTILLERY,6,9
+unit = 0,SUPPLY,7,9
+unit = 1,INFANTRY,21,8
+unit = 1,INFANTRY,20,7
+unit = 1,AT_INFANTRY,21,7
+unit = 1,TANK,22,7
+unit = 1,ARTILLERY,20,8
