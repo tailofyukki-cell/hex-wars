@@ -1,4 +1,12 @@
-/* sim_ai.c - CPU同士の自動対戦シミュレーション（ヘッドレス統合テスト） */
+/* sim_ai.c - CPU同士の自動対戦シミュレーション（ヘッドレス統合テスト）
+ *
+ *   sim_ai.exe                 短縮コース（約1分）。各マップを25ターンまで回す。
+ *   HWSIM_ALL=1 sim_ai.exe     全部回す（約14分）。決着まで回し、シードも複数。
+ *   HWSIM=c19 sim_ai.exe       マップ名かノードIDの部分一致で絞る（例 HWSIM=M19）。
+ *
+ * 普段は短縮でいい。マップが読めない・部隊が孤立している・序盤でAIが固まる、
+ * といった実際に起きる壊れ方は序盤で出る。決着するかまで見たいときと、
+ * AIを触ったとき、リリース前だけ HWSIM_ALL=1 を使う。 */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -25,6 +33,36 @@ static int run_match_co(const char *map, uint32_t seed, int ctrl0, int ctrl1,
 static int run_match(const char *map, uint32_t seed, int ctrl0, int ctrl1)
 {
     return run_match_co(map, seed, ctrl0, ctrl1, NULL, NULL);
+}
+
+/* 既定は短縮コース。HWSIM_ALL=1 で全部回す。
+ *
+ * 全部回すと14分かかる。マップを1枚直しただけで毎回それを待つのは
+ * 割に合わないので、既定では各マップを一度ずつだけ回す。
+ * 複数シードを回すのは「特定の乱数でだけ止まる」種の不具合を
+ * 拾うためなので、AIを触ったときとリリース前だけ HWSIM_ALL=1 で回せばいい。 */
+static int sim_full(void)
+{
+    const char *v = getenv("HWSIM_ALL");
+    return v && *v && *v != '0';
+}
+
+/* シードを何回回すか。短縮コースでは1回だけ。 */
+static int sim_seeds(int n)
+{
+    return sim_full() ? n : 1;
+}
+
+/* 短縮コースで切り上げるターン（0=無制限）。
+ *
+ * 時間の大半は「決着がつかないままターン上限まで回る試合」に消えている。
+ * だが普段壊れるのは「マップが読めない」「部隊が孤立している」
+ * 「序盤でAIが固まる」のどれかで、どれも序盤で出る。
+ * だから短縮コースは「動くか」だけ見、「決着するか」は
+ * HWSIM_ALL に回す。切り上げた未決着は失敗扱いにしない。 */
+static int sim_turn_cap(void)
+{
+    return sim_full() ? 0 : 25;
 }
 
 /* 環境変数 HWSIM で回すマップを絞る（部分一致）。
@@ -65,6 +103,14 @@ static int run_match_ffa(const char *map, uint32_t seed, int ctrl)
         ai_begin_turn(g, &s_ai);
         while (ai_step(g, &s_ai) && guard < 300000) guard++;
         guard++;
+        if (sim_turn_cap() > 0 && g->turn > sim_turn_cap()) break;
+    }
+    if (g->winner == WINNER_NONE && sim_turn_cap() > 0 &&
+        g->turn > sim_turn_cap()) {
+        /* 短縮コースの切り上げ。未決着だが失敗ではない。 */
+        printf("  %s: seed=%u turn=%d で切り上げ（短縮コース）\n",
+               map, seed, g->turn);
+        return 0;
     }
     if (g->winner == WINNER_NONE) {
         printf("  打ち切り（無限ループ疑い） turn=%d\n", g->turn);
@@ -119,6 +165,7 @@ static int run_match_co(const char *map, uint32_t seed, int ctrl0, int ctrl1,
         if (steps > s_step_max) s_step_max = steps;
         double tsec = (double)(clock() - tt0) / CLOCKS_PER_SEC;
         if (tsec > s_turn_max) s_turn_max = tsec;
+        if (sim_turn_cap() > 0 && g->turn > sim_turn_cap()) break;
         if (s_ai.co_used && side >= 0 && side < 2) co_fires[side]++;
         int loaded = 0, tr = 0;
         for (int i = 0; i < g->n_units; i++) {
@@ -137,6 +184,13 @@ static int run_match_co(const char *map, uint32_t seed, int ctrl0, int ctrl1,
     if (amphib_turns > 0)
         printf("    [上陸] 判定%dターン 輸送%d隻 積載最大%d 揚陸%d回\n",
                amphib_turns, transports_made, max_loaded, unloads);
+    if (g->winner == WINNER_NONE && sim_turn_cap() > 0 &&
+        g->turn > sim_turn_cap()) {
+        /* 短縮コースの切り上げ。未決着だが失敗ではない。 */
+        printf("  %s: seed=%u turn=%d で切り上げ（短縮コース）\n",
+               map, seed, g->turn);
+        return 0;
+    }
     if (g->winner == WINNER_NONE) {
         printf("  打ち切り（無限ループ疑い） turn=%d\n", g->turn);
         return -100;
@@ -186,6 +240,10 @@ static int run_campaign_node(const Campaign *c, const char *node_id, uint32_t se
         ai_begin_turn(g, &s_ai);
         while (ai_step(g, &s_ai) && guard < 200000) guard++;
         guard++;
+        /* 短縮コースでは途中で切り上げる。遅いターンのイベントや
+         * AREA条件は発火しないので、行末の「イベント n/m」は少なく出る。
+         * 全部発火するか見たいときは HWSIM_ALL=1。 */
+        if (sim_turn_cap() > 0 && g->turn > sim_turn_cap()) break;
     }
     printf("  %-4s %-24s turn=%3d 勝者=%2d 損失=%3d/%3d イベント %d/%d 発火\n",
            node_id, g->map_name, g->turn, g->winner,
@@ -196,23 +254,26 @@ static int run_campaign_node(const Campaign *c, const char *node_id, uint32_t se
 int main(void)
 {
     int fail = 0;
+    printf(sim_full()
+           ? "== 全部回す（HWSIM_ALL） ==\n"
+           : "== 短縮コース。全部回すなら HWSIM_ALL=1 ==\n");
     printf("== NORMAL vs NORMAL ==\n");
-    for (uint32_t s = 1; s <= 3; s++)
+    for (uint32_t s = 1; s <= (uint32_t)sim_seeds(3); s++)
         if (run_match("data/maps/m01_border_hills.map", s * 1000 + 7,
                       CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     printf("== HARD vs EASY ==\n");
     if (run_match("data/maps/m01_border_hills.map", 4242,
                   CTRL_CPU_HARD, CTRL_CPU_EASY) == -100) fail++;
     printf("== m02（海空マップ） ==\n");
-    for (uint32_t s = 1; s <= 2; s++)
+    for (uint32_t s = 1; s <= (uint32_t)sim_seeds(2); s++)
         if (run_match("data/maps/m02_channel.map", s * 77 + 5,
                       CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     printf("== m04（立体戦: 空・海面・海中が重なるマップ） ==\n");
-    for (uint32_t s = 1; s <= 2; s++)
+    for (uint32_t s = 1; s <= (uint32_t)sim_seeds(2); s++)
         if (run_match("data/maps/m04_layers.map", s * 211 + 9,
                       CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     printf("== m03/c11/c12（海戦・上陸マップ） ==\n");
-    for (uint32_t s = 1; s <= 2; s++)
+    for (uint32_t s = 1; s <= (uint32_t)sim_seeds(2); s++)
         if (run_match("data/maps/m03_archipelago.map", s * 131 + 3,
                       CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     if (run_match("data/maps/c11_seacontrol.map", 137, CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
@@ -250,7 +311,7 @@ int main(void)
                   CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     if (run_match("data/maps/f08_citadel.map", 207,
                   CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
-    for (uint32_t s9 = 0; s9 < 3; s9++)
+    for (uint32_t s9 = 0; s9 < (uint32_t)sim_seeds(3); s9++)
         if (run_match("data/maps/f09_drylines.map", 208 + s9 * 31,
                       CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     /* 大型マップ。部隊数が多いので遅いが、止まらないことを見る。 */
@@ -278,17 +339,17 @@ int main(void)
                s_step_max, s_step_max * 14 / 60.0,
                s_step_max * 6 / 60.0, s_step_max * 1 / 60.0);
     }
-    for (int s5 = 0; s5 < 5; s5++)
+    for (int s5 = 0; s5 < sim_seeds(5); s5++)
         if (run_match_ffa("data/maps/f01_lastStand.map", 210 + (uint32_t)s5,
                           CTRL_CPU_NORMAL) == -100) fail++;
 
     printf("== 多陣営の乱戦 ==\n");
-    for (int s3 = 0; s3 < 3; s3++)
+    for (int s3 = 0; s3 < sim_seeds(3); s3++)
         if (run_match_ffa("data/maps/m05_threeway.map", 900 + (uint32_t)s3,
                           CTRL_CPU_NORMAL) == -100) fail++;
     /* 完全対称なので、偏りが出れば手番順かAIの振る舞いが原因。
      * 2シードだと先手有利と区別できないので多めに回す。 */
-    for (int s3 = 0; s3 < 6; s3++)
+    for (int s3 = 0; s3 < sim_seeds(6); s3++)
         if (run_match_ffa("data/maps/m06_alliance.map", 950 + (uint32_t)s3,
                           CTRL_CPU_NORMAL) == -100) fail++;
 
@@ -309,9 +370,16 @@ int main(void)
             const char *nodes[] = { "M01", "M05", "M09", "M11", "M12",
                                     "N3", "N4", "M10",
                                     "M13", "M14", "M19", "M20" };
-            int n_nodes = (int)(sizeof nodes / sizeof nodes[0]);
+            /* 短縮コースは代表を4つ。先頭から順に取るのではなく、
+             * 仕組みの違うものを選ぶ:
+             *   M01 普通の小さい作戦 / M12 三つ巴（多陣営）
+             *   M14 持ちこたえれば勝ち / M19 段階的増援 */
+            static const char *quick[] = { "M01", "M12", "M14", "M19" };
+            const char **use = sim_full() ? nodes : quick;
+            int n_nodes = sim_full() ? (int)(sizeof nodes / sizeof nodes[0])
+                                     : (int)(sizeof quick / sizeof quick[0]);
             for (int i = 0; i < n_nodes; i++)
-                if (run_campaign_node(&cc, nodes[i], 700 + (uint32_t)i) == -100) fail++;
+                if (run_campaign_node(&cc, use[i], 700 + (uint32_t)i) == -100) fail++;
         }
     }
     printf("== キャンペーンマップ ==\n");
