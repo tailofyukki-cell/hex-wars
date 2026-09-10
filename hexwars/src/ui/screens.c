@@ -1242,12 +1242,14 @@ static int cpnmap_slot(const Campaign *c, int i)
 /* スクロールを含まない素の位置。高さの計算にも使う */
 static void cpnmap_node_pos(const Campaign *c, int i, int *x, int *y)
 {
-    /* 5列のジグザグ配置。作戦が増えると段が増えて縦に伸びる。
-     * 段ごとに進行方向を反転させる（牛耕式）。全段を左→右にすると
-     * 段の繋ぎ目が「右端→左端」になり、接続線が画面を横断してしまう。 */
+    /* 5列。作戦が増えると段が増えて縦に伸びる。
+     *
+     * **どの段も左→右**。以前は段ごとに向きを反転させる牛耕式にしていたが、
+     * 偶数段と奇数段で番号の進む向きが逆になり、作戦番号が並んで見えなかった。
+     * 段の繋ぎ目が「右端→左端」になる問題は、その線を直線で引かず
+     * 段の下を回す配線にして解いてある（draw_link_wrap）。 */
     int slot = cpnmap_slot(c, i);
     int col = slot % 5, row = slot / 5;
-    if (row % 2) col = 4 - col;
     *x = 160 + col * 240;
     *y = 240 + row * 260 + ((col % 2) ? 36 : 0);
 }
@@ -1354,12 +1356,26 @@ static void cpnmap_event(App *a, const SDL_Event *e)
 
 static void cpnmap_update(App *a) { (void)a; }
 
-static void draw_link(App *a, int x0, int y0, int x1, int y1, SDL_Color c)
+static void draw_seg(App *a, int x0, int y0, int x1, int y1)
 {
-    SDL_SetRenderDrawColor(a->ren, c.r, c.g, c.b, c.a);
     /* 少し太く見せるため2本 */
     SDL_RenderDrawLine(a->ren, x0, y0, x1, y1);
     SDL_RenderDrawLine(a->ren, x0, y0 + 1, x1, y1 + 1);
+}
+
+static void draw_link(App *a, int x0, int y0, int x1, int y1, SDL_Color c)
+{
+    SDL_SetRenderDrawColor(a->ren, c.r, c.g, c.b, c.a);
+    /* 段をまたいで左へ戻る線（段の折り返し）は直線で引くと画面を斜めに
+     * 横断してしまう。下へ落として横へ流し、次の段の頭で上げる。 */
+    if (x1 < x0 - 8 && y1 > y0 + 8) {
+        int lane = (y0 + y1) / 2;
+        draw_seg(a, x0, y0, x0, lane);
+        draw_seg(a, x0, lane, x1, lane);
+        draw_seg(a, x1, lane, x1, y1);
+        return;
+    }
+    draw_seg(a, x0, y0, x1, y1);
 }
 
 static void cpnmap_draw(App *a)
