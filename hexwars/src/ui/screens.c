@@ -1239,6 +1239,16 @@ static int cpnmap_slot(const Campaign *c, int i)
     return c->n_nodes + i;   /* 本線に載らないノードは後ろへ */
 }
 
+/* ヘクスの中に出す名前。ノードID（M13 等）は .cpn を書いた順の名残で
+ * 進行順と一致しないため、通し番号（第何作戦か）を出す。
+ * 本線に載らないノードだけは番号が付けられないのでIDのまま。 */
+static void cpnmap_node_label(const Campaign *c, int i, char *buf, size_t n)
+{
+    int slot = cpnmap_slot(c, i);
+    if (slot < c->n_nodes) snprintf(buf, n, "%02d", slot + 1);
+    else                   snprintf(buf, n, "%s", c->nodes[i].id);
+}
+
 /* スクロールを含まない素の位置。高さの計算にも使う */
 static void cpnmap_node_pos(const Campaign *c, int i, int *x, int *y)
 {
@@ -1431,8 +1441,10 @@ static void cpnmap_draw(App *a)
             float pulse = 1.0f + 0.05f * sinf((float)a->frame * 0.12f);
             render_hex_outline(a, (float)x, (float)y, 46.0f * pulse, COL_YELLOW);
         }
+        char nlab[32];
+        cpnmap_node_label(c, i, nlab, sizeof nlab);
         draw_text_center(a, a->font_m, x, y - 12,
-                         done || current ? COL_WHITE : COL_GRAY, c->nodes[i].id);
+                         done || current ? COL_WHITE : COL_GRAY, nlab);
         if (done) {
             /* 制圧済みは取得ランクを併記（未評価なら従来どおり「制圧」） */
             if (nrank != RANK_NONE) {
