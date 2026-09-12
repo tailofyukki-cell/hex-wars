@@ -193,6 +193,7 @@ TMENU_CLOSE     = 閉じる
 PROD_TITLE      = 生産 / 倉庫
 PROD_STORE_TAG  = 倉
 PROD_FREE       = 無料
+PROD_EXP_FMT    = 経験%3d (ランク%d)
 
 PANEL_DEF_FMT    = 防御補正 +%d%%
 PANEL_INCOME_FMT = 収入 %dG

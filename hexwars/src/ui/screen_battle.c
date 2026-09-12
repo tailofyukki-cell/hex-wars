@@ -331,7 +331,7 @@ static void do_save_slot(App *a, int slot)
 /* i 番目の項目の矩形（スクロール位置を考慮した画面上の行） */
 static SDL_Rect prod_rect(App *a, int i)
 {
-    SDL_Rect r = { WIN_W / 2 - 260, 140 + (i - a->prod_scroll) * 44, 520, 40 };
+    SDL_Rect r = { WIN_W / 2 - 340, 140 + (i - a->prod_scroll) * 44, 680, 40 };
     return r;
 }
 
@@ -2154,8 +2154,8 @@ static void draw_menus(App *a)
         int shown = scrollable ? PROD_VISIBLE : a->prod_n;
         /* 行領域(40+shown*44) + 下部余白(スクロール時は▼用に広めに) */
         int ph = 40 + shown * 44 + (scrollable ? 24 : 12);
-        fill_rect(a, WIN_W / 2 - 280, 100, 560, ph, (SDL_Color){ 28, 32, 38, 245 });
-        outline_rect(a, WIN_W / 2 - 280, 100, 560, ph, COL_DIM);
+        fill_rect(a, WIN_W / 2 - 360, 100, 720, ph, (SDL_Color){ 28, 32, 38, 245 });
+        outline_rect(a, WIN_W / 2 - 360, 100, 720, ph, COL_DIM);
         char title[64];
         if (scrollable)
             snprintf(title, sizeof title, "%s  (%d/%d)", tx("PROD_TITLE"),
@@ -2165,7 +2165,7 @@ static void draw_menus(App *a)
         draw_text_center(a, a->font_m, WIN_W / 2, 106, COL_WHITE, title);
         /* 上下に隠れた項目があれば ▲▼ を表示 */
         if (a->prod_scroll > 0)
-            draw_text_center(a, a->font_s, WIN_W / 2 + 250, 106, COL_YELLOW, "▲");
+            draw_text_center(a, a->font_s, WIN_W / 2 + 330, 106, COL_YELLOW, "▲");
         if (a->prod_scroll + PROD_VISIBLE < a->prod_n)
             draw_text_center(a, a->font_s, WIN_W / 2, 100 + ph - 20, COL_YELLOW, "▼");
         int end = a->prod_scroll + PROD_VISIBLE;
@@ -2197,6 +2197,18 @@ static void draw_menus(App *a)
             draw_text(a, a->font_m, r.x + r.w - 90, r.y + 7,
                       from_store ? (SDL_Color){ 130, 220, 130, 255 }
                                  : (afford ? COL_YELLOW : COL_DIM), buf);
+            /* 倉庫の部隊は経験値を持ったまま戻ってくるので、同じ名前が
+             * 並んだときにどれを出すか選べるよう経験とランクを出す。
+             * 名前の長さが種別で変わるため、値段の左に右詰めで置く。 */
+            if (from_store) {
+                int exp = a->cps.store[slot].exp;
+                int rank = exp / 20; if (rank > 5) rank = 5;
+                snprintf(buf, sizeof buf, tx("PROD_EXP_FMT"), exp, rank);
+                int ew = text_width(a, a->font_s, buf);
+                draw_text(a, a->font_s, r.x + r.w - 100 - ew, r.y + 12,
+                          rank > 0 ? (SDL_Color){ 160, 240, 160, 255 } : COL_GRAY,
+                          buf);
+            }
         }
     }
     if (a->bs == BS_UNITLIST) {
