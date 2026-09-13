@@ -194,6 +194,10 @@ PROD_TITLE      = 生産 / 倉庫
 PROD_STORE_TAG  = 倉
 PROD_FREE       = 無料
 PROD_EXP_FMT    = 経験%3d (ランク%d)
+PROD_SORT_FMT   = 並び: %s
+PROD_SORT_TYPE  = 種別順
+PROD_SORT_EXP   = 経験順
+PROD_SORT_COST  = 安い順
 
 PANEL_DEF_FMT    = 防御補正 +%d%%
 PANEL_INCOME_FMT = 収入 %dG
@@ -230,7 +234,7 @@ HINT_UNITLIST   = ↑↓/ホイール:選択  Z:そのユニットへ移動  X:�
 LAYER_AIR       = 空
 LAYER_SURFACE   = 地上
 LAYER_UNDER     = 海中
-HINT_PROD       = ↑↓/ホイール:選択  Z:生産/引出  X:閉じる
+HINT_PROD       = ↑↓/ホイール:選択  S:並び替え  Z:生産/引出  X:閉じる
 HINT_SAVE       = ↑↓:選択  Z:セーブ  X:戻る
 HINT_ANIM       = Z:スキップ
 

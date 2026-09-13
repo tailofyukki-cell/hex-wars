@@ -199,6 +199,8 @@ struct App {
     int   prod_store[MAX_UNIT_TYPES + MAX_STORE_UNITS];  /* 倉庫slot（-1=通常生産） */
     int   prod_n, prod_idx;
     int   prod_scroll;       /* 生産リストの先頭表示index（スクロール） */
+    uint8_t prod_sort;       /* 並び替え 0=種別 1=経験 2=安い順（S キーで巡回） */
+    bool  prod_bar_drag;     /* スクロールバーのつまみをドラッグ中 */
     /* 重なりセルの情報パネル巡回（カーソルを当てている間、一定間隔で切替） */
     int      panel_cx, panel_cy;   /* 巡回の基準セル（変わったら最初から） */
     int      panel_unit;           /* 情報パネルに今出しているユニット（-1=なし） */

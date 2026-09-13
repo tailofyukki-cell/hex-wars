@@ -327,11 +327,55 @@ static void do_save_slot(App *a, int slot)
 }
 
 #define PROD_VISIBLE 10   /* 生産メニューに一度に表示する行数 */
+#define PROD_SORT_N  3    /* 並び替えの種類: 種別 / 経験 / 安い順 */
 
-/* i 番目の項目の矩形（スクロール位置を考慮した画面上の行） */
+/* i 番目の項目の矩形（スクロール位置を考慮した画面上の行）。
+ * 右端はスクロールバーの溝の分だけ空けてある */
 static SDL_Rect prod_rect(App *a, int i)
 {
-    SDL_Rect r = { WIN_W / 2 - 340, 140 + (i - a->prod_scroll) * 44, 680, 40 };
+    SDL_Rect r = { WIN_W / 2 - 340, 140 + (i - a->prod_scroll) * 44, 656, 40 };
+    return r;
+}
+
+/* スクロールバーの溝。行の右、パネルの内側 */
+static SDL_Rect prod_bar_rect(void)
+{
+    SDL_Rect r = { WIN_W / 2 + 326, 140, 10, PROD_VISIBLE * 44 - 4 };
+    return r;
+}
+
+/* つまみ。見えている割合だけの長さにするが、項目が多いと潰れて
+ * つまめなくなるので下限を置く */
+static SDL_Rect prod_thumb_rect(App *a)
+{
+    SDL_Rect t = prod_bar_rect();
+    if (a->prod_n <= PROD_VISIBLE) return t;
+    int th = t.h * PROD_VISIBLE / a->prod_n;
+    if (th < 24) th = 24;
+    int maxs = a->prod_n - PROD_VISIBLE;
+    t.y += (t.h - th) * a->prod_scroll / maxs;
+    t.h = th;
+    return t;
+}
+
+/* つまみの中心を y に合わせる。溝のどこを押しても飛べるよう
+ * ドラッグと素のクリックの両方から呼ぶ */
+static void prod_bar_scroll_to(App *a, int y)
+{
+    if (a->prod_n <= PROD_VISIBLE) { a->prod_scroll = 0; return; }
+    SDL_Rect t = prod_bar_rect();
+    int th = prod_thumb_rect(a).h;
+    int span = t.h - th, maxs = a->prod_n - PROD_VISIBLE;
+    int sc = (span > 0) ? (y - t.y - th / 2) * maxs / span : 0;
+    if (sc < 0) sc = 0;
+    if (sc > maxs) sc = maxs;
+    a->prod_scroll = sc;
+}
+
+/* 並び替えボタン（見出しの右）。キーの S と同じ働き */
+static SDL_Rect prod_sort_rect(void)
+{
+    SDL_Rect r = { WIN_W / 2 + 200, 104, 136, 28 };
     return r;
 }
 
@@ -346,6 +390,73 @@ static void prod_keep_visible(App *a)
     if (maxscroll < 0) maxscroll = 0;
     if (a->prod_scroll > maxscroll) a->prod_scroll = maxscroll;
     if (a->prod_scroll < 0) a->prod_scroll = 0;
+}
+
+/* 並び順の比較。生産（有料）と倉庫は混ぜず、節の中だけで並べ替える。
+ * 混ぜると「買う」と「戻す」が入り乱れて、かえって読みにくくなる。 */
+static int prod_cmp(App *a, int ti, int si, int tj, int sj)
+{
+    const Game *g = &a->game;
+    if ((si < 0) != (sj < 0)) return (si < 0) ? -1 : 1;   /* 生産が先、倉庫が後 */
+    /* 経験値は倉庫の部隊しか持たない。生産側は -1 として扱う */
+    int ei = (si >= 0) ? a->cps.store[si].exp : -1;
+    int ej = (sj >= 0) ? a->cps.store[sj].exp : -1;
+    if (a->prod_sort == 1) {              /* 経験の高い順 */
+        if (ei != ej) return (ei > ej) ? -1 : 1;
+    } else if (a->prod_sort == 2) {       /* 値段の安い順 */
+        if (g->types[ti].cost != g->types[tj].cost)
+            return (g->types[ti].cost < g->types[tj].cost) ? -1 : 1;
+    }
+    /* 既定（種別順）と、上の鍵で並びが決まらなかったときの共通の後始末。
+     * 同じ種別は経験の高いものを上にして、育った個体を選びやすくする。 */
+    if (ti != tj) return (ti < tj) ? -1 : 1;
+    if (ei != ej) return (ei > ej) ? -1 : 1;
+    return (si < sj) ? -1 : ((si > sj) ? 1 : 0);
+}
+
+/* prod_sort に従って並べ替える。選んでいた項目は並びが変わっても
+ * 追いかける（種別と倉庫slotの組で拾い直す）。 */
+static void prod_sort_list(App *a)
+{
+    int cur_t = -1, cur_s = -2;
+    if (a->prod_idx >= 0 && a->prod_idx < a->prod_n) {
+        cur_t = a->prod_items[a->prod_idx];
+        cur_s = a->prod_store[a->prod_idx];
+    }
+    /* 挿入ソート。項目はたかだか数十で、既に並んでいれば何も動かない */
+    for (int i = 1; i < a->prod_n; i++) {
+        int t = a->prod_items[i], sl = a->prod_store[i], j = i - 1;
+        while (j >= 0 &&
+               prod_cmp(a, a->prod_items[j], a->prod_store[j], t, sl) > 0) {
+            a->prod_items[j + 1] = a->prod_items[j];
+            a->prod_store[j + 1] = a->prod_store[j];
+            j--;
+        }
+        a->prod_items[j + 1] = t;
+        a->prod_store[j + 1] = sl;
+    }
+    for (int i = 0; i < a->prod_n; i++)
+        if (a->prod_items[i] == cur_t && a->prod_store[i] == cur_s) {
+            a->prod_idx = i;
+            break;
+        }
+    prod_keep_visible(a);
+}
+
+static void prod_cycle_sort(App *a)
+{
+    a->prod_sort = (uint8_t)((a->prod_sort + 1) % PROD_SORT_N);
+    prod_sort_list(a);
+    snd_se(SE_OK);
+}
+
+/* 見出しに出す並び順の名前 */
+static const char *prod_sort_name(const App *a)
+{
+    static const char *K[PROD_SORT_N] = {
+        "PROD_SORT_TYPE", "PROD_SORT_EXP", "PROD_SORT_COST"
+    };
+    return tx(K[a->prod_sort < PROD_SORT_N ? a->prod_sort : 0]);
 }
 
 /* ------------------------------------------------------------------ */
@@ -701,8 +812,10 @@ static void open_production(App *a, int x, int y)
         }
     }
     if (a->prod_n == 0) return;
+    prod_sort_list(a);
     a->prod_idx = 0;
     a->prod_scroll = 0;
+    a->prod_bar_drag = false;
     a->bs = BS_PRODUCTION;
 }
 
@@ -1107,6 +1220,9 @@ static void cancel_action(App *a)
         break;
     }
     case BS_PRODUCTION:
+        a->prod_bar_drag = false;
+        a->bs = BS_IDLE;
+        break;
     case BS_TURN_MENU:
         a->bs = BS_IDLE;
         break;
@@ -1228,11 +1344,20 @@ void battle_event(App *a, const SDL_Event *e)
         a->drag_cx = a->cam_x; a->drag_cy = a->cam_y;
         return;
     }
+    if (e->type == SDL_MOUSEBUTTONUP && e->button.button == SDL_BUTTON_LEFT) {
+        a->prod_bar_drag = false;
+    }
     if (e->type == SDL_MOUSEBUTTONUP && e->button.button == SDL_BUTTON_MIDDLE) {
         a->dragging = false;
         return;
     }
     if (e->type == SDL_MOUSEMOTION) {
+        /* スクロールバーをつまんでいる間はカメラも地図カーソルも動かさない */
+        if (a->prod_bar_drag) {
+            if (a->bs == BS_PRODUCTION) prod_bar_scroll_to(a, e->motion.y);
+            else a->prod_bar_drag = false;
+            return;
+        }
         if (a->dragging) {
             a->cam_x = a->drag_cx - (e->motion.x - a->drag_sx);
             a->cam_y = a->drag_cy - (e->motion.y - a->drag_sy);
@@ -1309,6 +1434,16 @@ void battle_event(App *a, const SDL_Event *e)
             return;
         }
         if (a->bs == BS_PRODUCTION) {
+            /* 溝と並び替えボタンは行より先に見る（行の上に重ならないが、
+             * 押した瞬間に生産してしまうのを確実に避けるため） */
+            SDL_Rect sr = prod_sort_rect();
+            if (SDL_PointInRect(&p, &sr)) { prod_cycle_sort(a); return; }
+            SDL_Rect bar = prod_bar_rect();
+            if (a->prod_n > PROD_VISIBLE && SDL_PointInRect(&p, &bar)) {
+                a->prod_bar_drag = true;
+                prod_bar_scroll_to(a, p.y);
+                return;
+            }
             int end = a->prod_scroll + PROD_VISIBLE;
             if (end > a->prod_n) end = a->prod_n;
             for (int i = a->prod_scroll; i < end; i++) {
@@ -1465,6 +1600,7 @@ void battle_event(App *a, const SDL_Event *e)
         if (a->bs == BS_PRODUCTION) {
             menu_key_nav(k, &a->prod_idx, a->prod_n);
             prod_keep_visible(a);
+            if (k == SDLK_s) prod_cycle_sort(a);
             if (k == SDLK_z || k == SDLK_RETURN) prod_select(a);
             if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
             return;
@@ -2152,8 +2288,8 @@ static void draw_menus(App *a)
     if (a->bs == BS_PRODUCTION) {
         bool scrollable = a->prod_n > PROD_VISIBLE;
         int shown = scrollable ? PROD_VISIBLE : a->prod_n;
-        /* 行領域(40+shown*44) + 下部余白(スクロール時は▼用に広めに) */
-        int ph = 40 + shown * 44 + (scrollable ? 24 : 12);
+        /* 行領域(40+shown*44) + 下部余白。隠れた項目はスクロールバーで示す */
+        int ph = 40 + shown * 44 + 12;
         fill_rect(a, WIN_W / 2 - 360, 100, 720, ph, (SDL_Color){ 28, 32, 38, 245 });
         outline_rect(a, WIN_W / 2 - 360, 100, 720, ph, COL_DIM);
         char title[64];
@@ -2163,11 +2299,26 @@ static void draw_menus(App *a)
         else
             snprintf(title, sizeof title, "%s", tx("PROD_TITLE"));
         draw_text_center(a, a->font_m, WIN_W / 2, 106, COL_WHITE, title);
-        /* 上下に隠れた項目があれば ▲▼ を表示 */
-        if (a->prod_scroll > 0)
-            draw_text_center(a, a->font_s, WIN_W / 2 + 330, 106, COL_YELLOW, "▲");
-        if (a->prod_scroll + PROD_VISIBLE < a->prod_n)
-            draw_text_center(a, a->font_s, WIN_W / 2, 100 + ph - 20, COL_YELLOW, "▼");
+        /* 並び替えボタン。押すたび 種別→経験→安い順 と巡る（S キーと同じ） */
+        {
+            SDL_Rect sr = prod_sort_rect();
+            fill_rect(a, sr.x, sr.y, sr.w, sr.h, (SDL_Color){ 44, 52, 66, 255 });
+            outline_rect(a, sr.x, sr.y, sr.w, sr.h, COL_DIM);
+            char sb[64];
+            snprintf(sb, sizeof sb, tx("PROD_SORT_FMT"), prod_sort_name(a));
+            draw_text_center(a, a->font_s, sr.x + sr.w / 2, sr.y + 8,
+                             COL_YELLOW, sb);
+        }
+        /* スクロールバー。倉庫が増えると ▲▼ だけでは今どのあたりを
+         * 見ているのか分からないので、位置と量が出る溝とつまみにした */
+        if (scrollable) {
+            SDL_Rect tr = prod_bar_rect(), th = prod_thumb_rect(a);
+            fill_rect(a, tr.x, tr.y, tr.w, tr.h, (SDL_Color){ 20, 24, 30, 255 });
+            outline_rect(a, tr.x, tr.y, tr.w, tr.h, COL_DIM);
+            fill_rect(a, th.x, th.y, th.w, th.h,
+                      a->prod_bar_drag ? COL_YELLOW
+                                       : (SDL_Color){ 110, 132, 168, 255 });
+        }
         int end = a->prod_scroll + PROD_VISIBLE;
         if (end > a->prod_n) end = a->prod_n;
         for (int i = a->prod_scroll; i < end; i++) {
