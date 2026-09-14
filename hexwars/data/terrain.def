@@ -31,6 +31,9 @@ height     = 0
 [terrain ROAD]
 name       = 道路
 image      = gfx/terrain/road.png
+# 隣の link_road へ向かって舗装の帯を描く（見た目だけ。ルールには無関係）。
+# image は路肩の地面だけを描いたものにしてある＝舗装は描画側が繋いで描く。
+link_road  = 1
 char       = =
 def        = 0
 cost_foot  = 2
@@ -89,6 +92,7 @@ height     = -7
 
 [terrain CITY]
 name       = 都市
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/city.png
 char       = c
 def        = 30
@@ -108,6 +112,7 @@ repair_cost = 500
 
 [terrain FACTORY]
 name       = 工場
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/factory.png
 char       = f
 def        = 30
@@ -127,6 +132,7 @@ repair_cost = 800
 
 [terrain AIRPORT]
 name       = 空港
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/airport.png
 char       = a
 def        = 20
@@ -146,6 +152,7 @@ repair_cost = 700
 
 [terrain PORT]
 name       = 港
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/port.png
 char       = p
 def        = 20
@@ -179,6 +186,7 @@ height     = 11
 
 [terrain HQ]
 name       = 首都
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/hq.png
 char       = H
 def        = 40
@@ -211,6 +219,7 @@ height     = 0
 
 [terrain AIRSTRIP]
 name       = 野戦飛行場
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/airstrip.png
 char       = A
 def        = 20
@@ -229,6 +238,7 @@ repair_cost = 300
 
 [terrain ANCHORAGE]
 name       = 泊地
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/anchorage.png
 char       = P
 def        = 20
@@ -249,6 +259,7 @@ repair_cost = 300
 
 [terrain RUBBLE]
 name       = 瓦礫
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/rubble.png
 char       = X
 def        = 20
@@ -264,6 +275,7 @@ height     = 2
 
 [terrain RUBBLE_PORT]
 name       = 破壊された港湾
+link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/rubble_port.png
 char       = Y
 def        = 15

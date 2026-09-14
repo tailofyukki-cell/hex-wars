@@ -114,6 +114,7 @@ int data_load_terrain(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "income"))     cur->income = (int16_t)atoi(val);
         else if (!strcmp(key, "capturable")) cur->capturable = (uint8_t)atoi(val);
         else if (!strcmp(key, "hide"))       cur->hide = (uint8_t)atoi(val);
+        else if (!strcmp(key, "link_road"))  cur->link_road = (uint8_t)atoi(val);
         else if (!strcmp(key, "hq"))         cur->is_hq = (uint8_t)atoi(val);
         else if (!strcmp(key, "breaks_to"))
             snprintf(cur->breaks_to, sizeof cur->breaks_to, "%s", val);

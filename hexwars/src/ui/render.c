@@ -379,6 +379,79 @@ static void fill_diamond(App *a, float cx, float cy, float r, SDL_Color c)
     SDL_RenderGeometry(a->ren, NULL, verts, 6, NULL, 0);
 }
 
+/* 道路の接続描画。隣の道路・拠点へ向かって舗装の帯を伸ばす。
+ *
+ * タイル画像は方角を持てない（同じ絵を全マスに貼るので、縦に走る道でも
+ * 横向きの舗装が出てしまう）。そこで road.png は路肩の地面だけにして、
+ * 舗装そのものは隣接を見てここで繋いで描く。
+ *
+ * 帯は「自分の中心 → 隣との中点」までしか伸ばさない。中点は両側が同じ値を
+ * 出すので、隣のマスが残り半分を描いて継ぎ目なく繋がる。中点は hex_center_px
+ * どうしの中点なので、起伏で持ち上がったタイルでも段差の真ん中で合流する。
+ * はみ出しは手前のタイルに塗り潰されるが、そのタイルが同じ形を描き直すので
+ * 描画順（y 昇順）を変える必要はない。 */
+static void draw_road_links(App *a, int x, int y, float cx, float cy,
+                            float s, SDL_Color col)
+{
+    const Game *g = &a->game;
+    float sq = hex_tilt_squash(a);
+    /* 繋がる先の数。3方向以上へ繋がるマス（実マップの2割）へ帯を全部引くと、
+     * 隣どうしも繋がっているので三角形が出来て桁橋の骨組みのように見える。
+     * そこは道というより交差点や「舗装された一帯」なので、面で塗って塊にする。
+     * 2方向以下（残り8割）は素直な一本道なので帯で繋ぐ。 */
+    int cnt = 0;
+    for (int d = 0; d < HEX_DIRS; d++) {
+        int nx, ny;
+        hex_neighbor(x, y, d, &nx, &ny);
+        if (game_in_bounds(g, nx, ny) &&
+            g->terrains[g->tiles[ny][nx].terrain].link_road) cnt++;
+    }
+    bool dense = cnt >= 3;
+
+    /* 路肩を先に敷いてから舗装を重ねる。境目が出て道に見える。
+     * **幅を欲張らないこと**。太くすると交差点で帯の隙間に路肩が
+     * 三角形に残り、道ではなく模様に見える。 */
+    for (int pass = 0; pass < 2; pass++) {
+        float w = s * (pass == 0 ? 0.175f : 0.125f);
+        SDL_Color c = (pass == 0) ? shade(col, 76) : col;
+        /* 塊にする側。**帯は引かない**。面の上に帯を重ねると、幅の差が
+         * Y字の筋になって浮き出る。舗装をわずかに内側に入れてあるので、
+         * 隣の塊との境目が車線の区切りのように出る。 */
+        if (dense) {
+            render_fill_hex_map(a, cx, cy,
+                                s - 0.5f - (pass == 0 ? 0.0f : s * 0.05f), c);
+            continue;
+        }
+        for (int d = 0; d < HEX_DIRS; d++) {
+            int nx, ny;
+            hex_neighbor(x, y, d, &nx, &ny);
+            if (!game_in_bounds(g, nx, ny)) continue;
+            if (!g->terrains[g->tiles[ny][nx].terrain].link_road) continue;
+            float ex, ey;
+            hex_center_px(a, nx, ny, &ex, &ey);
+            ex = (cx + ex) * 0.5f; ey = (cy + ey) * 0.5f;
+            float dx = ex - cx, dy = ey - cy;
+            float len = sqrtf(dx * dx + dy * dy);
+            if (len < 0.01f) continue;
+            float ox = -dy / len * w, oy = dx / len * w;
+            SDL_FPoint q[4] = { { cx + ox, cy + oy }, { ex + ox, ey + oy },
+                                { ex - ox, ey - oy }, { cx - ox, cy - oy } };
+            static const int tri[6] = { 0, 1, 2, 0, 2, 3 };
+            SDL_Vertex v[6];
+            for (int k = 0; k < 6; k++) {
+                v[k].position = q[tri[k]];
+                v[k].color = c;
+                v[k].tex_coord.x = v[k].tex_coord.y = 0;
+            }
+            SDL_RenderGeometry(a->ren, NULL, v, 6, NULL, 0);
+        }
+        /* 交差点の角を埋める。繋がる先が無い孤立マスもここだけは残るので、
+         * 道が忽然と消えたようには見えない。 */
+        fill_ellipse(a, cx, cy, w, w * sq, c);
+    }
+}
+
+
 static void draw_unit(App *a, const Unit *u, float cx, float cy)
 {
     const Game *g = &a->game;
@@ -565,6 +638,10 @@ void render_map(App *a)
                 render_fill_hex_map(a, cx, cy, s - 0.5f, top);
                 render_hex_outline_map(a, cx, cy, s - 0.5f, shade(col, 70));
             }
+
+            /* 道路は隣へ向けて舗装を繋ぐ（画像は路肩の地面だけ） */
+            if (t->link_road == 1)
+                draw_road_links(a, x, y, cx, cy, s, col);
 
             /* 建物: 所有者色の屋根形マーク + 地形1文字 */
             if (t->capturable) {

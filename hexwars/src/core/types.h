@@ -185,6 +185,10 @@ typedef struct {
     uint8_t  produces;            /* ProduceCat */
     uint8_t  supplies;            /* 補給対象 MoveClass のビットマスク */
     uint8_t  hide;                /* 1=隣接しないと中の敵を視認不可 */
+    /* 道路の見た目の接続（ルールには一切影響しない）。
+     * 1=道路そのもの（隣の link_road へ向けて舗装の帯を描く）
+     * 2=接続先（街や港。自分では描かず、隣の道路が伸びてくる） */
+    uint8_t  link_road;
     uint8_t  is_hq;               /* 1=首都 */
     /* 工兵による破壊と復旧。breaks_to が空の地形は壊せない。
      * repair_cost は「この地形に戻す」のに要る資金（元の地形側に書く）。 */
