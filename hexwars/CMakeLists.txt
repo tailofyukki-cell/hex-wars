@@ -14,6 +14,11 @@ if(MSVC)
     # Debug は警告をエラー扱い（仕様書 2.2）
     add_compile_options(/W4 /utf-8 "$<$<CONFIG:Debug>:/WX>")
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+    # CRT を静的リンクして vcruntime140.dll の同梱を不要にする。
+    # System32 からコピーして配る形は再頒布条件から外れるため、
+    # 配布物から DLL ごと無くすのが確実（純Cなので MSVCP も要らない）。
+    # cmake_minimum_required が 3.16 なので CMP0091 は NEW＝この変数が効く。
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
     add_compile_options(-Wall -Wextra "$<$<CONFIG:Debug>:-Werror>")
 endif()

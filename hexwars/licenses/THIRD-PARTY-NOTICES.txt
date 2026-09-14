@@ -1,0 +1,64 @@
+HEX WARS — 第三者ソフトウェアの著作権表示
+========================================
+
+本ソフトウェアには、以下のオープンソースソフトウェアおよびフォントが
+含まれています。それぞれの著作権者と利用条件を以下に示します。
+ライセンス全文は、このフォルダ内の各ファイルを参照してください。
+
+
+1. SDL2 / SDL2_ttf / SDL2_mixer / SDL2_image
+--------------------------------------------
+  同梱物: SDL2.dll, SDL2_ttf.dll, SDL2_mixer.dll, SDL2_image.dll
+  著作権: Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  ライセンス: zlib License
+  全文: LICENSE.SDL2.txt
+  入手先: https://github.com/libsdl-org/SDL
+
+
+2. FreeType
+-----------
+  SDL2_ttf.dll に含まれています。
+  Portions of this software are copyright (c) 2013 The FreeType Project
+  (www.freetype.org). All rights reserved.
+  ライセンス: The FreeType Project License (FTL)
+  全文: LICENSE.FreeType.txt
+  入手先: https://freetype.org/
+
+
+3. HarfBuzz
+-----------
+  SDL2_ttf.dll に含まれています。
+  ライセンス: "Old MIT" license
+  全文: LICENSE.HarfBuzz.txt
+  入手先: https://github.com/harfbuzz/harfbuzz
+
+
+4. Noto Sans JP
+---------------
+  同梱物: assets/font/NotoSansJP.ttf
+  Copyright 2014-2021 Adobe (http://www.adobe.com/),
+  with Reserved Font Name 'Source'
+  ライセンス: SIL Open Font License, Version 1.1
+  全文: LICENSE.NotoSansJP.txt
+  入手先: https://github.com/google/fonts/tree/main/ofl/notosansjp
+
+  ※ OFL により、このフォントファイル自体を単独で販売することはできません。
+     ソフトウェアに同梱して頒布することは許諾されています。
+
+
+5. SDL2_image / SDL2_mixer が内部で用いるデコーダ
+-------------------------------------------------
+  配布している SDL2_image.dll は PNG / JPEG 等の、SDL2_mixer.dll は
+  WAV / Ogg / FLAC / MP3 等のデコーダを内部に含みます（libpng, zlib,
+  libjpeg-turbo, libogg, libvorbis, libFLAC 等）。これらは libsdl-org が
+  配布する公式ビルドに含まれるもので、いずれも再頒布を許諾する条件
+  （zlib / libpng / BSD 系）で提供されています。
+
+  なお本ソフトウェアが実際に読み込むのは PNG 画像と WAV 音声のみです。
+  将来 SDL をソースからビルドし直す場合は、未使用のデコーダを無効にすると
+  配布物が小さくなり、表示すべき著作権表示も減らせます。
+
+
+----------------------------------------------------------------------
+本ソフトウェア本体（HEX WARS）の著作権は作者に帰属します。
+上記以外の画像・音声・データは作者が作成したものです。

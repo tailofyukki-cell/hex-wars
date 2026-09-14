@@ -43,6 +43,7 @@ rem --- build フォルダ（開発時に build\hexwars.exe を直接起動する用） ---
 rem  data だけ変えた場合はビルドが走らず build\data が古いままになるので毎回同期する
 robocopy "%PROJ%data"   "%BUILD%\data"   /MIR /NFL /NDL /NJH /NJS /NC /NS >nul
 robocopy "%PROJ%assets" "%BUILD%\assets" /MIR /NFL /NDL /NJH /NJS /NC /NS >nul
+robocopy "%PROJ%licenses" "%BUILD%\licenses" /MIR /NFL /NDL /NJH /NJS /NC /NS >nul
 
 rem --- 配布フォルダ（人に渡す用） ---
 if not exist "%DIST%" mkdir "%DIST%"
@@ -52,6 +53,17 @@ for %%D in (SDL2.dll SDL2_ttf.dll SDL2_mixer.dll SDL2_image.dll) do (
 )
 robocopy "%PROJ%data"   "%DIST%\data"   /MIR /NFL /NDL /NJH /NJS /NC /NS >nul
 robocopy "%PROJ%assets" "%DIST%\assets" /MIR /NFL /NDL /NJH /NJS /NC /NS >nul
+
+rem --- 著作権表示（SDL2/FreeType/HarfBuzz/Noto Sans JP）。有料頒布には必須 ---
+robocopy "%PROJ%licenses" "%DIST%\licenses" /MIR /NFL /NDL /NJH /NJS /NC /NS >nul
+
+rem --- 同梱テキスト（はじめにお読みください等）。配布物の一部なので
+rem     リポジトリの dist/ を正本にして、ここから配る ---
+robocopy "%PROJ%dist" "%DIST%" /NFL /NDL /NJH /NJS /NC /NS >nul
+
+rem --- CRT を静的リンクしたので vcruntime140.dll は要らない。
+rem     System32 から複製した古い同梱物が残っていたら消す ---
+if exist "%DIST%\vcruntime140.dll" del /Q "%DIST%\vcruntime140.dll"
 
 echo.
 echo ============================================================

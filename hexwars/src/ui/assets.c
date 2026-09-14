@@ -3,14 +3,30 @@
 #include <stdio.h>
 #include <string.h>
 
+/* UIフォント。**同梱したものを必ず先に見ること。**
+ * 以前は同梱し忘れたまま Windows のシステムフォント（メイリオ等）に
+ * 落ちて動いていた。MSフォントは再頒布できないうえ、日本語フォントの
+ * 無い環境では文字が一切出ないので、配布するなら同梱が必須。
+ * 同梱しているのは Noto Sans JP Regular（SIL OFL。licenses/ を参照）。
+ * 先に挙げた候補が勝つので、別のフォントを試すときは assets/font/ に
+ * 置いて下の表に1行足す。 */
 static TTF_Font *open_font(App *a, int pt)
 {
+    static const char *CAND[] = {
+        "assets/font/NotoSansJP-Regular.otf",
+        "assets/font/NotoSansJP.ttf",     /* 差し替え用の別名 */
+        "assets/font/ui.ttf",
+    };
     char path[600];
-    snprintf(path, sizeof path, "%sassets/font/NotoSansJP.ttf", a->base_path);
-    TTF_Font *f = TTF_OpenFont(path, pt);
-    if (f) return f;
-    /* フォールバック: Windows システムフォント */
-    f = TTF_OpenFont("C:\\Windows\\Fonts\\meiryo.ttc", pt);
+    for (size_t i = 0; i < sizeof CAND / sizeof CAND[0]; i++) {
+        snprintf(path, sizeof path, "%s%s", a->base_path, CAND[i]);
+        TTF_Font *f = TTF_OpenFont(path, pt);
+        if (f) return f;
+    }
+    /* ここから下は保険で、同梱が効いていれば到達しない。
+     * 到達したら配布物にフォントが入っていないということ。 */
+    SDL_Log("同梱フォントを開けません。システムフォントに落ちます");
+    TTF_Font *f = TTF_OpenFont("C:\\Windows\\Fonts\\meiryo.ttc", pt);
     if (f) return f;
     f = TTF_OpenFont("C:\\Windows\\Fonts\\YuGothM.ttc", pt);
     if (f) return f;
