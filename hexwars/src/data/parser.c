@@ -231,16 +231,24 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
             set_err(err, errlen, path, ln, "セクション外のキー");
             fclose(f); return -1;
         }
-        if (!strcmp(key, "name")) {
-            /* 全陣営に同じ名前。name0..name4 を後に書けば上書きされる。 */
-            for (int p = 0; p < MAX_PLAYERS; p++)
-                snprintf(cur->name[p], sizeof cur->name[p], "%s", val);
-        }
-        /* name0 〜 name4: その陣営だけ別の名前にする。image0..image4 と同じ扱い */
-        else if (!strncmp(key, "name", 4) && key[4] >= '0' &&
-                 key[4] < '0' + MAX_PLAYERS && key[5] == '\0') {
-            int pi = key[4] - '0';
-            snprintf(cur->name[pi], sizeof cur->name[pi], "%s", val);
+        if (!strcmp(key, "name") ||
+            (!strncmp(key, "name", 4) && key[4] >= '0' &&
+             key[4] < '0' + MAX_PLAYERS && key[5] == '\0')) {
+            /* **黙って切り詰めないこと。** UTF-8 の途中で切れると画面に
+             * 文字化けが出るうえ、名前は表示専用なので自動テストでも
+             * 気づけない。入らないならここで読み込みを失敗させる。 */
+            if (strlen(val) >= sizeof cur->name[0]) {
+                set_err(err, errlen, path, ln, "name が長すぎます（48バイト未満、日本語15文字まで）");
+                fclose(f); return -1;
+            }
+            if (key[4] == '\0') {
+                /* 全陣営に同じ名前。name0..name4 を後に書けば上書きされる。 */
+                for (int p = 0; p < MAX_PLAYERS; p++)
+                    snprintf(cur->name[p], sizeof cur->name[p], "%s", val);
+            } else {
+                /* name0 〜 name4: その陣営だけ別の名前にする */
+                snprintf(cur->name[key[4] - '0'], sizeof cur->name[0], "%s", val);
+            }
         }
         else if (!strcmp(key, "icon")) snprintf(cur->icon, sizeof cur->icon, "%s", val);
         else if (!strcmp(key, "class")) {

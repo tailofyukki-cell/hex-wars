@@ -122,7 +122,9 @@ typedef struct {
      * だけ差し替えられる（image と同じ書き方）。
      * **参照は必ず id で行い、name は表示専用にすること。** 進化先の解決や
      * キャンペーンの条件判定が name を見ていると、名前を分けた瞬間に壊れる。 */
-    char     name[MAX_PLAYERS][32];
+    /* 48バイト＝日本語16文字ぶん。「自走ロケット砲「R-8型」」のような
+     * 長い名前が 32 では入りきらず、UTF-8 の途中で切れて文字化けしていた。 */
+    char     name[MAX_PLAYERS][48];
     char     icon[8];        /* 1文字表示用 (UTF-8) */
     uint8_t  mclass;         /* MoveClass */
     uint8_t  armor;          /* ArmorCat: 被弾時カテゴリ */
