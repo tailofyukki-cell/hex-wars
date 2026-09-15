@@ -2237,7 +2237,9 @@ static void deploy_draw(App *a)
                           : tx(go ? "DEPLOY_MARK_GO" : "DEPLOY_MARK_KEEP"));
 
         int t = a->cps.carry[i].type;
-        const char *nm = (t < a->game.n_types) ? a->game.types[t].name : "?";
+        /* 持越し部隊は必ず自軍なので陣営0の名前でよい */
+        const char *nm = (t < a->game.n_types)
+                       ? unit_name_of(&a->game.types[t], 0) : "?";
         int exp = a->cps.carry[i].exp;
         int rank = exp / 20; if (rank > 5) rank = 5;
         snprintf(buf, sizeof buf, "%s", nm);

@@ -73,6 +73,12 @@ int unit_rank(const Unit *u)
     return r > 5 ? 5 : r;
 }
 
+const char *unit_name_of(const UnitType *ut, int owner)
+{
+    if (owner < 0 || owner >= MAX_PLAYERS) owner = 0;
+    return ut->name[owner];
+}
+
 /* 対潜制限: 潜水艦は anti_sub 持ちからのみ攻撃可能（仕様書 5.5） */
 bool unit_can_attack_target(const Game *g, const Unit *atk, const Unit *def)
 {

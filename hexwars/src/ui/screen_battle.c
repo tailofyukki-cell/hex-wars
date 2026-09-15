@@ -2020,7 +2020,8 @@ static void draw_cargo_detail(App *a, int ui, int py)
         /* 補給ユニットは ammo が「補給物資」なので表記を分ける */
         snprintf(buf, sizeof buf,
                  ct->supply ? tx("CARGO_ROW_SUP_FMT") : tx("CARGO_ROW_FMT"),
-                 ct->name, c->hp, c->fuel, ct->fuel, c->ammo, ct->ammo);
+                 unit_name_of(ct, c->owner),
+                 c->hp, c->fuel, ct->fuel, c->ammo, ct->ammo);
         /* 満タンでなければ黄色 = 回復途中がひと目で分かる */
         bool full = c->hp >= 10 && c->fuel >= ct->fuel && c->ammo >= ct->ammo;
         draw_text(a, a->font_s, bx + 12, by + 26 + row * 22,
@@ -2117,13 +2118,14 @@ static void draw_panels(App *a)
         /* 重なっている時は高度と「何体中の何番目か」を出す */
         if (n_stack > 1) {
             snprintf(buf, sizeof buf, "[%s] %s",
-                     layer_tag(unit_layer(ut->mclass)), ut->name);
+                     layer_tag(unit_layer(ut->mclass)),
+                     unit_name_of(ut, u->owner));
             draw_text(a, a->font_l, ux + 14, py + 8, COL_P[u->owner], buf);
             char cb[32];
             snprintf(cb, sizeof cb, "%d/%d", scyc + 1, n_stack);
             draw_text(a, a->font_s, ux + 420 - 52, py + 14, COL_YELLOW, cb);
         } else {
-            snprintf(buf, sizeof buf, "%s%s", ut->name,
+            snprintf(buf, sizeof buf, "%s%s", unit_name_of(ut, u->owner),
                      rel_tag(g, viewer, u->owner));
             draw_text(a, a->font_l, ux + 14, py + 8, COL_P[u->owner], buf);
         }
@@ -2146,7 +2148,9 @@ static void draw_panels(App *a)
             for (int s = 0; s < 2; s++)
                 if (u->cargo[s] >= 0) {
                     if (names[0]) strncat(names, "、", sizeof names - strlen(names) - 1);
-                    strncat(names, g->types[g->units[u->cargo[s]].type].name,
+                    const Unit *cu = &g->units[u->cargo[s]];
+                    strncat(names,
+                            unit_name_of(&g->types[cu->type], cu->owner),
                             sizeof names - strlen(names) - 1);
                 }
             snprintf(buf, sizeof buf, tx("PANEL_CARGO_FMT"), names);
@@ -2207,7 +2211,8 @@ static void draw_menus(App *a)
             const Unit *u = &g->units[a->lpick_unit[i]];
             const UnitType *ut = &g->types[u->type];
             snprintf(buf, sizeof buf, "[%s] %s",
-                     layer_tag(unit_layer(ut->mclass)), ut->name);
+                     layer_tag(unit_layer(ut->mclass)),
+                     unit_name_of(ut, u->owner));
             draw_text(a, a->font_s, r.x + 12, r.y + 7,
                       sel ? COL_WHITE : COL_GRAY, buf);
             /* HPが満タンでなければ右端に表示 */
@@ -2246,7 +2251,8 @@ static void draw_menus(App *a)
             fill_rect(a, bx, by, bw, bh, (SDL_Color){ 26, 30, 38, 248 });
             outline_rect(a, bx, by, bw, bh, COL_YELLOW);
             char buf[128];
-            snprintf(buf, sizeof buf, "%s", g->types[du->type].name);
+            snprintf(buf, sizeof buf, "%s",
+                     unit_name_of(&g->types[du->type], du->owner));
             draw_text(a, a->font_s, bx + 12, by + 8, COL_P[du->owner], buf);
 
             /* 与ダメージ（撃破できるなら強調） */
@@ -2334,11 +2340,12 @@ static void draw_menus(App *a)
             outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
             char buf[96];
             /* 倉庫からの引き出しは名前頭に[倉]を付け、右端は無料表示 */
+            const char *tname = unit_name_of(&g->types[t], g->current);
             if (from_store)
                 snprintf(buf, sizeof buf, "[%s] %s", tx("PROD_STORE_TAG"),
-                         g->types[t].name);
+                         tname);
             else
-                snprintf(buf, sizeof buf, "%s", g->types[t].name);
+                snprintf(buf, sizeof buf, "%s", tname);
             draw_text(a, a->font_m, r.x + 14, r.y + 7,
                       afford ? COL_WHITE : COL_DIM, buf);
             if (from_store)
@@ -2394,7 +2401,8 @@ static void draw_menus(App *a)
                 outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
                 char buf[160];
                 snprintf(buf, sizeof buf, "[%s] %s",
-                         layer_tag(unit_layer(ut->mclass)), ut->name);
+                         layer_tag(unit_layer(ut->mclass)),
+                         unit_name_of(ut, u->owner));
                 draw_text(a, a->font_s, r.x + 12, r.y + 9,
                           sel ? COL_WHITE : COL_GRAY, buf);
                 /* 経験値。どの部隊を動かすかの判断材料なので、
@@ -2416,8 +2424,11 @@ static void draw_menus(App *a)
     /* 進化の確認。不可逆なので「何になるか」と「経験値が0に戻る」ことを明示する */
     if (a->bs == BS_EVOLVE_CONFIRM && a->sel_unit >= 0) {
         int to = game_evolve_target(g, a->sel_unit);
-        const char *from = g->types[g->units[a->sel_unit].type].name;
-        const char *toname = (to >= 0) ? g->types[to].name : "";
+        int evo_owner = g->units[a->sel_unit].owner;
+        const char *from =
+            unit_name_of(&g->types[g->units[a->sel_unit].type], evo_owner);
+        const char *toname =
+            (to >= 0) ? unit_name_of(&g->types[to], evo_owner) : "";
         int bw = 500, bh = 208;
         int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 108;
         fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 130 });
@@ -2462,7 +2473,8 @@ static void draw_menus(App *a)
         outline_rect(a, bx, by, bw, bh, COL_YELLOW);
 
         char buf[192];
-        snprintf(buf, sizeof buf, tx("JOIN_TITLE_FMT"), ut->name);
+        snprintf(buf, sizeof buf, tx("JOIN_TITLE_FMT"),
+                 unit_name_of(ut, t->owner));
         draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
         /* はみ出す場合は「10 と 5」のように結果の2部隊を見せる。
          * 消えるのか残るのかで判断が変わるので、押す前に分かるようにする。 */
@@ -2559,7 +2571,8 @@ static void draw_anim_card(App *a, int x, int y, int owner, int type, int hp)
         render_fill_hex(a, (float)(x + 40), (float)(y + 44), 26.0f, body);
         draw_text_center(a, a->font_l, x + 40, y + 28, COL_WHITE, ut->icon);
     }
-    draw_text(a, a->font_m, x + 88, y + 8, COL_WHITE, ut->name);
+    draw_text(a, a->font_m, x + 88, y + 8, COL_WHITE,
+              unit_name_of(ut, owner));
     /* HPバー 10セグメント */
     for (int i = 0; i < 10; i++) {
         SDL_Color c = i < hp ? (SDL_Color){ 120, 220, 120, 255 }
@@ -2596,8 +2609,10 @@ static void draw_battle_anim_video(App *a, UnitAnim *ua)
     int atk_hp = anim_hp(an->atk_hp0, an->atk_hp1, t, an->total * 2 / 3);
     char buf[160];
     snprintf(buf, sizeof buf, "%s  HP%d  →  %s  HP%d",
-             a->game.types[an->atk_type].name, atk_hp,
-             a->game.types[an->def_type].name, def_hp);
+             unit_name_of(&a->game.types[an->atk_type], an->atk_owner),
+             atk_hp,
+             unit_name_of(&a->game.types[an->def_type], an->def_owner),
+             def_hp);
     draw_text_center(a, a->font_m, WIN_W / 2, WIN_H - 92, COL_WHITE, buf);
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 56, COL_DIM, tx("HINT_ANIM"));
 }

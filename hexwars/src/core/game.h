@@ -136,6 +136,9 @@ int  game_units_at(const Game *g, int x, int y, int out[LAYER_COUNT]);
 Unit *game_unit(Game *g, int i);
 const UnitType *unit_type(const Game *g, const Unit *u);
 int  unit_rank(const Unit *u);                          /* 経験ランク 0..5 */
+/* 陣営に応じた表示名。**表示にはこれを通すこと**（ut->name[0] を直接読むと
+ * 陣営ごとの呼び分けが効かない）。owner が範囲外なら陣営0の名前を返す。 */
+const char *unit_name_of(const UnitType *ut, int owner);
 bool unit_can_attack_target(const Game *g, const Unit *atk, const Unit *def);
 bool game_unit_visible_to(const Game *g, int viewer, const Unit *u);
 

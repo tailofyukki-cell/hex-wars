@@ -117,7 +117,12 @@ typedef struct { uint8_t x, y; } Cell;
 /* ユニット定義（units.def の1エントリ） */
 typedef struct {
     char     id[24];
-    char     name[32];
+    /* 表示名。陣営ごとに別の名前を持てる（同じ車体でも西方と東方で呼び名が違う）。
+     * units.def の `name =` は全陣営に入り、`name0 =` 〜 `name4 =` でその陣営
+     * だけ差し替えられる（image と同じ書き方）。
+     * **参照は必ず id で行い、name は表示専用にすること。** 進化先の解決や
+     * キャンペーンの条件判定が name を見ていると、名前を分けた瞬間に壊れる。 */
+    char     name[MAX_PLAYERS][32];
     char     icon[8];        /* 1文字表示用 (UTF-8) */
     uint8_t  mclass;         /* MoveClass */
     uint8_t  armor;          /* ArmorCat: 被弾時カテゴリ */

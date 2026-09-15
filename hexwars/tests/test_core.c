@@ -377,6 +377,62 @@ static void test_layers(void)
 
 /* 空挺降下: 輸送機は「真下（自分と同じヘクス）」へ降ろせる。
  * 輸送ヘリ等は真下へは降ろせない（従来どおり隣接のみ）。 */
+/* 陣営ごとの表示名（units.def の name / name0..name4）。
+ * name しか書いていないユニットは全陣営が同じ名前になること、
+ * name<N> を書いたユニットはその陣営だけ変わることを見る。
+ * 名前は表示専用なので、ここが壊れてもルールは変わらない＝
+ * 自動テストで拾わないと「敵の名前が空欄」に気づけない。 */
+static void test_unit_names(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+
+    for (int t = 0; t < g->n_types; t++) {
+        const UnitType *ut = &g->types[t];
+        /* どの陣営でも空にならない（name だけ書けば全陣営に入る） */
+        for (int p = 0; p < MAX_PLAYERS; p++)
+            CHECK(unit_name_of(ut, p)[0] != 0);
+        /* 範囲外の陣営は陣営0にフォールバックする */
+        CHECK(strcmp(unit_name_of(ut, -1), unit_name_of(ut, 0)) == 0);
+        CHECK(strcmp(unit_name_of(ut, MAX_PLAYERS), unit_name_of(ut, 0)) == 0);
+    }
+
+    /* name<N> の上書きがパーサで効くこと。units.def の中身に左右されずに
+     * 見たいので、その場で小さな定義ファイルを書いて読ませる。 */
+    {
+        const char *tmp = "data/_test_names.def";
+        FILE *f = fopen(tmp, "wb");
+        CHECK(f != NULL);
+        fputs("[unit T_NAMES]\n"
+              "name  = 共通名\n"
+              "name1 = 敵側の名前\n"
+              "icon  = 試\n"
+              "class = LAND_FOOT\n"
+              "armor = SOFT\n"
+              "cost  = 100\n"
+              "move  = 3\n"
+              "fuel  = 60\n"
+              "ammo  = 10\n"
+              "vision = 2\n", f);
+        fclose(f);
+
+        Game t;
+        memset(&t, 0, sizeof t);
+        CHECK(data_load_terrain(&t, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(&t, tmp, err, sizeof err) == 0);
+        CHECK(t.n_types == 1);
+        const UnitType *u = &t.types[0];
+        CHECK(strcmp(unit_name_of(u, 0), "共通名") == 0);
+        CHECK(strcmp(unit_name_of(u, 1), "敵側の名前") == 0);   /* ここだけ別 */
+        CHECK(strcmp(unit_name_of(u, 2), "共通名") == 0);
+        remove(tmp);
+    }
+    printf("test_unit_names OK (%d 種)\n", g->n_types);
+}
+
 static void test_paradrop(void)
 {
     Game *g = &s_game;
@@ -3940,6 +3996,7 @@ int main(void)
     test_capture();
     test_layers();
     test_transport();
+    test_unit_names();
     test_paradrop();
     test_produce_layers();
     test_evolve();

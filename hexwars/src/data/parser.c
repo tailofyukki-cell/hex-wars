@@ -231,7 +231,17 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
             set_err(err, errlen, path, ln, "セクション外のキー");
             fclose(f); return -1;
         }
-        if      (!strcmp(key, "name")) snprintf(cur->name, sizeof cur->name, "%s", val);
+        if (!strcmp(key, "name")) {
+            /* 全陣営に同じ名前。name0..name4 を後に書けば上書きされる。 */
+            for (int p = 0; p < MAX_PLAYERS; p++)
+                snprintf(cur->name[p], sizeof cur->name[p], "%s", val);
+        }
+        /* name0 〜 name4: その陣営だけ別の名前にする。image0..image4 と同じ扱い */
+        else if (!strncmp(key, "name", 4) && key[4] >= '0' &&
+                 key[4] < '0' + MAX_PLAYERS && key[5] == '\0') {
+            int pi = key[4] - '0';
+            snprintf(cur->name[pi], sizeof cur->name[pi], "%s", val);
+        }
         else if (!strcmp(key, "icon")) snprintf(cur->icon, sizeof cur->icon, "%s", val);
         else if (!strcmp(key, "class")) {
             int m = parse_mclass(val);
