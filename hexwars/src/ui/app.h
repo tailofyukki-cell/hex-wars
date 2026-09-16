@@ -156,6 +156,10 @@ struct App {
     int opt_tilt;       /* 0=平面(真上) / 1=斜め見下ろし（Y圧縮＋地形の起伏）。見た目のみ */
     int opt_cutin;      /* 攻撃時カットイン: 0=出さない / 1=毎回 / 2=撃破時のみ */
     int opt_weather_fx; /* 天候の画面演出: 0=切る / 1=出す。見た目のみ */
+    /* 画面。ゲームは常に WIN_W x WIN_H の論理解像度で描き、SDL が窓の大きさへ
+     * 拡縮する（縦横比は保ち、余りは黒帯）。座標計算は一切変えなくてよい。 */
+    int opt_fullscreen; /* 0=ウィンドウ / 1=フルスクリーン（デスクトップ解像度） */
+    int opt_win_w, opt_win_h;   /* ウィンドウ時の大きさ（端のドラッグでも変わる） */
     int cpn_scroll;     /* 作戦全体図の縦スクロールpx */
     /* 進捗（progress.cfg に永続化。指揮官の解禁条件に使う） */
     int progress_clears;   /* これまでにクリアした作戦の総数 */
@@ -296,6 +300,12 @@ bool reward_available(App *a);
 /* オプション永続化（options.cfg） */
 void options_load(App *a);
 void options_save(App *a);
+/* opt_fullscreen / opt_win_w / opt_win_h を実際の窓へ反映する */
+void app_apply_window(App *a);
+/* ウィンドウ⇔フルスクリーンの切り替え（Alt+Enter / F11 / オプション） */
+void app_toggle_fullscreen(App *a);
+/* 窓の座標（マウス位置など）を論理座標へ直す */
+void app_window_to_logical(App *a, int wx, int wy, int *lx, int *ly);
 
 /* 進捗（クリア数・各作戦の最高ランク）の永続化 */
 /* クリア済みの作戦「種類数」（指揮官の解禁基準。周回では増えない） */

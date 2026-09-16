@@ -51,6 +51,9 @@ void options_load(App *a)
      * 設定の存在に気づかないまま終盤で待たされるのを避ける。
      * 思考の中身は変わらない（行動の間の待ちフレーム数だけ）。 */
     a->opt_cpu_speed = 1;
+    a->opt_fullscreen = 0;
+    a->opt_win_w = WIN_W;
+    a->opt_win_h = WIN_H;
     char path[600];
     snprintf(path, sizeof path, "%soptions.cfg", a->base_path);
     FILE *f = fopen(path, "rb");
@@ -70,6 +73,9 @@ void options_load(App *a)
             else if (!strcmp(key, "tilt")) a->opt_tilt = atoi(val) ? 1 : 0;
             else if (!strcmp(key, "cutin")) a->opt_cutin = atoi(val);
             else if (!strcmp(key, "weather_fx")) a->opt_weather_fx = atoi(val) ? 1 : 0;
+            else if (!strcmp(key, "fullscreen")) a->opt_fullscreen = atoi(val) ? 1 : 0;
+            else if (!strcmp(key, "win_w")) a->opt_win_w = atoi(val);
+            else if (!strcmp(key, "win_h")) a->opt_win_h = atoi(val);
         }
         fclose(f);
     }
@@ -107,10 +113,12 @@ void options_save(App *a)
     /* cutin は読み込みだけで書き出していなかったため、起動のたびに既定へ戻っていた */
     fprintf(f, "bgm = %d\nse = %d\nanim = %d\nanim_video = %d\nbgm_track = %d\n"
                "se_set = %d\ntilt = %d\ncutin = %d\nweather_fx = %d\n"
-               "cpu_speed = %d\nvolcurve = 2\n",
+               "cpu_speed = %d\nvolcurve = 2\n"
+               "fullscreen = %d\nwin_w = %d\nwin_h = %d\n",
             a->opt_bgm, a->opt_se, a->opt_anim, a->opt_anim_video,
             a->opt_bgm_track, a->opt_se_set, a->opt_tilt,
-            a->opt_cutin, a->opt_weather_fx, a->opt_cpu_speed);
+            a->opt_cutin, a->opt_weather_fx, a->opt_cpu_speed,
+            a->opt_fullscreen, a->opt_win_w, a->opt_win_h);
     fclose(f);
 }
 
@@ -856,12 +864,16 @@ static void setup_draw(App *a)
 /* ------------------------------------------------------------------ */
 /* オプション画面（仕様書 10章: 音量、8.2: 戦闘アニメOFF）             */
 /* ------------------------------------------------------------------ */
-#define OPT_ROWS 11
-#define OPT_BACK_ROW (OPT_ROWS - 1)
-#define OPT_TILT_ROW 6
-#define OPT_CUTIN_ROW 7
-#define OPT_WXFX_ROW 8
-#define OPT_CPUSPD_ROW 9
+/* オプションの行。**番号を直書きしないこと**（途中に行を足すと全部ずれる）。
+ * 並べ替えや追加はこの enum を触るだけで済むようにしてある。 */
+enum {
+    OPT_BGM_ROW, OPT_SE_ROW, OPT_ANIM_ROW, OPT_ANIMVID_ROW,
+    OPT_TRACK_ROW, OPT_SESET_ROW,
+    OPT_WINMODE_ROW, OPT_WINSIZE_ROW,
+    OPT_TILT_ROW, OPT_CUTIN_ROW, OPT_WXFX_ROW, OPT_CPUSPD_ROW,
+    OPT_BACK_ROW,
+    OPT_ROWS
+};
 
 static void opt_enter(App *a) { a->opt_row = 0; }
 
@@ -872,37 +884,126 @@ static void opt_leave(App *a)
     snd_music(HWM_TITLE, true);
 }
 
+/* 行の高さと間隔は行数から決める。項目を足すたびに手で調整しないで済むように。 */
+#define OPT_TOP    150
+#define OPT_BOTTOM (WIN_H - 62)
+#define OPT_ROW_H  38
+
 static SDL_Rect opt_row_rect(int i)
 {
-    /* 11行だと 196+54*i では最下段が下のヒント(WIN_H-40)に食い込む。
-     * 項目を足すたびに手で調整しないで済むよう、行数から間隔を決める。 */
-    const int top = 176, bottom = WIN_H - 62, h = 42;
-    int gap = (bottom - top - h) / (OPT_ROWS - 1);
+    int gap = (OPT_BOTTOM - OPT_TOP - OPT_ROW_H) / (OPT_ROWS - 1);
     if (gap > 54) gap = 54;
-    SDL_Rect r = { WIN_W / 2 - 300, top + i * gap, 600, h };
+    SDL_Rect r = { WIN_W / 2 - 300, OPT_TOP + i * gap, 600, OPT_ROW_H };
     return r;
+}
+
+/* ------------------------------------------------------------------ */
+/* 窓の大きさ                                                          */
+/* ------------------------------------------------------------------ */
+/* ウィンドウ時に選べる大きさ。どれも論理解像度 1280x800 と同じ 16:10 なので
+ * 黒帯が出ない。画面に収まらないものは選択肢から外す。 */
+static const int WIN_PRESETS[][2] = {
+    { 1280, 800 }, { 1440, 900 }, { 1680, 1050 }, { 1920, 1200 }, { 2560, 1600 },
+};
+#define N_WIN_PRESETS ((int)(sizeof WIN_PRESETS / sizeof WIN_PRESETS[0]))
+
+/* 窓を置けるいちばん大きな内側の大きさ（タスクバーと枠のぶんを引く） */
+static void usable_size(App *a, int *w, int *h)
+{
+    SDL_Rect ub;
+    int di = SDL_GetWindowDisplayIndex(a->win);
+    if (di < 0 || SDL_GetDisplayUsableBounds(di, &ub) != 0) {
+        *w = 1920; *h = 1080;
+        return;
+    }
+    *w = ub.w;
+    *h = ub.h - 32;   /* タイトルバーのぶん */
+}
+
+void app_apply_window(App *a)
+{
+    int uw, uh;
+    usable_size(a, &uw, &uh);
+    if (a->opt_win_w < WIN_W / 2) a->opt_win_w = WIN_W / 2;
+    if (a->opt_win_h < WIN_H / 2) a->opt_win_h = WIN_H / 2;
+    if (a->opt_win_w > uw) a->opt_win_w = uw;
+    if (a->opt_win_h > uh) a->opt_win_h = uh;
+
+    if (a->opt_fullscreen) {
+        /* 解像度を切り替える本物のフルスクリーンではなく、デスクトップの
+         * 解像度のまま全面に出す方式。切り替えが速く、他の窓へ移っても崩れない。 */
+        SDL_SetWindowFullscreen(a->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    } else {
+        SDL_SetWindowFullscreen(a->win, 0);
+        SDL_SetWindowSize(a->win, a->opt_win_w, a->opt_win_h);
+        SDL_SetWindowPosition(a->win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    }
+}
+
+void app_toggle_fullscreen(App *a)
+{
+    a->opt_fullscreen = !a->opt_fullscreen;
+    app_apply_window(a);
+    options_save(a);
+}
+
+void app_window_to_logical(App *a, int wx, int wy, int *lx, int *ly)
+{
+    float fx = (float)wx, fy = (float)wy;
+    SDL_RenderWindowToLogical(a->ren, wx, wy, &fx, &fy);
+    *lx = (int)fx;
+    *ly = (int)fy;
+}
+
+/* 今の大きさの次（dir=+1）/ 前（-1）のプリセットへ。画面に入らないものは飛ばす */
+static void opt_step_win_size(App *a, int dir)
+{
+    int uw, uh;
+    usable_size(a, &uw, &uh);
+    int n = 0, cur = -1;
+    int fit[N_WIN_PRESETS];
+    for (int i = 0; i < N_WIN_PRESETS; i++) {
+        if (WIN_PRESETS[i][0] > uw || WIN_PRESETS[i][1] > uh) continue;
+        if (WIN_PRESETS[i][0] == a->opt_win_w && WIN_PRESETS[i][1] == a->opt_win_h)
+            cur = n;
+        fit[n++] = i;
+    }
+    if (n == 0) return;
+    int next;
+    if (cur < 0) {
+        /* 端のドラッグで半端な大きさになっている: それより大きい最初の候補へ */
+        next = 0;
+        for (int k = 0; k < n; k++)
+            if (WIN_PRESETS[fit[k]][0] > a->opt_win_w) { next = k; break; }
+        if (dir < 0) next = (next + n - 1) % n;
+    } else {
+        next = (cur + dir + n) % n;
+    }
+    a->opt_win_w = WIN_PRESETS[fit[next]][0];
+    a->opt_win_h = WIN_PRESETS[fit[next]][1];
+    app_apply_window(a);
 }
 
 static void opt_change(App *a, int dir)
 {
     switch (a->opt_row) {
-    case 0:
+    case OPT_BGM_ROW:
         a->opt_bgm += dir;
         if (a->opt_bgm < 0) a->opt_bgm = 0;
         if (a->opt_bgm > 10) a->opt_bgm = 10;
         break;
-    case 1:
+    case OPT_SE_ROW:
         a->opt_se += dir;
         if (a->opt_se < 0) a->opt_se = 0;
         if (a->opt_se > 10) a->opt_se = 10;
         break;
-    case 2:
+    case OPT_ANIM_ROW:
         a->opt_anim = !a->opt_anim;
         break;
-    case 3:
+    case OPT_ANIMVID_ROW:
         a->opt_anim_video = !a->opt_anim_video;
         break;
-    case 4: {
+    case OPT_TRACK_ROW: {
         /* 戦闘BGM: -1(自動) → 0 → 1 → ... → 最後 → -1 と巡回。曲数は audio.def 次第 */
         int n = snd_battle_track_count();
         if (n <= 0) return;
@@ -912,7 +1013,7 @@ static void opt_change(App *a, int dir)
         a->opt_bgm_track = v;
         break;
     }
-    case 5: {
+    case OPT_SESET_ROW: {
         int n = snd_se_set_count();
         if (n <= 0) return;
         int v = (a->opt_se_set + dir) % n;
@@ -921,6 +1022,14 @@ static void opt_change(App *a, int dir)
         snd_set_se_set(a->opt_se_set);
         break;
     }
+    case OPT_WINMODE_ROW:
+        a->opt_fullscreen = !a->opt_fullscreen;
+        app_apply_window(a);
+        break;
+    case OPT_WINSIZE_ROW:
+        if (a->opt_fullscreen) return;   /* フルスクリーン中は大きさを選べない */
+        opt_step_win_size(a, dir);
+        break;
     case OPT_TILT_ROW:
         a->opt_tilt = !a->opt_tilt;   /* 斜め見下ろし ⇔ 平面（見た目のみ） */
         break;
@@ -945,11 +1054,11 @@ static void opt_change(App *a, int dir)
     }
     snd_apply_volumes(a->opt_bgm, a->opt_se);
     /* 選んだ音をその場で確かめられるように鳴らす */
-    if (a->opt_row == 4) {
+    if (a->opt_row == OPT_TRACK_ROW) {
         int m = snd_battle_music(a->opt_bgm_track, "");
         if (m != HWM_NONE) snd_music(m, true);
     } else {
-        snd_se(a->opt_row == 5 ? SE_OK : SE_CURSOR);
+        snd_se(a->opt_row == OPT_SESET_ROW ? SE_OK : SE_CURSOR);
     }
     options_save(a);
 }
@@ -1024,13 +1133,24 @@ static void draw_volume_bar(App *a, int x, int y, int val)
 static void opt_draw(App *a)
 {
     fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 32, 42, 52, 255 });
-    draw_text_center(a, a->font_xl, WIN_W / 2, 100, COL_WHITE, tx("OPT_TITLE"));
+    draw_text_center(a, a->font_xl, WIN_W / 2, 80, COL_WHITE, tx("OPT_TITLE"));
 
-    const char *labels[OPT_ROWS] = {
-        tx("OPT_BGM"), tx("OPT_SE"), tx("OPT_ANIM"), tx("OPT_ANIM_VIDEO"),
-        tx("OPT_BGM_TRACK"), tx("OPT_SE_SET"), tx("OPT_TILT"), tx("OPT_CUTIN"),
-        tx("OPT_WEATHER_FX"), tx("OPT_CPU_SPEED"), tx("OPT_BACK")
-    };
+    const char *labels[OPT_ROWS];
+    labels[OPT_BGM_ROW]     = tx("OPT_BGM");
+    labels[OPT_SE_ROW]      = tx("OPT_SE");
+    labels[OPT_ANIM_ROW]    = tx("OPT_ANIM");
+    labels[OPT_ANIMVID_ROW] = tx("OPT_ANIM_VIDEO");
+    labels[OPT_TRACK_ROW]   = tx("OPT_BGM_TRACK");
+    labels[OPT_SESET_ROW]   = tx("OPT_SE_SET");
+    labels[OPT_WINMODE_ROW] = tx("OPT_WINMODE");
+    labels[OPT_WINSIZE_ROW] = tx("OPT_WINSIZE");
+    labels[OPT_TILT_ROW]    = tx("OPT_TILT");
+    labels[OPT_CUTIN_ROW]   = tx("OPT_CUTIN");
+    labels[OPT_WXFX_ROW]    = tx("OPT_WEATHER_FX");
+    labels[OPT_CPUSPD_ROW]  = tx("OPT_CPU_SPEED");
+    labels[OPT_BACK_ROW]    = tx("OPT_BACK");
+
+    const int ty = (OPT_ROW_H - 22) / 2;   /* 文字の縦位置（行の中央） */
     for (int i = 0; i < OPT_ROWS; i++) {
         SDL_Rect r = opt_row_rect(i);
         bool sel = (a->opt_row == i);
@@ -1040,23 +1160,25 @@ static void opt_draw(App *a)
         outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
 
         if (i == OPT_BACK_ROW) {
-            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 11,
+            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + ty,
                              sel ? COL_WHITE : COL_GRAY, labels[i]);
             continue;
         }
-        draw_text(a, a->font_m, r.x + 20, r.y + 11,
+        draw_text(a, a->font_m, r.x + 20, r.y + ty,
                   sel ? COL_WHITE : COL_GRAY, labels[i]);
-        if (i == 0) draw_volume_bar(a, r.x + 320, r.y + 15, a->opt_bgm);
-        if (i == 1) draw_volume_bar(a, r.x + 320, r.y + 15, a->opt_se);
-        if (i == 2)
-            draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW,
-                      tx(a->opt_anim ? "ON" : "OFF"));
-        if (i == 3)
-            draw_text(a, a->font_m, r.x + 320, r.y + 11,
-                      a->opt_anim ? COL_YELLOW : COL_DIM,
+        int vx = r.x + 320, vy = r.y + ty;
+        char buf[80];
+        switch (i) {
+        case OPT_BGM_ROW: draw_volume_bar(a, vx, r.y + ty + 4, a->opt_bgm); break;
+        case OPT_SE_ROW:  draw_volume_bar(a, vx, r.y + ty + 4, a->opt_se);  break;
+        case OPT_ANIM_ROW:
+            draw_text(a, a->font_m, vx, vy, COL_YELLOW, tx(a->opt_anim ? "ON" : "OFF"));
+            break;
+        case OPT_ANIMVID_ROW:
+            draw_text(a, a->font_m, vx, vy, a->opt_anim ? COL_YELLOW : COL_DIM,
                       tx(a->opt_anim_video ? "ON" : "OFF"));
-        if (i == 4) {
-            char buf[80];
+            break;
+        case OPT_TRACK_ROW: {
             int n = snd_battle_track_count();
             if (n <= 0)
                 snprintf(buf, sizeof buf, "%s", tx("OPT_TRACK_NONE"));
@@ -1066,35 +1188,50 @@ static void opt_draw(App *a)
                 snprintf(buf, sizeof buf, tx("OPT_TRACK_FMT"),
                          a->opt_bgm_track + 1, n,
                          snd_battle_track_name(a->opt_bgm_track));
-            draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW, buf);
+            draw_text(a, a->font_m, vx, vy, COL_YELLOW, buf);
+            break;
         }
-        if (i == 5)
-            draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW,
-                      snd_se_set_name(a->opt_se_set));
-        if (i == OPT_WXFX_ROW)
-            draw_text(a, a->font_m, r.x + 320, r.y + 11,
-                      a->opt_weather_fx ? COL_YELLOW : COL_DIM,
+        case OPT_SESET_ROW:
+            draw_text(a, a->font_m, vx, vy, COL_YELLOW, snd_se_set_name(a->opt_se_set));
+            break;
+        case OPT_WINMODE_ROW:
+            draw_text(a, a->font_m, vx, vy, COL_YELLOW,
+                      tx(a->opt_fullscreen ? "OPT_WIN_FULL" : "OPT_WIN_WINDOW"));
+            break;
+        case OPT_WINSIZE_ROW:
+            /* フルスクリーン中は選べないので暗く出す */
+            snprintf(buf, sizeof buf, tx("OPT_WINSIZE_FMT"), a->opt_win_w, a->opt_win_h);
+            draw_text(a, a->font_m, vx, vy,
+                      a->opt_fullscreen ? COL_DIM : COL_YELLOW,
+                      a->opt_fullscreen ? tx("OPT_WINSIZE_FULL") : buf);
+            break;
+        case OPT_WXFX_ROW:
+            draw_text(a, a->font_m, vx, vy, a->opt_weather_fx ? COL_YELLOW : COL_DIM,
                       tx(a->opt_weather_fx ? "OPT_WXFX_ON" : "OPT_WXFX_OFF"));
-        if (i == OPT_TILT_ROW)
-            draw_text(a, a->font_m, r.x + 320, r.y + 11, COL_YELLOW,
+            break;
+        case OPT_TILT_ROW:
+            draw_text(a, a->font_m, vx, vy, COL_YELLOW,
                       tx(a->opt_tilt ? "OPT_TILT_ON" : "OPT_TILT_OFF"));
-        if (i == OPT_CPUSPD_ROW) {
+            break;
+        case OPT_CPUSPD_ROW: {
             static const char *K[3] = {
                 "OPT_CPUSPD_NORMAL", "OPT_CPUSPD_FAST", "OPT_CPUSPD_MAX"
             };
             int v = a->opt_cpu_speed;
             if (v < 0 || v > 2) v = 0;
-            draw_text(a, a->font_m, r.x + 320, r.y + 11,
-                      v ? COL_YELLOW : COL_GRAY, tx(K[v]));
+            draw_text(a, a->font_m, vx, vy, v ? COL_YELLOW : COL_GRAY, tx(K[v]));
+            break;
         }
-        if (i == OPT_CUTIN_ROW) {
+        case OPT_CUTIN_ROW: {
             static const char *K[3] = {
                 "OPT_CUTIN_OFF", "OPT_CUTIN_ALWAYS", "OPT_CUTIN_KILL"
             };
             int v = a->opt_cutin;
             if (v < 0 || v > 2) v = 0;
-            draw_text(a, a->font_m, r.x + 320, r.y + 11,
-                      v ? COL_YELLOW : COL_DIM, tx(K[v]));
+            draw_text(a, a->font_m, vx, vy, v ? COL_YELLOW : COL_DIM, tx(K[v]));
+            break;
+        }
+        default: break;
         }
     }
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 40, COL_DIM, tx("OPT_HINT"));

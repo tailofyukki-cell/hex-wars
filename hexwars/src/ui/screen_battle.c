@@ -1676,8 +1676,11 @@ static void edge_scroll(App *a)
 {
     if (a->dragging) return;
     if (SDL_GetMouseFocus() != a->win) return;
-    int mx, my;
-    SDL_GetMouseState(&mx, &my);
+    int wx, wy, mx, my;
+    SDL_GetMouseState(&wx, &wy);
+    /* GetMouseState は窓の実ピクセルなので論理座標へ直す。
+     * 直さないと窓を広げたとき右端・下端で反応しなくなる。 */
+    app_window_to_logical(a, wx, wy, &mx, &my);
     const int MARGIN = 16;
     const float SPEED = 10.0f;
     float dx = 0, dy = 0;

@@ -66,6 +66,12 @@ OPT_SE          = SE音量
 OPT_ANIM        = 戦闘アニメ
 OPT_ANIM_VIDEO  = 戦闘アニメを動画で再生
 OPT_TILT        = マップ表示
+OPT_WINMODE     = 画面モード
+OPT_WIN_WINDOW  = ウィンドウ
+OPT_WIN_FULL    = フルスクリーン
+OPT_WINSIZE     = ウィンドウの大きさ
+OPT_WINSIZE_FMT = %d × %d
+OPT_WINSIZE_FULL = （フルスクリーン中）
 OPT_TILT_ON     = 斜め見下ろし
 OPT_TILT_OFF    = 平面（真上）
 OPT_CUTIN       = 攻撃時のカットイン
@@ -80,7 +86,7 @@ OPT_CPUSPD_MAX  = 最速
 OPT_WXFX_ON     = 出す（雨・雲の影・色味）
 OPT_WXFX_OFF    = 切る
 OPT_BACK        = タイトルへ戻る
-OPT_HINT        = ←→:変更  Z/Enter:決定  X/Esc:戻る
+OPT_HINT        = ←→:変更  Z/Enter:決定  X/Esc:戻る  Alt+Enter/F11:フルスクリーン
 
 # --- ロード / セーブ ---
 LOAD_TITLE      = ロード

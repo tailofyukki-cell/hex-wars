@@ -572,8 +572,9 @@ void render_map(App *a)
     float s = hex_size(a);
     int viewer = render_viewer(g);   /* CPU手番中は人間側の視界で描画 */
 
-    int ww, wh;
-    SDL_GetRendererOutputSize(a->ren, &ww, &wh);
+    /* 論理解像度で描いているので、画面外判定も論理解像度で見る。
+     * 出力解像度（窓の実ピクセル）で見ると、窓を広げたとき画面外を描きすぎる。 */
+    int ww = WIN_W, wh = WIN_H;
 
     for (int y = 0; y < g->h; y++) {
         for (int x = 0; x < g->w; x++) {

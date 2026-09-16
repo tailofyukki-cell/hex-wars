@@ -16,7 +16,14 @@ static App s_app; /* 静的確保（仕様書 1.2） */
 /* 今の描画内容を HWSHOT のパスへ PNG で落として終了を予約する */
 static void save_shot(App *a)
 {
-    SDL_Surface *sf = SDL_CreateRGBSurfaceWithFormat(0, WIN_W, WIN_H, 32,
+    int ow = WIN_W, oh = WIN_H;
+    SDL_GetRendererOutputSize(a->ren, &ow, &oh);   /* 窓を広げていれば論理解像度より大きい */
+    /* ReadPixels は「今のビューポート」しか読まない。縦横比が違う窓では
+     * ビューポートが黒帯の内側に寄っているので、窓全体に戻してから読む
+     * （もう終了するので戻さなくてよい）。 */
+    SDL_RenderSetLogicalSize(a->ren, 0, 0);
+    SDL_RenderSetViewport(a->ren, NULL);
+    SDL_Surface *sf = SDL_CreateRGBSurfaceWithFormat(0, ow, oh, 32,
                                                      SDL_PIXELFORMAT_RGBA32);
     if (sf && SDL_RenderReadPixels(a->ren, NULL, SDL_PIXELFORMAT_RGBA32,
                                    sf->pixels, sf->pitch) == 0)
@@ -72,8 +79,15 @@ int main(int argc, char *argv[])
     /* この時点では text_ja.def を読んでいないので仮題。読込後に付け替える */
     a->win = SDL_CreateWindow("...",
                               SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                              WIN_W, WIN_H, SDL_WINDOW_HIDDEN);
+                              WIN_W, WIN_H,
+                              SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE |
+                              SDL_WINDOW_ALLOW_HIGHDPI);
     if (!a->win) { SDL_Log("CreateWindow: %s", SDL_GetError()); return 1; }
+    /* 小さくしすぎると文字が読めなくなるので下限を置く（論理解像度の半分） */
+    SDL_SetWindowMinimumSize(a->win, WIN_W / 2, WIN_H / 2);
+    /* 拡縮したときの補間。nearest だと文字がガタガタになる。
+     * レンダラを作る前に設定しないとテクスチャに効かない。 */
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
     a->ren = SDL_CreateRenderer(a->win, -1,
                                 SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -81,6 +95,10 @@ int main(int argc, char *argv[])
         a->ren = SDL_CreateRenderer(a->win, -1, 0);
     if (!a->ren) { SDL_Log("CreateRenderer: %s", SDL_GetError()); return 1; }
     SDL_SetRenderDrawBlendMode(a->ren, SDL_BLENDMODE_BLEND);
+    /* ゲームは常に 1280x800 の論理解像度で描く。窓の大きさが変わっても
+     * SDL が縦横比を保って拡縮し、マウス座標も論理座標へ直して届けてくれる。
+     * これで画面レイアウトのコードを1行も変えずに可変サイズにできる。 */
+    SDL_RenderSetLogicalSize(a->ren, WIN_W, WIN_H);
     {   /* どの描画バックエンドになったかを記録（software だと遅く、ちらつきやすい） */
         SDL_RendererInfo ri;
         if (SDL_GetRendererInfo(a->ren, &ri) == 0)
@@ -111,6 +129,7 @@ int main(int argc, char *argv[])
     uanim_init();
     options_load(a);
     progress_load(a);
+    app_apply_window(a);   /* 保存してある窓の大きさ・フルスクリーンを反映 */
     /* 未解禁の指揮官が初期選択にならないようにする */
     a->sel_co0 = co_is_unlocked(a, 0) ? 0 : co_next_unlocked(a, 0, 1);
     a->sel_co1 = a->sel_co0;
@@ -336,8 +355,22 @@ int main(int argc, char *argv[])
         uint32_t frame_start = SDL_GetTicks();
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) a->quit = true;
-            else SCREENS[a->screen].event(a, &e);
+            if (e.type == SDL_QUIT) { a->quit = true; continue; }
+            /* 窓の端をドラッグして大きさを変えたら覚えておく（次回もその大きさで開く） */
+            if (e.type == SDL_WINDOWEVENT &&
+                e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED && !a->opt_fullscreen) {
+                a->opt_win_w = e.window.data1;
+                a->opt_win_h = e.window.data2;
+                continue;
+            }
+            /* どの画面にいても Alt+Enter / F11 でフルスクリーンを切り替える */
+            if (e.type == SDL_KEYDOWN && !e.key.repeat &&
+                (e.key.keysym.sym == SDLK_F11 ||
+                 (e.key.keysym.sym == SDLK_RETURN && (e.key.keysym.mod & KMOD_ALT)))) {
+                app_toggle_fullscreen(a);
+                continue;
+            }
+            SCREENS[a->screen].event(a, &e);
         }
         SCREENS[a->screen].update(a);
 
@@ -360,6 +393,7 @@ int main(int argc, char *argv[])
         if (el < 16) SDL_Delay(16 - el);
     }
 
+    options_save(a);   /* ドラッグで変えた窓の大きさを残す */
     sprites_quit();
     uanim_quit();
     snd_quit();
