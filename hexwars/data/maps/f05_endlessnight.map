@@ -7,6 +7,7 @@
 # 中央の海の帯に橋は無く、陸は渡れない。180度回転対称。
 [map]
 name             = 常夜の戦場
+name@en = Field of Endless Night
 width            = 44
 height           = 28
 turns            = 70

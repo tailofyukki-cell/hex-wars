@@ -3,6 +3,7 @@
 # 南東の湾が首都の東まで回り込むので、艦砲と上陸が最後まで噛み合う。
 [map]
 name             = 首都攻略
+name@en = Assault on the Capital
 width            = 42
 height           = 29
 turns            = 95

@@ -1,0 +1,348 @@
+# text_en.def - UI strings in English (loaded on top of text_ja.def)
+#
+# Only the keys written here are replaced. A key missing from this file
+# falls back to the Japanese text, so the game never shows a raw key.
+# Keep every %d / %s in the same count and order as text_ja.def.
+# Note: '#' starts a comment anywhere on a line, so it cannot be used in text.
+# Leading spaces are trimmed; use a no-break space (U+00A0) when one is needed.
+
+# --- common ---
+FACTION0        = Western Alliance
+FACTION1        = Eastern Federation
+FACTION2        = Southern Union
+FACTION3        = Northern Pact
+FACTION4        = Free Army
+NEUTRAL         = Neutral
+REL_SELF        =
+REL_ALLY        =  (Allied)
+REL_ENEMY       =  (Enemy)
+ON              = ON
+OFF             = OFF
+
+# --- title ---
+TITLE_SUB1      = A Turn-Based Hex War Strategy Game
+TITLE_SUB2      = Western Alliance vs Eastern Federation - A Fictional WWII Continental War
+TITLE_CAMPAIGN  = Campaign
+TITLE_FREE      = Skirmish
+TITLE_LOAD      = Load
+TITLE_OPTIONS   = Options
+TITLE_QUIT      = Quit
+TITLE_HINT      = Arrows: Select  Z/Enter: Confirm
+
+# --- skirmish setup ---
+SETUP_TITLE     = Skirmish
+SETUP_MAP       = Map
+SETUP_OPP       = Opponent (Eastern Federation)
+SETUP_FOG       = Fog of War
+SETUP_CO0       = Commander (You)
+SETUP_CO1       = Commander (Enemy)
+SETUP_START     = Start
+SETUP_BACK      = Back to Title
+SETUP_NOMAP     = (No map)
+SETUP_NOPREVIEW = Could not load
+SETUP_MAPINFO_FMT = %dx%d / %d factions / %d turns
+SETUP_TAG_NIGHT = Endless night
+SETUP_TAG_WXFIXED = Fixed weather
+SETUP_TAG_OBJ_FMT = Win by holding %d bases
+CO_DOM_LAND     = Ground units only
+CO_DOM_AIR      = Air units only
+CO_DOM_SEA      = Naval units only
+CO_ST_ATK       = Attack
+CO_ST_DEF       = Defense
+CO_ST_MOVE      = Move
+CO_ST_VISION    = Vision
+CO_ST_INCOME    = Income
+CO_POWER_FMT    = Power: %s (%d)
+SETUP_HINT      = Arrows: Select/Change  Z/Enter: Confirm  X/Esc: Back
+SETUP_CTRL_FMT  = %s: Control
+SETUP_CO_FMT    = %s: Commander
+SETUP_NEED_HUMAN = Choose at least one faction for a human player
+OPP_CPU_EASY    = CPU (EASY)
+OPP_CPU_NORMAL  = CPU (NORMAL)
+OPP_CPU_HARD    = CPU (HARD)
+OPP_HUMAN       = Human (hot seat)
+
+# --- options ---
+WINDOW_TITLE    = HEX WARS
+
+OPT_TITLE       = Options
+OPT_BGM         = Music Volume
+OPT_SE          = Sound Volume
+OPT_ANIM        = Battle Animation
+OPT_ANIM_VIDEO  = Play Battle Videos
+OPT_TILT        = Map View
+OPT_LANG        = Language / 言語
+SND_SET_DEFAULT = Standard
+SND_TRACK_FMT   = Track %d
+STORY_Q_OPEN    = "
+STORY_Q_CLOSE   = "
+OPT_WINMODE     = Display Mode
+OPT_WIN_WINDOW  = Windowed
+OPT_WIN_FULL    = Fullscreen
+OPT_WINSIZE     = Window Size
+OPT_WINSIZE_FMT = %d x %d
+OPT_WINSIZE_FULL = (Fullscreen)
+OPT_TILT_ON     = Isometric
+OPT_TILT_OFF    = Flat (top-down)
+OPT_CUTIN       = Attack Cut-ins
+OPT_CUTIN_OFF   = Off
+OPT_CUTIN_ALWAYS= Always
+OPT_CUTIN_KILL  = Only on kills
+OPT_WEATHER_FX  = Weather Effects
+OPT_CPU_SPEED   = CPU Turn Speed
+OPT_CPUSPD_NORMAL = Normal
+OPT_CPUSPD_FAST = Fast
+OPT_CPUSPD_MAX  = Fastest
+OPT_WXFX_ON     = On (rain, cloud shadows, tint)
+OPT_WXFX_OFF    = Off
+OPT_BACK        = Back to Title
+OPT_HINT        = Left/Right: Change  Z/Enter: Confirm  X/Esc: Back  Alt+Enter/F11: Fullscreen
+
+# --- load / save ---
+LOAD_TITLE      = Load
+LOAD_AUTO       = Auto
+LOAD_SLOT_FMT   = Slot %2d %s  %s  Turn %d
+LOAD_EMPTY_FMT  = Slot %2d %s  (Empty)
+LOAD_HINT       = Z/Enter: Load  X/Esc: Back
+SAVE_TITLE      = Save Slot
+SAVE_SLOT_FMT   = Slot %2d  %s  Turn %d
+SAVE_EMPTY_FMT  = Slot %2d  (Empty)
+
+# --- campaign map ---
+CPNMAP_TITLE    = Operations Map
+CPNMAP_DONE     = Taken
+CPNMAP_NEXT_FMT = Next: %s
+CPNMAP_HINT     = Z: Prepare  C: Commander  Up/Down/Wheel: Scroll  X: Title
+
+# --- briefing ---
+BRIEF_CARRY_FMT = Carried over: %d units   Funds carried: +%dG
+BRIEF_STORE_FMT = %d units in reserve (deploy free at a production base)
+BRIEF_GO        = Z / Click to deploy
+STORY_GO        = Z / Click for the briefing
+STORY_SKIP      = Enter / Click to show all
+STORY_WIN_GO    = Z / Click for the results
+BRIEF_NONODE    = (No operation)
+
+# --- reward image ---
+REWARD_TITLE      = Mission Accomplished!
+REWARD_HINT       = Z / Click to continue
+REWARD_NONE       = (No image)
+
+# --- results ---
+RESULT_WIN_FMT    = %s is victorious!
+RESULT_DRAW       = Draw
+RESULT_HUMAN_OUT  = Your forces were wiped out...
+RESULT_TURNS_FMT  = Turns: %d
+RESULT_LOSSES_HEAD  = Units Lost
+RESULT_LOSS_ONE_FMT = %s: %d
+RESULT_NEXT_FMT   = Next: %s
+RESULT_CARRY_FMT  = Carried over: %d units / Funds carried: +%dG
+RESULT_NEXT_HINT  = Z: Next operation  X: Title
+RESULT_CLEAR      = Campaign Complete!
+RESULT_CLEAR_SUB  = Peace returns to the continent - Z / Click for the title
+RESULT_LOSE       = The operation failed...
+RESULT_RETRY_HINT = Z: Retry  X: Title
+RESULT_HINT       = Z / Click for the title
+
+# --- rating (S/A/B/C) ---
+RANK_TITLE_FMT       = Rating  %s
+RANK_DETAIL_FMT      = Speed %d / Preservation %d / Kills %d  ->  Total %d
+RANK_DETAIL_BONUS_FMT = Speed %d / Preservation %d / Kills %d  ->  Total %d   Bonus +%dG
+CO_LOCKED_FMT        = %d commanders locked (clear operations to unlock)
+
+# --- battle ---
+BANNER_TURN_FMT = Turn %d - %s
+TOP_TURNLIM_FMT = %s  Turn %d/%d
+TOP_TURN_FMT    = %s  Turn %d
+TOP_FACTION_FMT = %s
+TOP_FUNDS_FMT   = Funds %dG
+TOP_OBJ_FMT     = Bases held: %s %d/%d
+TOP_WEATHER_FMT = %s, %d turns left (next: %s)
+TOP_WEATHER_FIXED_FMT = %s (fixed)
+WX_CLEAR        = Clear
+WX_CLOUDY       = Cloudy
+WX_RAIN         = Rain
+TOP_PHASE_FMT   = %s (%d left)
+PHASE_DAY       = Day
+PHASE_NIGHT     = Night
+BTN_MENU        = Menu (E)
+CPU_THINKING    = CPU is thinking...
+HANDOVER_FMT    = %s's turn
+HANDOVER_SUB    = Pass control to the next player - Z / Click to start
+ACT_ATTACK      = Attack
+ACT_CAPTURE     = Capture
+ACT_WAIT        = Wait
+ACT_CANCEL      = Cancel
+ACT_UNLOAD      = Unload
+ACT_SUPPLY      = Supply
+ACT_HEAL        = Repair
+ACT_EVOLVE      = Evolve
+ACT_WORK        = Engineer
+
+# --- evolution ---
+EVOLVE_TITLE_FMT = Evolve %s into %s?
+EVOLVE_WARN1     = Evolution cannot be undone
+EVOLVE_WARN2     = Experience resets to 0 and the unit ends its turn
+EVOLVE_YES       = Evolve
+EVOLVE_NO        = Cancel
+POP_EVOLVE       = Evolved!
+EVOLVE_COST_FMT  = Cost %dG (you have %dG)
+HINT_EVOLVE      = Left/Right: Select  Z: Confirm  X: Cancel
+
+# --- join ---
+JOIN_TITLE_FMT   = Join %s?
+JOIN_HP_FMT      = HP %d + %d  ->  %d
+JOIN_HP_SPLIT_FMT = HP %d + %d  ->  %d and %d
+JOIN_WARN        = One of the two units will leave the board
+JOIN_WARN_SPLIT  = The overflow stays behind as a unit
+JOIN_YES         = Join
+JOIN_NO          = Cancel
+HINT_JOIN        = Left/Right: Select  Z: Confirm  X: Cancel
+
+TMENU_UNITLIST  = Units Ready
+TMENU_END       = End Turn
+TMENU_SAVE      = Save
+TMENU_TILT_FMT  = Map View: %s
+TMENU_TITLE     = Back to Title
+TMENU_CLOSE     = Close
+PROD_TITLE      = Build / Reserve
+PROD_STORE_TAG  = R
+PROD_FREE       = Free
+PROD_EXP_FMT    = EXP%3d (Rank %d)
+PROD_SORT_FMT   = Sort: %s
+PROD_SORT_TYPE  = Type
+PROD_SORT_EXP   = EXP
+PROD_SORT_COST  = Cost
+
+PANEL_DEF_FMT    = Defense +%d%%
+PANEL_INCOME_FMT = Income %dG
+PANEL_OWNER_FMT  = Owner: %s
+PANEL_CAP_FMT    = Capture: %d turns left
+LPICK_PRODUCE    = + Build
+PANEL_NOUNIT     = (No unit)
+PANEL_HP_FMT     = HP %d/10   Fuel %d/%d   Ammo %d/%d
+PANEL_HP_SUP_FMT = HP %d/10   Fuel %d/%d   Supplies %d/%d
+PANEL_EXP_FMT    = EXP %d (Rank %d)   Move %d
+PANEL_ATK_FMT    = ATK: Soft %d Armor %d Air %d Sea %d   Range %d-%d
+PANEL_CARGO_FMT  = Cargo: %s
+CARGO_TITLE      = Cargo Status
+CARGO_ROW_FMT    = %s   HP %d/10   Fuel %d/%d   Ammo %d/%d
+CARGO_ROW_SUP_FMT = %s   HP %d/10   Fuel %d/%d   Supplies %d/%d
+PANEL_SUPPLY_HINT = Supply: -1 per unit  Repair: 10 supplies = 1 HP
+
+HINT_IDLE       = Z: Select  N: Next unit  P: Power  E: Menu  Wheel: Zoom  Middle: Scroll
+HINT_MOVE       = Z: Move here  X: Cancel
+HINT_MENU       = Up/Down: Select  Z: Confirm  X: Back
+HINT_TARGET     = Choose a target  Left/Right: Switch  Z: Attack  X: Back
+
+# --- attack forecast ---
+FC_DMG_FMT      = Damage     %d    HP %d -> %d
+FC_DMG_KILL_FMT = Damage     %d    HP %d -> Destroyed!
+FC_CNT_FMT      = Counter    %d    Yours %d -> %d
+FC_CNT_KILL_FMT = Counter    %d    Yours %d -> Destroyed!
+FC_NO_COUNTER   = No counterattack
+FC_NOTE         = Expected values. Actual results vary by +/-15%
+HINT_UNLOAD     = Choose where to unload (repeatable)  Z: Confirm  X: Done
+HINT_WORK       = Choose a hex (red = demolish / green = repair)  Z: Confirm  X: Cancel
+HINT_LAYER_PICK = What to do on this hex  Up/Down: Select  Z: Confirm  X: Back
+HINT_UNITLIST   = Up/Down/Wheel: Select  Z: Go to unit  X: Back
+LAYER_AIR       = Air
+LAYER_SURFACE   = Surface
+LAYER_UNDER     = Undersea
+HINT_PROD       = Up/Down/Wheel: Select  S: Sort  Z: Build/Deploy  X: Close
+HINT_SAVE       = Up/Down: Select  Z: Save  X: Back
+HINT_ANIM       = Z: Skip
+
+POP_AMBUSH      = Enemy spotted! Move halted
+POP_BOARD       = Boarded
+POP_JOIN_FMT    = Joined HP%d
+POP_JOIN_LEFT_FMT = Left HP%d
+POP_REFUND_FMT  = Refund +%d
+POP_UNBOARD     = Unloaded
+POP_DEMOLISH    = Demolished!
+POP_REPAIR_FMT  = Repaired -%dG
+WORK_NO_FUNDS   = Not enough funds to repair
+POP_KILL        = Destroyed!
+POP_LOST        = Lost...
+POP_CAP_DONE    = Captured!
+POP_CAP_PROG    = Capturing...
+POP_NOFUNDS     = Not enough funds
+PROD_FULL       = Unit limit reached
+POP_PROD        = Built
+POP_WITHDRAW    = Deployed from reserve
+POP_SAVED       = Saved
+POP_SAVEFAIL    = Save failed
+POP_SUPPLY_FMT  = Supplied %d units
+POP_HEAL_FMT    = +%d HP repaired
+
+# ---- ending credits ----
+END_HINT_SKIP   = Z / Click to fast-forward
+END_HINT_DONE   = Z / Click for the title
+END_L01 = @HEX WARS
+END_L02 = A Turn-Based Hex War Strategy Game
+END_L03 =
+END_L04 = @Campaign "The Western Counteroffensive" - Complete
+END_L05 =
+END_L06 = Every operation is complete, and peace returns to the continent.
+END_L07 = Our respects to your command.
+END_L08 =
+END_L09 = @STAFF
+END_L10 =
+END_L11 = Game Design / Programming
+END_L12 = The HEX WARS Team
+END_L13 =
+END_L14 = Map Design
+END_L15 = tools/gen_maps.py (procedural)
+END_L16 =
+END_L17 = Units / Graphics
+END_L18 = tools/gen_units_gfx.py
+END_L19 =
+END_L20 = Sound
+END_L21 = tools/gen_audio.py
+END_L22 =
+END_L23 = @SPECIAL THANKS
+END_L24 =
+END_L25 = SDL2 / SDL2_ttf / SDL2_mixer / SDL2_image
+END_L26 = Noto Sans JP (SIL Open Font License)
+END_L27 = FFmpeg (video conversion)
+END_L28 =
+END_L29 = @THANK YOU FOR PLAYING!
+END_L30 =
+
+# --- commanders ---
+CO_NONE            = None
+CO_READY           = Power ready! (P)
+CO_POWER_BANNER_FMT = %s - %s!
+CPNMAP_CO_FMT      = Commander: %s   (C key / click here to change)
+
+# --- units ready ---
+ULIST_TITLE_FMT = Units Ready (%d)
+ULIST_ROW_FMT   = HP%2d  %s  (%d,%d)
+ULIST_EXP_FMT   = EXP%3d (Rank %d)
+ULIST_EMPTY     = No units left to move
+
+# --- deployment ---
+DEPLOY_TITLE      = Deployment
+DEPLOY_COUNT_FMT  = Deploying %d / %d   (carried over: %d)
+DEPLOY_NOTE       = Units you leave behind go to the reserve (not lost; deploy them free at a production base)
+DEPLOY_MARK_GO    = > Deploy
+DEPLOY_MARK_KEEP  = - Reserve
+DEPLOY_MARK_NA    = x No terrain
+DEPLOY_EXP_FMT    = EXP %d (Rank %d)
+DEPLOY_GO         = Deploy this force
+DEPLOY_HINT       = Up/Down/Wheel: Select  Z/Space: Deploy/Reserve  A: Auto by value  X: Deploy
+
+# --- secondary objectives ---
+SUB_TITLE_FMT   = Secondary Objectives (+%d each)
+SUB_ROW_FMT     = - %s
+SUB_RESULT_FMT  = Objectives %d/%d complete  Bonus +%d
+SUB_OK_FMT      = O %s
+SUB_NG_FMT      = x %s
+SUB_HUD_TITLE   = Objectives
+
+# --- audio options ---
+OPT_BGM_TRACK   = Battle Music
+OPT_SE_SET      = Sound Set
+OPT_TRACK_AUTO  = Auto (per map)
+OPT_TRACK_FMT   = %d/%d  %s
+OPT_TRACK_NONE  = (No tracks)

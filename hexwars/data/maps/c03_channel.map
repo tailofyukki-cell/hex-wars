@@ -1,6 +1,7 @@
 # c03 海峡横断 - 蝶ネクタイ型の両大陸。くびれの小島が足がかり
 [map]
 name = 海峡横断
+name@en = Strait Crossing
 width  = 46
 height = 29
 turns  = 83

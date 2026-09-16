@@ -1,6 +1,7 @@
 # c11 制海権の争奪 - 東の要塞島の敵首都へ、制海権を握り上陸せよ
 [map]
 name = 制海権の争奪
+name@en = Command of the Sea
 width  = 52
 height = 34
 turns  = 117

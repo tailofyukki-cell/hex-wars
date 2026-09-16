@@ -10,6 +10,7 @@
 # 敵が多いのは意図的（撤退戦なので非対称）。回転対称ではない。
 [map]
 name             = 後退線
+name@en = Fallback Line
 width            = 36
 height           = 26
 turns            = 16

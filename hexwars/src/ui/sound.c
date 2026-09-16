@@ -3,6 +3,7 @@
  * 音源の一覧は data/audio.def に書く（ファイル名も拡張子も自由）。
  * audio.def が無い/壊れている場合は組み込みの既定リストで動く。 */
 #include "sound.h"
+#include "text.h"
 #include "../data/parser.h"
 #include <SDL.h>
 #include <SDL_mixer.h>
@@ -46,7 +47,7 @@ static void audio_defaults(void)
     for (int i = 0; i < SE_COUNT; i++)
         snprintf(s_se_file[i], sizeof s_se_file[i], "%s", SE_DEFAULT[i]);
     s_n_sets = 1;
-    snprintf(s_set_name[0], sizeof s_set_name[0], "%s", "標準");
+    snprintf(s_set_name[0], sizeof s_set_name[0], "%s", tx("SND_SET_DEFAULT"));
     snprintf(s_set_dir[0], sizeof s_set_dir[0], "%s", "sfx");
 
     memset(s_mus_file, 0, sizeof s_mus_file);
@@ -126,12 +127,12 @@ static int load_audio_def(const char *base_path)
 
     if (s_n_sets == 0) {   /* [seset] を1つも書かなかった場合の保険 */
         s_n_sets = 1;
-        snprintf(s_set_name[0], sizeof s_set_name[0], "%s", "標準");
+        snprintf(s_set_name[0], sizeof s_set_name[0], "%s", tx("SND_SET_DEFAULT"));
         snprintf(s_set_dir[0], sizeof s_set_dir[0], "%s", "sfx");
     }
     for (int i = 0; i < s_n_battle; i++)
         if (!s_battle_name[i][0])
-            snprintf(s_battle_name[i], sizeof s_battle_name[0], "曲%d", i + 1);
+            snprintf(s_battle_name[i], sizeof s_battle_name[0], tx("SND_TRACK_FMT"), i + 1);
     return 0;
 }
 
@@ -157,6 +158,15 @@ static void load_se_set(int set)
         if (!s_se[i]) SDL_Log("SE読込失敗: %s (%s)", path, Mix_GetError());
     }
     s_se_set = set;
+}
+
+/* 表示言語を変えたとき、曲名・効果音セット名だけ読み直す（音は読み直さない） */
+void snd_reload_names(void)
+{
+    int keep = s_se_set;
+    audio_defaults();
+    load_audio_def(s_base);
+    s_se_set = (keep < s_n_sets) ? keep : 0;
 }
 
 int snd_init(const char *base_path)

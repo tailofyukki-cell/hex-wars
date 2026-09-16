@@ -6,6 +6,7 @@
 # 拠点は誰も占領できない（占領は陸ユニットだけ）ので、決着は全滅のみ。180度回転対称。
 [map]
 name             = 蒼穹の戦列
+name@en = Battle Line in the Sky
 width            = 46
 height           = 30
 turns            = 60

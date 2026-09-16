@@ -104,6 +104,14 @@ void options_load(App *a)
     if (curve < 2) options_save(a);   /* 換算結果を書き戻して二重換算を防ぐ */
 }
 
+static char s_file_lang[8];   /* options.cfg に書いてあった言語（HWLANG で上書きする前） */
+
+static const char *options_lang_to_save(const App *a)
+{
+    if (getenv("HWLANG") && s_file_lang[0]) return s_file_lang;
+    return a->opt_lang[0] ? a->opt_lang : "ja";
+}
+
 void options_save(App *a)
 {
     char path[600];
@@ -114,12 +122,94 @@ void options_save(App *a)
     fprintf(f, "bgm = %d\nse = %d\nanim = %d\nanim_video = %d\nbgm_track = %d\n"
                "se_set = %d\ntilt = %d\ncutin = %d\nweather_fx = %d\n"
                "cpu_speed = %d\nvolcurve = 2\n"
-               "fullscreen = %d\nwin_w = %d\nwin_h = %d\n",
+               "fullscreen = %d\nwin_w = %d\nwin_h = %d\nlang = %s\n",
             a->opt_bgm, a->opt_se, a->opt_anim, a->opt_anim_video,
             a->opt_bgm_track, a->opt_se_set, a->opt_tilt,
             a->opt_cutin, a->opt_weather_fx, a->opt_cpu_speed,
-            a->opt_fullscreen, a->opt_win_w, a->opt_win_h);
+            a->opt_fullscreen, a->opt_win_w, a->opt_win_h,
+            options_lang_to_save(a));
     fclose(f);
+}
+
+/* ------------------------------------------------------------------ */
+/* 表示言語                                                            */
+/* ------------------------------------------------------------------ */
+/* 選べる言語。コードは text_<コード>.def と、データの「キー@コード」に対応する */
+static const char *LANGS[] = { "ja", "en" };
+#define N_LANGS ((int)(sizeof LANGS / sizeof LANGS[0]))
+
+static bool lang_known(const char *code)
+{
+    for (int i = 0; i < N_LANGS; i++)
+        if (!strcmp(LANGS[i], code)) return true;
+    return false;
+}
+
+void options_load_lang(App *a)
+{
+    a->opt_lang[0] = 0;
+    char path[600];
+    snprintf(path, sizeof path, "%soptions.cfg", a->base_path);
+    FILE *f = fopen(path, "rb");
+    if (f) {
+        char line[128];
+        while (fgets(line, sizeof line, f)) {
+            char *key, *val;
+            if (parser_split_line(line, &key, &val) != 1) continue;
+            if (!strcmp(key, "lang")) snprintf(a->opt_lang, sizeof a->opt_lang, "%s", val);
+        }
+        fclose(f);
+    }
+    /* 初回（設定なし）は OS の言語で決める。日本語環境なら日本語、それ以外は英語。
+     * 日本語が読めない人が最初の画面で言語設定を探せずに詰むのを避ける。 */
+    if (!lang_known(a->opt_lang)) {
+        snprintf(a->opt_lang, sizeof a->opt_lang, "%s", "en");
+        SDL_Locale *loc = SDL_GetPreferredLocales();
+        if (loc) {
+            for (SDL_Locale *l = loc; l->language; l++)
+                if (!strcmp(l->language, "ja")) {
+                    snprintf(a->opt_lang, sizeof a->opt_lang, "%s", "ja");
+                    break;
+                }
+            SDL_free(loc);
+        } else {
+            snprintf(a->opt_lang, sizeof a->opt_lang, "%s", "ja");
+        }
+    }
+    snprintf(s_file_lang, sizeof s_file_lang, "%s", a->opt_lang);
+    /* 画面確認用: HWLANG=en で設定を触らずに英語で起動する */
+    const char *env = getenv("HWLANG");
+    if (env && lang_known(env)) snprintf(a->opt_lang, sizeof a->opt_lang, "%s", env);
+    data_set_lang(a->opt_lang);
+}
+
+void app_load_text(App *a)
+{
+    char path[600];
+    snprintf(path, sizeof path, "%sdata/text_ja.def", a->base_path);
+    if (text_load(path) != 0)
+        SDL_Log("text_ja.def が読めません（キー名を直接表示します）");
+    /* 英語などは日本語の上に重ねる。訳し漏れたキーは日本語のまま出る */
+    if (strcmp(a->opt_lang, "ja") != 0) {
+        snprintf(path, sizeof path, "%sdata/text_%s.def", a->base_path, a->opt_lang);
+        if (text_load_overlay(path) != 0)
+            SDL_Log("text_%s.def が読めません（日本語で表示します）", a->opt_lang);
+    }
+}
+
+void app_set_language(App *a, const char *code)
+{
+    if (!lang_known(code)) return;
+    snprintf(a->opt_lang, sizeof a->opt_lang, "%s", code);
+    data_set_lang(code);
+    app_load_text(a);
+    /* ユニット名・地形名・指揮官・マップ一覧の名前も言語ごとに持っているので読み直す。
+     * オプション画面はタイトルからしか開けない＝対戦中の盤面は無いので安全 */
+    if (app_load_defs(a) != 0) SDL_Log("言語切り替え後のデータ読み直しに失敗");
+    snd_reload_names();
+    const char *title = tx("WINDOW_TITLE");
+    SDL_SetWindowTitle(a->win, strcmp(title, "WINDOW_TITLE") ? title : "HEX WARS");
+    options_save(a);
 }
 
 /* ------------------------------------------------------------------ */
@@ -355,6 +445,24 @@ static int draw_text_wrap(App *a, TTF_Font *f, int x, int y, int w,
             if (text_width(a, f, line) <= w) break;
         }
         if (take <= 0) break;             /* 1文字も入らない幅。諦める */
+        /* 英語など単語を空白で区切る言語は、単語の途中で切らずに直前の空白で切る。
+         * 日本語の文中（空白が無い）ではこの処理は何もしない。 */
+        if (from + take < total) {
+            const char *nx = s + utf8_prefix(s, from + take);
+            const char *pv = s + utf8_prefix(s, from + take - 1);
+            if ((unsigned char)*nx < 0x80 && *nx != ' ' &&
+                (unsigned char)*pv < 0x80 && *pv != ' ') {
+                int t = take - 1;
+                while (t > 0 && s[utf8_prefix(s, from + t)] != ' ') t--;
+                if (t > 0) {
+                    take = t + 1;   /* 空白ごと前の行に含めて、次の行を単語から始める */
+                    int b0 = utf8_prefix(s, from);
+                    int nb = utf8_prefix(s, from + t) - b0;
+                    memcpy(line, s + b0, (size_t)nb);
+                    line[nb] = 0;
+                }
+            }
+        }
         /* 次の行の先頭が禁則文字なら、1文字手前で切って押し下げる */
         while (take > 1 && from + take < total &&
                jp_no_line_start(s + utf8_prefix(s, from + take)))
@@ -867,6 +975,7 @@ static void setup_draw(App *a)
 /* オプションの行。**番号を直書きしないこと**（途中に行を足すと全部ずれる）。
  * 並べ替えや追加はこの enum を触るだけで済むようにしてある。 */
 enum {
+    OPT_LANG_ROW,
     OPT_BGM_ROW, OPT_SE_ROW, OPT_ANIM_ROW, OPT_ANIMVID_ROW,
     OPT_TRACK_ROW, OPT_SESET_ROW,
     OPT_WINMODE_ROW, OPT_WINSIZE_ROW,
@@ -987,6 +1096,13 @@ static void opt_step_win_size(App *a, int dir)
 static void opt_change(App *a, int dir)
 {
     switch (a->opt_row) {
+    case OPT_LANG_ROW: {
+        int cur = 0;
+        for (int i = 0; i < N_LANGS; i++)
+            if (!strcmp(LANGS[i], a->opt_lang)) cur = i;
+        app_set_language(a, LANGS[(cur + dir + N_LANGS) % N_LANGS]);
+        break;
+    }
     case OPT_BGM_ROW:
         a->opt_bgm += dir;
         if (a->opt_bgm < 0) a->opt_bgm = 0;
@@ -1136,6 +1252,7 @@ static void opt_draw(App *a)
     draw_text_center(a, a->font_xl, WIN_W / 2, 80, COL_WHITE, tx("OPT_TITLE"));
 
     const char *labels[OPT_ROWS];
+    labels[OPT_LANG_ROW]    = tx("OPT_LANG");
     labels[OPT_BGM_ROW]     = tx("OPT_BGM");
     labels[OPT_SE_ROW]      = tx("OPT_SE");
     labels[OPT_ANIM_ROW]    = tx("OPT_ANIM");
@@ -1169,6 +1286,11 @@ static void opt_draw(App *a)
         int vx = r.x + 320, vy = r.y + ty;
         char buf[80];
         switch (i) {
+        case OPT_LANG_ROW:
+            /* 言語名はどの言語で表示していてもその言語自身の書き方で出す */
+            draw_text(a, a->font_m, vx, vy, COL_YELLOW,
+                      !strcmp(a->opt_lang, "en") ? "English" : "日本語");
+            break;
         case OPT_BGM_ROW: draw_volume_bar(a, vx, r.y + ty + 4, a->opt_bgm); break;
         case OPT_SE_ROW:  draw_volume_bar(a, vx, r.y + ty + 4, a->opt_se);  break;
         case OPT_ANIM_ROW:
@@ -2551,7 +2673,9 @@ static void story_draw(App *a)
             int w = text_width(a, a->font_m, who);
             char buf[200];
             /* 閉じ括弧は出し切ってから。途中で出すと行が伸び縮みして見える。 */
-            snprintf(buf, sizeof buf, "「%s%s", part, show == len ? "」" : "");
+            /* 括弧は言語で違う（日本語「」、英語 ""） */
+            snprintf(buf, sizeof buf, "%s%s%s", tx("STORY_Q_OPEN"), part,
+                     show == len ? tx("STORY_Q_CLOSE") : "");
             draw_text(a, a->font_m, bx + 24 + w + 6, y, LINE, buf);
         } else {
             draw_text(a, a->font_m, bx + 40, y, NARR, part);

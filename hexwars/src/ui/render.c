@@ -3,6 +3,7 @@
 #include "sprites.h"
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 /* 陣営色。隣り合っても見分けられるよう色相を離してある。 */
 const SDL_Color COL_P[MAX_PLAYERS] = {
@@ -651,8 +652,14 @@ void render_map(App *a)
                 fill_circle(a, cx, cy - s * 0.45f, s * 0.2f, oc);
                 TTF_Font *f = a->zoom == 0 ? a->font_s : a->font_m;
                 char icon[8] = { 0 };
-                /* 地形名の先頭1文字(UTF-8 3バイト想定) */
-                icon[0] = t->name[0]; icon[1] = t->name[1]; icon[2] = t->name[2];
+                /* 地形名の先頭1文字。**バイト数を決め打ちしないこと**
+                 * （日本語は3バイト、英語は1バイト。3バイト取ると "Fac" になる） */
+                {
+                    unsigned char c0 = (unsigned char)t->name[0];
+                    int nb = (c0 < 0x80) ? 1 : (c0 < 0xE0) ? 2 : (c0 < 0xF0) ? 3 : 4;
+                    memcpy(icon, t->name, (size_t)nb);
+                    icon[nb] = 0;
+                }
                 SDL_Color tc = darken(rgb(t->color), 45);
                 if (t->is_hq) tc = (SDL_Color){ 120, 60, 20, 255 };
                 draw_text_center(a, f, (int)cx, (int)(cy - s * 0.32f), tc, icon);

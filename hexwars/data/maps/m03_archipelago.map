@@ -1,6 +1,7 @@
 # m03 群島の海戦 - 盤面の7割が海。中央の群島の港を奪い制海権を握る
 [map]
 name = 群島の海戦
+name@en = Archipelago Sea Battle
 width  = 52
 height = 34
 turns  = 130

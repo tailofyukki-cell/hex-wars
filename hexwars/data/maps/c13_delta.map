@@ -3,6 +3,7 @@
 # 内海は東西に深く食い込むので、艦砲が両岸の陸戦を直接支援できる。
 [map]
 name             = 三角州の攻防
+name@en = Battle of the Delta
 width            = 52
 height           = 30
 turns            = 110

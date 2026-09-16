@@ -18,6 +18,7 @@
 
 [terrain PLAIN]
 name       = 平地
+name@en    = Plains
 image      = gfx/terrain/plain.png
 char       = .
 def        = 0
@@ -30,6 +31,7 @@ height     = 0
 
 [terrain ROAD]
 name       = 道路
+name@en    = Road
 image      = gfx/terrain/road.png
 # 隣の link_road へ向かって舗装の帯を描く（見た目だけ。ルールには無関係）。
 # image は路肩の地面だけを描いたものにしてある＝舗装は描画側が繋いで描く。
@@ -48,6 +50,7 @@ repair_cost = 150
 
 [terrain FOREST]
 name       = 森
+name@en    = Forest
 image      = gfx/terrain/forest.png
 char       = w
 def        = 20
@@ -61,6 +64,7 @@ height     = 4
 
 [terrain MOUNTAIN]
 name       = 山
+name@en    = Mountain
 image      = gfx/terrain/mountain.png
 char       = ^
 def        = 40
@@ -71,6 +75,7 @@ height     = 22
 
 [terrain RIVER]
 name       = 川
+name@en    = River
 image      = gfx/terrain/river.png
 char       = r
 def        = 0
@@ -81,6 +86,7 @@ height     = -3
 
 [terrain SEA]
 name       = 海
+name@en    = Sea
 image      = gfx/terrain/sea.png
 char       = ~
 def        = 0
@@ -92,6 +98,7 @@ height     = -7
 
 [terrain CITY]
 name       = 都市
+name@en    = City
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/city.png
 char       = c
@@ -112,6 +119,7 @@ repair_cost = 500
 
 [terrain FACTORY]
 name       = 工場
+name@en    = Factory
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/factory.png
 char       = f
@@ -132,6 +140,7 @@ repair_cost = 800
 
 [terrain AIRPORT]
 name       = 空港
+name@en    = Airport
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/airport.png
 char       = a
@@ -152,6 +161,7 @@ repair_cost = 700
 
 [terrain PORT]
 name       = 港
+name@en    = Port
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/port.png
 char       = p
@@ -174,6 +184,7 @@ repair_cost = 700
 
 [terrain HILL]
 name       = 丘
+name@en    = Hill
 image      = gfx/terrain/hill.png
 char       = h
 def        = 20
@@ -186,6 +197,7 @@ height     = 11
 
 [terrain HQ]
 name       = 首都
+name@en    = HQ
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/hq.png
 char       = H
@@ -206,6 +218,7 @@ height     = 5
 # 全コスト0=全ユニット進入不可。描画側で 'x' はスキップされる（セーブ互換のため末尾）
 [terrain VOID]
 name       = 圏外
+name@en    = Out of Bounds
 char       = x
 def        = 0
 color      = 161A20
@@ -219,6 +232,7 @@ height     = 0
 
 [terrain AIRSTRIP]
 name       = 野戦飛行場
+name@en    = Airstrip
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/airstrip.png
 char       = A
@@ -238,6 +252,7 @@ repair_cost = 300
 
 [terrain ANCHORAGE]
 name       = 泊地
+name@en    = Anchorage
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/anchorage.png
 char       = P
@@ -259,6 +274,7 @@ repair_cost = 300
 
 [terrain RUBBLE]
 name       = 瓦礫
+name@en    = Rubble
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/rubble.png
 char       = X
@@ -275,6 +291,7 @@ height     = 2
 
 [terrain RUBBLE_PORT]
 name       = 破壊された港湾
+name@en    = Ruined Port
 link_road  = 2       # 道路がここまで伸びてくる（描くのは道路側）
 image      = gfx/terrain/rubble_port.png
 char       = Y

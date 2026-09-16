@@ -13,6 +13,7 @@
 # ため、対になる図形を回転で置いている。
 [map]
 name             = 二大陸と内海
+name@en = Two Continents and an Inland Sea
 width            = 60
 height           = 42
 turns            = 100

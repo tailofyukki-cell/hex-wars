@@ -18,8 +18,19 @@ static char *trim(char *s)
 }
 
 /* 行を key/value に分解。コメント(#)除去。戻り値: 0=空行 1=kv 2=[section] */
+static char s_lang[8] = "ja";
+static int  s_last_lang;
+
+void data_set_lang(const char *code)
+{
+    snprintf(s_lang, sizeof s_lang, "%s", (code && *code) ? code : "ja");
+}
+const char *data_lang(void) { return s_lang; }
+int parser_last_was_lang(void) { return s_last_lang; }
+
 int parser_split_line(char *line, char **key, char **val)
 {
+    s_last_lang = 0;
     /* コメント除去（行頭でなくても # 以降を落とす） */
     char *hash = strchr(line, '#');
     if (hash) *hash = '\0';
@@ -37,6 +48,13 @@ int parser_split_line(char *line, char **key, char **val)
     *eq = '\0';
     *key = trim(s);
     *val = trim(eq + 1);
+    /* 言語の上書き行（name@en = ...）。表示言語と違えば読まなかったことにする */
+    char *at = strchr(*key, '@');
+    if (at) {
+        if (strcmp(at + 1, s_lang) != 0) return 0;
+        *at = '\0';
+        s_last_lang = 1;
+    }
     return 1;
 }
 
@@ -642,7 +660,12 @@ int data_load_maplist(MapList *ml, const char *path)
         if (!bar) continue;
         *bar = '\0';
         snprintf(ml->file[ml->n], sizeof ml->file[0], "%s", trim(s));
-        snprintf(ml->name[ml->n], sizeof ml->name[0], "%s", trim(bar + 1));
+        /* 「ファイル|日本語名|英語名」。英語名が無ければ日本語名のまま */
+        char *bar2 = strchr(bar + 1, '|');
+        if (bar2) *bar2 = '\0';
+        const char *nm = trim(bar + 1);
+        if (bar2 && strcmp(s_lang, "ja") != 0 && *trim(bar2 + 1)) nm = trim(bar2 + 1);
+        snprintf(ml->name[ml->n], sizeof ml->name[0], "%s", nm);
         ml->n++;
     }
     fclose(f);

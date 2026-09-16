@@ -10,6 +10,7 @@
 # 自軍は西、敵首都は東。キャンペーンなので回転対称ではない。
 [map]
 name             = 総力戦
+name@en = Total War
 width            = 60
 height           = 44
 turns            = 60

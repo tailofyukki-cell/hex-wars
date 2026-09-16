@@ -1,6 +1,7 @@
 # m01 国境の丘 - 六角形の大陸。対角に走る丘の尾根が国境線
 [map]
 name = 国境の丘
+name@en = Border Hills
 width  = 42
 height = 29
 turns  = 104

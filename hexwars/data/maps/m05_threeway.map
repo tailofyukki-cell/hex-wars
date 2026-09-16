@@ -2,6 +2,7 @@
 # 3勢力を三角に配置し、中央の高地と拠点群を奪い合う。
 [map]
 name             = 三国志の丘
+name@en = Hills of Three Kingdoms
 width            = 40
 height           = 30
 turns            = 90

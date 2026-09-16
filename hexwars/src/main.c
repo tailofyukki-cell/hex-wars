@@ -32,7 +32,7 @@ static void save_shot(App *a)
     a->quit = true;
 }
 
-static int load_defs(App *a)
+int app_load_defs(App *a)
 {
     char path[600], err[256];
 
@@ -108,19 +108,19 @@ int main(int argc, char *argv[])
     }
 
     if (assets_init(a) != 0) return 1;
-    if (load_defs(a) != 0) return 1;
     {
         char dir[600];
         snprintf(dir, sizeof dir, "%ssaves", a->base_path);
         save_ensure_dir(dir);
-        snprintf(dir, sizeof dir, "%sdata/text_ja.def", a->base_path);
-        if (text_load(dir) != 0)
-            SDL_Log("text_ja.def が読めません（キー名を直接表示します）");
     }
+    /* 表示言語は他のデータより先に決める（ユニット名などを読む時点で要る） */
+    options_load_lang(a);
+    app_load_text(a);
+    if (app_load_defs(a) != 0) return 1;
     /* ウィンドウのタイトルは text_ja.def の WINDOW_TITLE から取る。
      * 別ゲームに作り替えるときに再ビルドしなくても変えられるようにするため。 */
     {
-        const char *title = tx("WINDOW_TITLE");
+        const char *title = tx("WINDOW_TITLE");   /* 言語を変えたら app_set_language が付け直す */
         SDL_SetWindowTitle(a->win, (title && strcmp(title, "WINDOW_TITLE")) ? title
                                                                            : "HEX WARS");
     }

@@ -7,6 +7,7 @@
 # 対称ではない。左右で戦力も資金も目的も違う。
 [map]
 name             = 城塞の攻防
+name@en = Siege of the Citadel
 width            = 42
 height           = 28
 turns            = 40

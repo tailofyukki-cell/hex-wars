@@ -6,6 +6,7 @@
 # 歯ごたえではなく締めくくりが目的なので、このバランスは意図的。
 [map]
 name             = 残照
+name@en = Last Light
 width            = 28
 height           = 18
 turns            = 30

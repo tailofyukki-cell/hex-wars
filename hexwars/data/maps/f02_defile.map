@@ -4,6 +4,7 @@
 # 地形・拠点・初期配置は180度回転対称（odd-rでは左右反転が距離を保たないため）。
 [map]
 name             = 隘路の死闘
+name@en = Death in the Defile
 width            = 40
 height           = 26
 turns            = 70

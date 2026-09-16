@@ -17,6 +17,7 @@
 # 5回対称はヘクス格子では厳密に作れないので、対称ではなく実測で揃えてある。
 [map]
 name             = 五海諸島
+name@en = Five Seas Archipelago
 width            = 62
 height           = 54
 turns            = 110

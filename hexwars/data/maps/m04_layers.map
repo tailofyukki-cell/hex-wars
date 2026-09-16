@@ -1,6 +1,7 @@
 # m04 三層の要衝 - 中央の海峡で空・海面・海中が同じセルに重なる立体戦
 [map]
 name   = 三層の要衝
+name@en = Three-Layer Stronghold
 width  = 44
 height = 28
 turns  = 100

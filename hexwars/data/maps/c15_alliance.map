@@ -5,6 +5,7 @@
 # 距離を保たない（約39%%の組で変わる）ため、鏡像にしてはいけない。
 [map]
 name             = 共同戦線
+name@en = Joint Front
 width            = 46
 height           = 32
 turns            = 100

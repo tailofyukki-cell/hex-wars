@@ -1,6 +1,7 @@
 # c06 橋頭堡の死守 - 鉤型の半島。付け根を封じて先端を守り抜く
 [map]
 name = 橋頭堡の死守
+name@en = Hold the Beachhead
 width  = 38
 height = 25
 turns  = 34

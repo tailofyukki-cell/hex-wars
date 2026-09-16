@@ -5,6 +5,7 @@
 # 岩礁は進入不可で、艦隊の機動を縛る。180度回転対称。
 [map]
 name             = 群狼の海
+name@en = Sea of Wolves
 width            = 46
 height           = 30
 turns            = 70

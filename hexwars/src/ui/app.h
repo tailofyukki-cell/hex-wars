@@ -159,6 +159,7 @@ struct App {
     /* 画面。ゲームは常に WIN_W x WIN_H の論理解像度で描き、SDL が窓の大きさへ
      * 拡縮する（縦横比は保ち、余りは黒帯）。座標計算は一切変えなくてよい。 */
     int opt_fullscreen; /* 0=ウィンドウ / 1=フルスクリーン（デスクトップ解像度） */
+    char opt_lang[8];   /* 表示言語 "ja" / "en" */
     int opt_win_w, opt_win_h;   /* ウィンドウ時の大きさ（端のドラッグでも変わる） */
     int cpn_scroll;     /* 作戦全体図の縦スクロールpx */
     /* 進捗（progress.cfg に永続化。指揮官の解禁条件に使う） */
@@ -302,6 +303,14 @@ void options_load(App *a);
 void options_save(App *a);
 /* opt_fullscreen / opt_win_w / opt_win_h を実際の窓へ反映する */
 void app_apply_window(App *a);
+/* 表示言語。options.cfg の lang。初回は OS の言語が日本語なら ja、それ以外は en */
+void options_load_lang(App *a);
+/* 文言（text_ja.def、英語なら text_en.def を重ねる）を読む */
+void app_load_text(App *a);
+/* データ定義（地形・ユニット・指揮官・マップ一覧）を読む。main.c */
+int  app_load_defs(App *a);
+/* 表示言語を切り替えて、文言とデータの名前を全部読み直す */
+void app_set_language(App *a, const char *code);
 /* ウィンドウ⇔フルスクリーンの切り替え（Alt+Enter / F11 / オプション） */
 void app_toggle_fullscreen(App *a);
 /* 窓の座標（マウス位置など）を論理座標へ直す */

@@ -6,6 +6,7 @@
 # 180度回転対称。
 [map]
 name             = 電撃戦
+name@en = Blitzkrieg
 width            = 32
 height           = 22
 turns            = 25

@@ -8,6 +8,7 @@
 # 180度回転対称。
 [map]
 name             = 夜襲
+name@en = Night Raid
 width            = 38
 height           = 24
 turns            = 40

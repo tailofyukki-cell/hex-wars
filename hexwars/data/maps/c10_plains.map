@@ -1,6 +1,7 @@
 # c10 平原の決戦 - 巨大な楕円の大平原。遮蔽は三日月の丘だけ
 [map]
 name = 平原の決戦
+name@en = Decisive Battle on the Plains
 width  = 49
 height = 29
 turns  = 104

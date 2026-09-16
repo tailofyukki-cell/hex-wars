@@ -5,6 +5,7 @@
 # 距離を保たない（約39%の組で変わる）ため、鏡像にしてはいけない。
 [map]
 name             = 連合軍の反攻
+name@en = Allied Counteroffensive
 width            = 46
 height           = 32
 turns            = 100

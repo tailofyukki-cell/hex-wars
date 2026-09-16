@@ -1,6 +1,7 @@
 # c02 森林の防衛線 - 十字型の森。中央交差点を封鎖して守る
 [map]
 name = 森林の防衛線
+name@en = Forest Defense Line
 width  = 38
 height = 25
 turns  = 38

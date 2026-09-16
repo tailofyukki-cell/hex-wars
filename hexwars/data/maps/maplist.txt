@@ -1,29 +1,29 @@
-# フリー対戦マップ一覧: ファイル名|表示名
-maps/m01_border_hills.map|国境の丘（42x29・陸戦）
-maps/m02_channel.map|運河の対岸（49x34・海空戦）
-maps/m03_archipelago.map|群島の海戦（52x34・艦隊決戦）
-maps/c11_seacontrol.map|制海権の争奪（52x34・上陸戦）
-maps/c12_dday.map|敵首都上陸（57x34・大規模上陸）
-maps/c05_river.map|河川突破（42x25・渡河戦）
-maps/c07_pass.map|山岳の隘路（42x25・山岳戦）
-maps/c09_cities.map|補給都市の攻防（46x25・都市争奪）
-maps/c10_plains.map|平原の決戦（49x29・大機甲戦）
-maps/m04_layers.map|三層の要衝（44x28・立体戦）
-maps/c13_delta.map|三角州の攻防（52x30・複合兵科）
-maps/c14_bastion.map|湾岸の要塞（56x32・総力戦）
-maps/c04_capital.map|首都攻略（42x29・最終決戦）
-maps/m05_threeway.map|三国志の丘（40x30・3陣営の乱戦）
-maps/m06_alliance.map|連合軍の反攻（46x32・2対2のチーム戦）
+# フリー対戦マップ一覧: ファイル名|表示名|英語の表示名（省略可）
+maps/m01_border_hills.map|国境の丘（42x29・陸戦）|Border Hills (42x29, land)
+maps/m02_channel.map|運河の対岸（49x34・海空戦）|Across the Canal (49x34, sea & air)
+maps/m03_archipelago.map|群島の海戦（52x34・艦隊決戦）|Archipelago Sea Battle (52x34, fleet)
+maps/c11_seacontrol.map|制海権の争奪（52x34・上陸戦）|Command of the Sea (52x34, landing)
+maps/c12_dday.map|敵首都上陸（57x34・大規模上陸）|Landing at the Enemy Capital (57x34, large landing)
+maps/c05_river.map|河川突破（42x25・渡河戦）|River Breakthrough (42x25, river crossing)
+maps/c07_pass.map|山岳の隘路（42x25・山岳戦）|Mountain Pass (42x25, mountain)
+maps/c09_cities.map|補給都市の攻防（46x25・都市争奪）|Battle for the Supply Cities (46x25, cities)
+maps/c10_plains.map|平原の決戦（49x29・大機甲戦）|Decisive Battle on the Plains (49x29, armor)
+maps/m04_layers.map|三層の要衝（44x28・立体戦）|Three-Layer Stronghold (44x28, layered)
+maps/c13_delta.map|三角州の攻防（52x30・複合兵科）|Battle of the Delta (52x30, combined arms)
+maps/c14_bastion.map|湾岸の要塞（56x32・総力戦）|Harbor Fortress (56x32, total war)
+maps/c04_capital.map|首都攻略（42x29・最終決戦）|Assault on the Capital (42x29, final battle)
+maps/m05_threeway.map|三国志の丘（40x30・3陣営の乱戦）|Hills of Three Kingdoms (40x30, 3-way melee)
+maps/m06_alliance.map|連合軍の反攻（46x32・2対2のチーム戦）|Allied Counteroffensive (46x32, 2 vs 2)
 # --- フリー対戦専用（キャンペーンには出てこない尖ったルールのマップ） ---
-maps/f01_lastStand.map|四面楚歌（5陣営乱戦・陸戦のみ）
-maps/f02_defile.map|隘路の死闘（陸戦のみ）
-maps/f03_wolfpack.map|群狼の海（海戦のみ）
-maps/f04_skyline.map|蒼穹の戦列（航空戦のみ）
-maps/f05_endlessnight.map|常夜の戦場（ずっと夜）
-maps/f06_blitz.map|電撃戦（短期決戦）
-maps/f07_stormstrait.map|嵐の海峡（常時雨・航空は水上に届かない）
-maps/f08_citadel.map|城塞の攻防（非対称・攻守で目的が違う）
-maps/f09_drylines.map|涸れた戦線（拠点なし・補給なし）
-maps/f10_twocontinents.map|二大陸と内海（陸海空の決戦・大規模）
-maps/f11_fiveisles.map|五海諸島（5陣営の海洋決戦・陸海空）
-maps/f12_grandbattle.map|【試作】大決戦MAX（自軍72対敵144・待ち時間の確認用）
+maps/f01_lastStand.map|四面楚歌（5陣営乱戦・陸戦のみ）|Surrounded (5-faction melee, land only)
+maps/f02_defile.map|隘路の死闘（陸戦のみ）|Death in the Defile (land only)
+maps/f03_wolfpack.map|群狼の海（海戦のみ）|Sea of Wolves (naval only)
+maps/f04_skyline.map|蒼穹の戦列（航空戦のみ）|Battle Line in the Sky (air only)
+maps/f05_endlessnight.map|常夜の戦場（ずっと夜）|Field of Endless Night (always night)
+maps/f06_blitz.map|電撃戦（短期決戦）|Blitzkrieg (short game)
+maps/f07_stormstrait.map|嵐の海峡（常時雨・航空は水上に届かない）|Storm Strait (always rain)
+maps/f08_citadel.map|城塞の攻防（非対称・攻守で目的が違う）|Siege of the Citadel (asymmetric goals)
+maps/f09_drylines.map|涸れた戦線（拠点なし・補給なし）|Dried-Up Front (no bases, no supply)
+maps/f10_twocontinents.map|二大陸と内海（陸海空の決戦・大規模）|Two Continents and an Inland Sea (large)
+maps/f11_fiveisles.map|五海諸島（5陣営の海洋決戦・陸海空）|Five Seas Archipelago (5-faction naval)
+maps/f12_grandbattle.map|【試作】大決戦MAX（自軍72対敵144・待ち時間の確認用）|[Prototype] Grand Battle MAX (72 vs 144)

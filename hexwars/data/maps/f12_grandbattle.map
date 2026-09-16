@@ -14,6 +14,7 @@
 # まず最速で試してから標準に戻して比べるとよい。
 [map]
 name             = 【試作】大決戦MAX
+name@en = [Prototype] Grand Battle MAX
 width            = 60
 height           = 44
 turns            = 80

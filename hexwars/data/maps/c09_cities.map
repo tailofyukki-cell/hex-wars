@@ -3,6 +3,7 @@
 # 野戦飛行場(A)は航空機の補給・修理・進化はできるが生産はできない。
 [map]
 name             = 補給都市の攻防
+name@en = Battle for the Supply Cities
 width            = 46
 height           = 25
 turns            = 84

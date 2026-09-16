@@ -40,6 +40,7 @@ typedef enum {
 
 /* 失敗しても続行可能（無音動作）。戻り値 0=音あり */
 int  snd_init(const char *base_path);
+void snd_reload_names(void);
 void snd_quit(void);
 
 void snd_se(int id);

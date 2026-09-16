@@ -1,6 +1,7 @@
 # m02 運河の対岸 - 斜めに向き合う双子島。中間の環礁が要衝
 [map]
 name = 運河の対岸
+name@en = Across the Canal
 width  = 49
 height = 34
 turns  = 125

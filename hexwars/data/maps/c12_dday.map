@@ -1,6 +1,7 @@
 # c12 敵首都上陸 - 西の海から東岸の敵首都へ。史上最大の上陸作戦
 [map]
 name = 敵首都上陸
+name@en = Landing at the Enemy Capital
 width  = 57
 height = 34
 turns  = 125

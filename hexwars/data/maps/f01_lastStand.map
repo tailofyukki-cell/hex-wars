@@ -16,6 +16,7 @@
 # 収入は中央1150、四方は各1000。
 [map]
 name             = 四面楚歌
+name@en = Surrounded
 width            = 40
 height           = 40
 turns            = 60

@@ -1,6 +1,7 @@
 # c01 国境の哨戒線 - L字型の国境地帯。角の村を巡る遭遇戦
 [map]
 name = 国境の哨戒線
+name@en = Border Patrol Line
 width  = 34
 height = 25
 turns  = 52

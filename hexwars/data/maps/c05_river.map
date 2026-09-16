@@ -1,6 +1,7 @@
 # c05 河川突破 - 稲妻型の回廊。中段の渡河点がボトルネック
 [map]
 name = 河川突破
+name@en = River Breakthrough
 width  = 42
 height = 25
 turns  = 62

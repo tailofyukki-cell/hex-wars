@@ -38,6 +38,30 @@ int text_load(const char *path)
     return s_n_texts > 0 ? 0 : -1;
 }
 
+int text_load_overlay(const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) return -1;
+    char line[512];
+    int n = 0;
+    while (fgets(line, sizeof line, f)) {
+        char *key, *val;
+        if (parser_split_line(line, &key, &val) != 1) continue;
+        int i = 0;
+        for (; i < s_n_texts; i++)
+            if (!strcmp(s_texts[i].key, key)) break;
+        if (i == s_n_texts) {
+            if (s_n_texts >= MAX_TEXTS) continue;
+            snprintf(s_texts[i].key, sizeof s_texts[0].key, "%s", key);
+            s_n_texts++;
+        }
+        snprintf(s_texts[i].val, sizeof s_texts[0].val, "%s", val);
+        n++;
+    }
+    fclose(f);
+    return n > 0 ? 0 : -1;
+}
+
 const char *tx(const char *key)
 {
     for (int i = 0; i < s_n_texts; i++)

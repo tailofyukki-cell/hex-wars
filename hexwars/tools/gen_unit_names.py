@@ -3,7 +3,8 @@
 
     python tools/gen_unit_names.py            # 貼る行を画面に出すだけ
     python tools/gen_unit_names.py --apply    # units.def に直接書き込む
-    python tools/gen_unit_names.py --check    # 長さと重複だけ見る
+    python tools/gen_unit_names.py --check    # 長さと重複だけ見る（日本語・英語とも）
+    python tools/gen_unit_names.py --apply-en # 英語名（name@en 等）を units.def に書き込む
 
 陣営0（西方同盟）は units.def の `name =` をそのまま使うのでここには書かない。
 `name` は全陣営に入り、`name1`〜`name4` が後勝ちで上書きする仕組み。
@@ -200,11 +201,152 @@ def preview():
     check(src)
 
 
+# ====================================================================
+# 英語名（name@en / name1@en 〜 name4@en）
+# 各陣営の命名規則は日本語と同じ考え方で英語にしてある:
+#   西方 = 型式＋機能名 / 東方 = 設計局コード・Project n / 南方 = 生き物（進化で Great）
+#   北方 = Type n（進化で Type n Kai）/ 自由軍 = あだ名
+# ====================================================================
+# id: (陣営0 西方, 陣営1 東方, 陣営2 南方, 陣営3 北方, 陣営4 自由軍)
+NAMES_EN = {
+    "INFANTRY":      ("Infantry", "People's Infantry", "Wild Dog Troops", "Type 1 Infantry", "Volunteers"),
+    "AT_INFANTRY":   ("Anti-Tank Infantry", "Armor Breakers", "Scorpion Troops", "Type 2 AT Infantry", "Iron Fists"),
+    "RECON":         ("Recon Car", "ZB-1 Scout Car", "Weasel", "Type 3 Recon Car", "Fast Runner"),
+    "TANK":          ("T-40 Medium Tank", "ZK-40 Medium Tank", "Leopard", "Type 4 Medium Tank", "Iron Ox"),
+    "HTANK":         ("G-6 Heavy Tank", "ZK-60 Heavy Tank", "Rhino", "Type 5 Heavy Tank", "Old Bear"),
+    "ARTILLERY":     ("H-15 SP Gun", "SV-15 SP Gun", "Elephant", "Type 6 SP Gun", "Distant Thunder"),
+    "AA_TANK":       ("F-8 AA Tank", "SV-8 SP AA Gun", "Porcupine", "Type 7 AA Tank", "Flak Wagon"),
+    "TRUCK":         ("Truck", "ZB-3 Transport", "Mule", "Type 8 Transport", "Horse Cart"),
+    "T_COPTER":      ("Hv-4 Transport Heli", "MV-4 Transport Rotorcraft", "Cormorant", "Type 9 Transport Heli", "Pack Bird"),
+    "FIGHTER":       ("Fk-9 Fighter", "YA-9 Fighter", "Falcon", "Type 10 Fighter", "Windcutter"),
+    "BOMBER":        ("Bx-17 Bomber", "IB-17 Bomber", "Eagle", "Type 11 Bomber", "Iron Rain"),
+    "HELI":          ("Hv-2 Attack Heli", "MV-2 Attack Rotorcraft", "Honey Buzzard", "Type 12 Attack Heli", "Gnat"),
+    "DESTROYER":     ("Dn-3 Destroyer", "Project 3 Destroyer", "Bonito", "Type 13 Destroyer", "Runner Boat"),
+    "CRUISER":       ("Kv-1 Cruiser", "Project 11 Cruiser", "Tuna", "Type 14 Cruiser", "Big Sister"),
+    "SUBMARINE":     ("U-11 Submarine", "Project 21 Submarine", "Shark", "Type 15 Submarine", "Diver"),
+    "T_SHIP":        ("Ln-2 Transport Ship", "Project 32 Landing Ship", "Whale", "Type 16 Transport Ship", "Ferry"),
+    "SUPPLY":        ("Supply Truck", "ZB-5 Supply Truck", "Camel", "Type 17 Supply Truck", "Field Kitchen"),
+    "SUPPLY_AIR":    ("Cg-5 Supply Plane", "IB-25 Supply Plane", "Magpie", "Type 18 Supply Plane", "Care Package"),
+    "MILITIA":       ("Militia", "Worker-Peasant Troops", "Village Band", "Type 19 Home Guard", "Townsfolk"),
+    "MECH_INF":      ("Mechanized Infantry", "Motor Rifles", "Wolf Riders", "Type 20 Mech Infantry", "Hitchhikers"),
+    "ENGINEER":      ("Engineers", "People's Engineers", "Ant Troops", "Type 21 Engineers", "Diggers"),
+    "LTANK":         ("T-20 Light Tank", "ZK-20 Light Tank", "Wildcat", "Type 22 Light Tank", "Jackrabbit"),
+    "ROCKET":        ("R-8 Rocket Artillery", "SV-8 Rocket Artillery", "Boar", "Type 23 Rocket Artillery", "Fire Breather"),
+    "AA_GUN":        ("AA Gun", "SV-2 AA Gun", "Hedgehog", "Type 24 AA Gun", "Sky Sniper"),
+    "DIVE_BOMBER":   ("Sk-6 Attacker", "IB-6 Attacker", "Kite", "Type 25 Attacker", "Dropper"),
+    "SCOUT_PLANE":   ("Mk-3 Recon Plane", "YA-3 Recon Plane", "Skylark", "Type 26 Recon Plane", "Lookout Bird"),
+    "BATTLESHIP":    ("Rz-9 Battleship", "Project 9 Battleship", "Orca", "Type 27 Battleship", "Old Duke"),
+    "CARRIER":       ("Hy-4 Carrier", "Project 41 Carrier", "Manta", "Type 28 Carrier", "Birdcage"),
+    "GUNBOAT":       ("Bt-2 Gunboat", "Project 12 Gunboat", "Pufferfish", "Type 29 Gunboat", "Watch Boat"),
+    "MISSILE_BOAT":  ("Fk-5 Missile Boat", "Project 15 Rocket Boat", "Flying Fish", "Type 30 Rocket Boat", "One-Shot Boat"),
+    "SUPPLY_SHIP":   ("Ho-6 Supply Ship", "Project 26 Supply Ship", "Dolphin", "Type 31 Supply Ship", "Mother Ship"),
+    "T_PLANE":       ("Cd-8 Transport Plane", "IB-8 Transport Plane", "Stork", "Type 32 Transport Plane", "Sky Ferry"),
+    "NIGHT_INF":     ("Night Stalkers", "Night Assault Troops", "Bat Troops", "Type 33 Night Infantry", "Night Blades"),
+    "NIGHT_BOAT":    ("Night Assault Boat", "Project 44 Night Boat", "Squid", "Type 34 Night Boat", "Dark Boat"),
+    "NIGHT_FIGHTER": ("Night Interceptor", "YA-24 Night Interceptor", "Owl", "Type 35 Night Fighter", "Nighthawk"),
+
+    "INFANTRY_V":      ("Elite Jaegers", "Guards Infantry", "Hound Troops", "Type 1 Kai Infantry", "Veterans"),
+    "AT_INFANTRY_V":   ("Tank Hunters", "Guards Armor Breakers", "Great Scorpion Troops", "Type 2 Kai AT Infantry", "Tank Killers"),
+    "RECON_V":         ("Armored Recon Car", "ZB-6 Armored Scout Car", "Great Weasel", "Type 3 Kai Recon Car", "Vanguard"),
+    "TANK_V":          ("T-55 Main Battle Tank", "ZK-55 Main Battle Tank", "Black Panther", "Type 4 Kai Medium Tank", "Great Iron Ox"),
+    "HTANK_V":         ("G-9 Super-Heavy Tank", "ZK-90 Super-Heavy Tank", "Great Rhino", "Type 5 Kai Heavy Tank", "Moving Fortress"),
+    "ARTILLERY_V":     ("H-24 Heavy SP Gun", "SV-24 Heavy SP Gun", "Great Elephant", "Type 6 Kai SP Gun", "Great Thunder"),
+    "AA_TANK_V":       ("SP AA Autocannon", "SV-18 AA Autocannon", "Great Porcupine", "Type 7 Kai AA Tank", "Wall of Flak"),
+    "TRUCK_V":         ("Armored Personnel Carrier", "ZB-8 Armored Transport", "Great Mule", "Type 8 Kai Transport", "Iron Wagon"),
+    "T_COPTER_V":      ("Hv-9 Assault Transport Heli", "MV-9 Assault Rotorcraft", "Great Cormorant", "Type 9 Kai Transport Heli", "Big Pack Bird"),
+    "FIGHTER_V":       ("Fk-12 Interceptor", "YA-12 Interceptor", "Great Falcon", "Type 10 Kai Fighter", "Windslicer"),
+    "BOMBER_V":        ("Bx-24 Heavy Bomber", "IB-24 Heavy Bomber", "Great Eagle", "Type 11 Kai Bomber", "Iron Downpour"),
+    "HELI_V":          ("Hv-8 Heavy Attack Heli", "MV-8 Heavy Rotorcraft", "Great Honey Buzzard", "Type 12 Kai Attack Heli", "Big Gnat"),
+    "DESTROYER_V":     ("Dn-8 Heavy Destroyer", "Project 8 Heavy Destroyer", "Great Bonito", "Type 13 Kai Destroyer", "Big Runner Boat"),
+    "CRUISER_V":       ("Kv-6 Heavy Cruiser", "Project 61 Heavy Cruiser", "Great Tuna", "Type 14 Kai Cruiser", "Grand Dame"),
+    "SUBMARINE_V":     ("U-24 Large Submarine", "Project 24 Large Submarine", "Great Shark", "Type 15 Kai Submarine", "Deep Diver"),
+    "T_SHIP_V":        ("Ln-6 Assault Landing Ship", "Project 36 Assault Ship", "Great Whale", "Type 16 Kai Transport Ship", "Big Ferry"),
+    "SUPPLY_V":        ("Heavy Supply Truck", "ZB-9 Heavy Supply Truck", "Great Camel", "Type 17 Kai Supply Truck", "Big Field Kitchen"),
+    "SUPPLY_AIR_V":    ("Cg-9 Large Supply Plane", "IB-29 Large Supply Plane", "Great Magpie", "Type 18 Kai Supply Plane", "Big Care Package"),
+    "MILITIA_V":       ("Home Defense Corps", "Worker-Peasant Guards", "Watchdogs", "Type 19 Kai Home Guard", "Town Wardens"),
+    "MECH_INF_V":      ("Panzergrenadiers", "Guards Rifles", "Great Wolf Riders", "Type 20 Kai Mech Infantry", "Tin Can Riders"),
+    "ENGINEER_V":      ("Armored Engineers", "Guards Engineers", "Great Ant Troops", "Type 21 Kai Engineers", "Master Diggers"),
+    "LTANK_V":         ("T-24 Cavalry Tank", "ZK-24 Cavalry Tank", "Great Wildcat", "Type 22 Kai Light Tank", "Bucking Horse"),
+    "ROCKET_V":        ("R-16 Multiple Rocket Launcher", "SV-16 Multiple Rocket Launcher", "Great Boar", "Type 23 Kai Rocket Artillery", "Pillar of Fire"),
+    "AA_GUN_V":        ("Type 88 Heavy AA Gun", "SV-12 Heavy AA Gun", "Great Hedgehog", "Type 24 Kai AA Gun", "Sky Piercer"),
+    "DIVE_BOMBER_V":   ("Sk-9 Ground Attacker", "IB-9 Ground Attacker", "Great Kite", "Type 25 Kai Attacker", "Steamroller"),
+    "SCOUT_PLANE_V":   ("Mk-8 High-Altitude Recon", "YA-8 High-Altitude Recon", "Great Skylark", "Type 26 Kai Recon Plane", "High Watcher"),
+    "BATTLESHIP_V":    ("Rz-14 Super-Dreadnought", "Project 14 Super-Dreadnought", "Great Orca", "Type 27 Kai Battleship", "Lord of the Sea"),
+    "CARRIER_V":       ("Hy-9 Fleet Carrier", "Project 49 Fleet Carrier", "Great Manta", "Type 28 Kai Carrier", "Great Birdcage"),
+    "GUNBOAT_V":       ("Bt-6 Heavy Gunboat", "Project 16 Heavy Gunboat", "Great Pufferfish", "Type 29 Kai Gunboat", "Big Watch Boat"),
+    "MISSILE_BOAT_V":  ("Fk-9 Fast Missile Boat", "Project 19 Fast Rocket Boat", "Great Flying Fish", "Type 30 Kai Rocket Boat", "Quick Boat"),
+    "SUPPLY_SHIP_V":   ("Ho-9 Fast Supply Ship", "Project 29 Fast Supply Ship", "Great Dolphin", "Type 31 Kai Supply Ship", "Big Mother Ship"),
+    "T_PLANE_V":       ("Cd-14 Heavy Transport", "IB-14 Heavy Transport", "Great Stork", "Type 32 Kai Transport Plane", "Big Sky Ferry"),
+    "NIGHT_INF_V":     ("Shadow Operatives", "Guards Night Assault Troops", "Great Bat Troops", "Type 33 Kai Night Infantry", "Masters of the Dark"),
+    "NIGHT_BOAT_V":    ("Black Tide Raider", "Project 64 Night Assault Boat", "Great Squid", "Type 34 Kai Night Boat", "Black Boat"),
+    "NIGHT_FIGHTER_V": ("Night Sky Interceptor", "YA-36 High-Altitude Night Fighter", "Great Owl", "Type 35 Kai Night Fighter", "Lord of the Night"),
+}
+
+
+def check_en(src):
+    ok = True
+    ids = [u for u, _ in roster(src)]
+    for u in ids:
+        if u not in NAMES_EN:
+            print("x 英語名が未設定:", u); ok = False
+    for uid, row in NAMES_EN.items():
+        if uid not in ids:
+            print("x units.def に無いID:", uid); ok = False
+        for i, nm in enumerate(row):
+            if len(nm.encode("utf-8")) > MAXLEN:
+                print("x 長すぎ", uid, i, nm); ok = False
+            if "#" in nm:
+                print("x # はコメント扱いになる", uid, nm); ok = False
+    for f in range(5):
+        seen = {}
+        for uid in ids:
+            nm = NAMES_EN.get(uid, ("",) * 5)[f]
+            if nm in seen:
+                print("x EN 陣営%d で重複: %s（%s と %s）" % (f, nm, seen[nm], uid)); ok = False
+            seen[nm] = uid
+    return ok
+
+
+def apply_en():
+    """name@en / name1@en 〜 name4@en を、その兵種の最後の name 行の直後に入れる。"""
+    src = read_units()
+    if not check_en(src):
+        print("問題があるので書き込みませんでした")
+        return 1
+    text = src
+    n = 0
+    for uid, row in NAMES_EN.items():
+        blk = re.search(r"^\[unit %s\]\n((?:(?!\[unit ).*\n)*)" % re.escape(uid), text, re.M)
+        if not blk:
+            print("? 見つからない:", uid); continue
+        body = blk.group(1)
+        if re.search(r"^name@en\s*=", body, re.M):
+            continue                                  # すでに入っている
+        last = None
+        for m in re.finditer(r"^name[0-4]?\s*=.*\n", body, re.M):
+            last = m
+        if not last:
+            print("? name が無い:", uid); continue
+        ins = "name@en   = %s\n" % row[0] + "".join(
+            "name%d@en  = %s\n" % (i, nm) for i, nm in enumerate(row) if i > 0)
+        pos = blk.start(1) + last.end()
+        text = text[:pos] + ins + text[pos:]
+        n += 1
+    io.open(UNITS, "w", encoding="utf-8", newline="").write(text)
+    print("units.def に英語名を書き込みました（%d 種）" % n)
+    return 0
+
+
 if __name__ == "__main__":
     arg = sys.argv[1] if len(sys.argv) > 1 else ""
     if arg == "--apply":
         sys.exit(apply_to_units())
+    elif arg == "--apply-en":
+        sys.exit(apply_en())
     elif arg == "--check":
-        sys.exit(0 if check(read_units()) else 1)
+        src = read_units()
+        ok = check(src)
+        ok = check_en(src) and ok
+        sys.exit(0 if ok else 1)
     else:
         preview()

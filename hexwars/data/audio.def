@@ -50,14 +50,17 @@ file = se_turn.wav
 # ------------------------------------------------------------------
 [seset]
 name = 標準
+name@en = Standard
 dir  = sfx
 
 [seset]
 name = レトロ
+name@en = Retro
 dir  = sfx/set1
 
 [seset]
 name = 重厚
+name@en = Heavy
 dir  = sfx/set2
 
 # ------------------------------------------------------------------
@@ -85,23 +88,29 @@ file = bgm/bgm_ending.wav
 [battle]
 file = bgm/bgm_battle0.wav
 name = 進撃
+name@en = Advance
 
 [battle]
 file = bgm/bgm_battle1.wav
 name = 鉄の意志
+name@en = Iron Will
 
 [battle]
 file = bgm/bgm_battle2.wav
 name = 疾走
+name@en = Dash
 
 [battle]
 file = bgm/bgm_battle3.wav
 name = 緊迫
+name@en = Tension
 
 [battle]
 file = bgm/bgm_battle4.wav
 name = 荘厳
+name@en = Majestic
 
 [battle]
 file = bgm/bgm_battle5.wav
 name = 鋼鉄の行進
+name@en = March of Steel

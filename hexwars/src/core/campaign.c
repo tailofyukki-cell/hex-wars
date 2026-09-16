@@ -235,6 +235,11 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
     CpnNode *cur = NULL;
     char line[512];
     int ln = 0;
+    /* 複数行を積むキーの言語差し替え。上書き行（brief@en 等）が初めて来たら、
+     * そのノードの日本語の行を捨ててから積む。ビットは brief/story/story_win */
+    uint8_t lang_reset[MAX_CAMPAIGN_MAPS];
+    memset(lang_reset, 0, sizeof lang_reset);
+    int ev_msg_i = 0, sub_desc_i = 0;   /* event_msg / sub_desc の何番目か */
 
     while (fgets(line, sizeof line, f)) {
         ln++;
@@ -253,6 +258,7 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
                 }
                 cur = &c->nodes[c->n_nodes++];
                 memset(cur, 0, sizeof *cur);
+                ev_msg_i = sub_desc_i = 0;
                 for (int p = 0; p < MAX_PLAYERS; p++) cur->ctrl[p] = CTRL_CPU_NORMAL;
                 snprintf(cur->id, sizeof cur->id, "%s", key + 5);
                 continue;
@@ -260,6 +266,8 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
             if (err) snprintf(err, (size_t)errlen, "%s:%d: 不明なセクション", path, ln);
             fclose(f); return -1;
         }
+        int ni = cur ? (int)(cur - c->nodes) : 0;
+        int is_lang = parser_last_was_lang();
         if (!cur) {
             if      (!strcmp(key, "name"))  snprintf(c->name, sizeof c->name, "%s", val);
             else if (!strcmp(key, "start")) snprintf(c->start, sizeof c->start, "%s", val);
@@ -272,6 +280,7 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         else if (!strcmp(key, "reward_video"))
             snprintf(cur->reward_video, sizeof cur->reward_video, "%s", val);
         else if (!strcmp(key, "brief")) {
+            if (is_lang && !(lang_reset[ni] & 1)) { lang_reset[ni] |= 1; cur->n_brief = 0; }
             if (cur->n_brief < MAX_BRIEF_LINES)
                 snprintf(cur->brief[cur->n_brief++], sizeof cur->brief[0], "%s", val);
         }
@@ -299,10 +308,26 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         else if (!strcmp(key, "next_lose"))     snprintf(cur->next_lose, sizeof cur->next_lose, "%s", val);
         else if (!strcmp(key, "enemy_co"))
             snprintf(cur->co[1], sizeof cur->co[1], "%s", val);
-        else if (!strcmp(key, "story"))
+        else if (!strcmp(key, "story")) {
+            if (is_lang && !(lang_reset[ni] & 2)) { lang_reset[ni] |= 2; cur->n_story = 0; }
             cur->n_story = story_push(cur->story, cur->n_story, val);
-        else if (!strcmp(key, "story_win"))
+        }
+        else if (!strcmp(key, "story_win")) {
+            if (is_lang && !(lang_reset[ni] & 4)) { lang_reset[ni] |= 4; cur->n_story_win = 0; }
             cur->n_story_win = story_push(cur->story_win, cur->n_story_win, val);
+        }
+        /* イベントの知らせ・副目標の説明だけを差し替える（条件や動作は書き直さない）。
+         * 書いた順に 1つ目の event / sub から当てはめる。 */
+        else if (!strcmp(key, "event_msg")) {
+            if (ev_msg_i < cur->n_evs)
+                snprintf(cur->evs[ev_msg_i].msg, sizeof cur->evs[0].msg, "%s", val);
+            ev_msg_i++;
+        }
+        else if (!strcmp(key, "sub_desc")) {
+            if (sub_desc_i < cur->n_subs)
+                snprintf(cur->subs[sub_desc_i].desc, sizeof cur->subs[0].desc, "%s", val);
+            sub_desc_i++;
+        }
         else if (!strcmp(key, "carry"))         cur->carry = atoi(val);
         else if (!strcmp(key, "bonus"))         cur->bonus = atoi(val);
         else if (!strcmp(key, "enemy")) cur->ctrl[1] = ctrl_from_word(val);

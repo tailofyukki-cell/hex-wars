@@ -1,6 +1,7 @@
 # c08 空の要衝 - Y字の三叉空域。中心の飛行場を制した側が空を制す
 [map]
 name = 空の要衝
+name@en = Key Airfields
 width  = 42
 height = 25
 turns  = 73

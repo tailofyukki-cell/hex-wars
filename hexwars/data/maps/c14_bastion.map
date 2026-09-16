@@ -3,6 +3,7 @@
 # 北の湾からの艦砲・上陸と航空優勢が初めて要塞を崩す。
 [map]
 name             = 湾岸の要塞
+name@en = Harbor Fortress
 width            = 56
 height           = 32
 turns            = 120

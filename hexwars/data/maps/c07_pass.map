@@ -1,6 +1,7 @@
 # c07 山岳の隘路 - ドーナツ型の環状谷。北回りか南回りか
 [map]
 name = 山岳の隘路
+name@en = Mountain Pass
 width  = 42
 height = 25
 turns  = 73

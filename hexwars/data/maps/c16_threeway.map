@@ -4,6 +4,7 @@
 # 地形は m05_threeway と同じ。中央の高地と拠点群を奪い合う。
 [map]
 name             = 三つ巴の要衝
+name@en = Three-Way Crossroads
 width            = 40
 height           = 30
 turns            = 90
