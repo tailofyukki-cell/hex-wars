@@ -31,6 +31,10 @@
 image     = gfx/units/infantry.png
 cutin     = gfx/cutin/infantry.png
 name      = 歩兵
+name1     = 人民歩兵
+name2     = 野犬兵
+name3     = 一式歩兵
+name4     = 義勇兵
 evolve_to    = INFANTRY_V
 icon      = 歩
 class     = LAND_FOOT
@@ -52,6 +56,10 @@ transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 image     = gfx/units/at_infantry.png
 cutin     = gfx/cutin/infantry.png
 name      = 対戦車兵
+name1     = 破甲兵
+name2     = 蠍兵
+name3     = 二式対戦車兵
+name4     = 鉄拳持ち
 evolve_to    = AT_INFANTRY_V
 icon      = 対
 class     = LAND_FOOT
@@ -72,6 +80,10 @@ transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 [unit RECON]
 image     = gfx/units/recon.png
 name      = 偵察車
+name1     = 偵察装甲車「ZB-1」
+name2     = 鼬
+name3     = 三式偵察車
+name4     = 早駆け車
 recon        = 1
 evolve_to    = RECON_V
 icon      = 偵
@@ -95,6 +107,10 @@ cutin     = gfx/cutin/tank.png
 # 戦闘アニメ動画のサンプル（実際の動画に差し替えてください）
 anim      = gfx/anim/sample_land.mp4
 name      = 中戦車「T-40型」
+name1     = 中戦車「ZK-40」
+name2     = 豹
+name3     = 四式中戦車
+name4     = 鉄牛
 evolve_to    = TANK_V
 icon      = 戦
 class     = LAND_TRACK
@@ -115,6 +131,10 @@ transport_by = T_SHIP
 image     = gfx/units/htank.png
 cutin     = gfx/cutin/tank.png
 name      = 重戦車「G-6型」
+name1     = 重戦車「ZK-60」
+name2     = 犀
+name3     = 五式重戦車
+name4     = 山親父
 evolve_to    = HTANK_V
 icon      = 重
 class     = LAND_TRACK
@@ -135,6 +155,10 @@ transport_by = T_SHIP
 image     = gfx/units/artillery.png
 cutin     = gfx/cutin/tank.png
 name      = 自走砲「H-15型」
+name1     = 自走砲「SV-15」
+name2     = 象
+name3     = 六式自走砲
+name4     = 遠雷
 evolve_to    = ARTILLERY_V
 icon      = 砲
 class     = LAND_TRACK
@@ -157,6 +181,10 @@ transport_by = T_SHIP
 [unit AA_TANK]
 image     = gfx/units/aa_tank.png
 name      = 対空戦車「F-8型」
+name1     = 対空自走砲「SV-8」
+name2     = 豪猪
+name3     = 七式対空戦車
+name4     = 弾幕車
 evolve_to    = AA_TANK_V
 icon      = 高
 class     = LAND_TRACK
@@ -176,6 +204,10 @@ transport_by = T_SHIP
 [unit TRUCK]
 image     = gfx/units/truck.png
 name      = トラック
+name1     = 輸送車「ZB-3」
+name2     = 駄馬
+name3     = 八式輸送車
+name4     = 荷馬車
 evolve_to    = TRUCK_V
 icon      = 輸
 class     = LAND_WHEEL
@@ -195,6 +227,10 @@ capacity  = 1
 [unit T_COPTER]
 image     = gfx/units/t_copter.png
 name      = 輸送ヘリ「Hv-4型」
+name1     = 輸送回転翼機「MV-4」
+name2     = 鵜
+name3     = 九式輸送ヘリ
+name4     = 荷運び鳥
 evolve_to    = T_COPTER_V
 icon      = 吊
 class     = AIR
@@ -215,6 +251,10 @@ capacity  = 1
 image     = gfx/units/fighter.png
 cutin     = gfx/cutin/air.png
 name      = 戦闘機「Fk-9型」
+name1     = 戦闘機「YA-9」
+name2     = 隼
+name3     = 十式戦闘機
+name4     = 風切り
 evolve_to    = FIGHTER_V
 icon      = 翼
 class     = AIR
@@ -235,6 +275,10 @@ transport_by = CARRIER
 image     = gfx/units/bomber.png
 cutin     = gfx/cutin/air.png
 name      = 爆撃機「Bx-17型」
+name1     = 爆撃機「IB-17」
+name2     = 鷲
+name3     = 十一式爆撃機
+name4     = 鉄の雨
 evolve_to    = BOMBER_V
 icon      = 爆
 class     = AIR
@@ -255,6 +299,10 @@ transport_by = CARRIER
 image     = gfx/units/heli.png
 cutin     = gfx/cutin/air.png
 name      = 攻撃ヘリ「Hv-2型」
+name1     = 攻撃回転翼機「MV-2」
+name2     = 蜂鷹
+name3     = 十二式攻撃ヘリ
+name4     = 羽虫
 evolve_to    = HELI_V
 icon      = 旋
 class     = AIR
@@ -276,6 +324,10 @@ transport_by = CARRIER
 image     = gfx/units/destroyer.png
 cutin     = gfx/cutin/ship.png
 name      = 駆逐艦「Dn-3型」
+name1     = 駆逐艦「計画3号」
+name2     = 鰹
+name3     = 十三式駆逐艦
+name4     = 走り舟
 evolve_to    = DESTROYER_V
 icon      = 駆
 class     = SEA
@@ -296,6 +348,10 @@ anti_sub  = 1
 image     = gfx/units/cruiser.png
 cutin     = gfx/cutin/ship.png
 name      = 巡洋艦「Kv-1型」
+name1     = 巡洋艦「計画11号」
+name2     = 鮪
+name3     = 十四式巡洋艦
+name4     = 姉御
 evolve_to    = CRUISER_V
 icon      = 巡
 class     = SEA
@@ -315,6 +371,10 @@ def       = 55
 image     = gfx/units/submarine.png
 cutin     = gfx/cutin/ship.png
 name      = 潜水艦「U-11型」
+name1     = 潜水艦「計画21号」
+name2     = 鮫
+name3     = 十五式潜水艦
+name4     = 潜り屋
 evolve_to    = SUBMARINE_V
 icon      = 潜
 class     = SEA_SUB
@@ -334,6 +394,10 @@ is_sub    = 1
 [unit T_SHIP]
 image     = gfx/units/t_ship.png
 name      = 輸送艦「Ln-2型」
+name1     = 揚陸艦「計画32号」
+name2     = 鯨
+name3     = 十六式輸送艦
+name4     = 渡し舟
 evolve_to    = T_SHIP_V
 icon      = 舶
 class     = SEA
@@ -356,6 +420,10 @@ capacity  = 2
 [unit SUPPLY]
 image     = gfx/units/supply.png
 name      = 補給車
+name1     = 補給車「ZB-5」
+name2     = 駱駝
+name3     = 十七式補給車
+name4     = 炊き出し車
 evolve_to    = SUPPLY_V
 icon      = 給
 class     = LAND_WHEEL
@@ -377,6 +445,10 @@ transport_by = T_SHIP
 [unit SUPPLY_AIR]
 image     = gfx/units/supply_air.png
 name      = 補給機「Cg-5型」
+name1     = 補給機「IB-25」
+name2     = 鵲
+name3     = 十八式補給機
+name4     = 差し入れ便
 evolve_to    = SUPPLY_AIR_V
 icon      = 補
 class     = AIR
@@ -399,6 +471,10 @@ supply    = 1
 image     = gfx/units/militia.png
 cutin     = gfx/cutin/infantry.png
 name      = 民兵
+name1     = 労農兵
+name2     = 村衆
+name3     = 十九式郷土兵
+name4     = 町衆
 evolve_to    = MILITIA_V
 icon      = 民
 class     = LAND_FOOT
@@ -420,6 +496,10 @@ transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 image     = gfx/units/mech_inf.png
 cutin     = gfx/cutin/infantry.png
 name      = 機械化歩兵
+name1     = 自動車化狙撃兵
+name2     = 狼騎兵
+name3     = 二十式機械化歩兵
+name4     = 相乗り兵
 evolve_to    = MECH_INF_V
 icon      = 機
 class     = LAND_TRACK
@@ -440,6 +520,10 @@ transport_by = T_SHIP
 [unit ENGINEER]
 image     = gfx/units/engineer.png
 name      = 工兵
+name1     = 人民工兵
+name2     = 蟻兵
+name3     = 二十一式工兵
+name4     = 穴掘り
 evolve_to    = ENGINEER_V
 icon      = 工
 class     = LAND_FOOT
@@ -463,6 +547,10 @@ transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 image     = gfx/units/ltank.png
 cutin     = gfx/cutin/tank.png
 name      = 軽戦車「T-20型」
+name1     = 軽戦車「ZK-20」
+name2     = 山猫
+name3     = 二十二式軽戦車
+name4     = 跳ね兎
 evolve_to    = LTANK_V
 icon      = 軽
 class     = LAND_TRACK
@@ -482,6 +570,10 @@ transport_by = T_SHIP
 [unit ROCKET]
 image     = gfx/units/rocket.png
 name      = 自走ロケット砲「R-8型」
+name1     = 噴進砲「SV-8」
+name2     = 猪
+name3     = 二十三式噴進砲
+name4     = 火吹き車
 evolve_to    = ROCKET_V
 icon      = 噴
 class     = LAND_WHEEL
@@ -504,6 +596,10 @@ transport_by = T_SHIP
 [unit AA_GUN]
 image     = gfx/units/aa_gun.png
 name      = 高射砲
+name1     = 高射砲「SV-2」
+name2     = 針鼠
+name3     = 二十四式高射砲
+name4     = 空狙い
 evolve_to    = AA_GUN_V
 icon      = 射
 class     = LAND_FOOT
@@ -526,6 +622,10 @@ transport_by = TRUCK,T_SHIP,T_PLANE
 image     = gfx/units/dive_bomber.png
 cutin     = gfx/cutin/air.png
 name      = 襲撃機「Sk-6型」
+name1     = 襲撃機「IB-6」
+name2     = 鳶
+name3     = 二十五式襲撃機
+name4     = 落とし屋
 evolve_to    = DIVE_BOMBER_V
 icon      = 襲
 class     = AIR
@@ -545,6 +645,10 @@ transport_by = CARRIER
 [unit SCOUT_PLANE]
 image     = gfx/units/scout_plane.png
 name      = 偵察機「Mk-3型」
+name1     = 偵察機「YA-3」
+name2     = 雲雀
+name3     = 二十六式偵察機
+name4     = 見張り鳥
 recon        = 1
 evolve_to    = SCOUT_PLANE_V
 icon      = 察
@@ -571,6 +675,10 @@ cutin     = gfx/cutin/ship.png
 # 戦闘アニメ動画のサンプル（ユニット毎に別の動画を指定できる）
 anim      = gfx/anim/sample_sea.gif
 name      = 戦艦「Rz-9型」
+name1     = 戦艦「計画9号」
+name2     = 鯱
+name3     = 二十七式戦艦
+name4     = 老大公
 evolve_to    = BATTLESHIP_V
 icon      = 艦
 class     = SEA
@@ -594,6 +702,10 @@ move_and_fire = 0
 [unit CARRIER]
 image     = gfx/units/carrier.png
 name      = 空母「Hy-4型」
+name1     = 航空母艦「計画41号」
+name2     = 鱏
+name3     = 二十八式空母
+name4     = 鳥籠
 evolve_to    = CARRIER_V
 icon      = 母
 class     = SEA
@@ -615,6 +727,10 @@ resupply_cargo = 1
 [unit GUNBOAT]
 image     = gfx/units/gunboat.png
 name      = 砲艦「Bt-2型」
+name1     = 砲艦「計画12号」
+name2     = 河豚
+name3     = 二十九式砲艦
+name4     = 番船
 evolve_to    = GUNBOAT_V
 icon      = 舟
 class     = SEA
@@ -637,6 +753,10 @@ move_and_fire = 0
 [unit MISSILE_BOAT]
 image     = gfx/units/missile_boat.png
 name      = ミサイル艇「Fk-5型」
+name1     = 噴進艇「計画15号」
+name2     = 飛魚
+name3     = 三十式噴進艇
+name4     = 一撃舟
 evolve_to    = MISSILE_BOAT_V
 icon      = 艇
 class     = SEA
@@ -658,6 +778,10 @@ def       = 25
 [unit SUPPLY_SHIP]
 image     = gfx/units/supply_ship.png
 name      = 補給艦「Ho-6型」
+name1     = 補給艦「計画26号」
+name2     = 海豚
+name3     = 三十一式補給艦
+name4     = 母船
 evolve_to    = SUPPLY_SHIP_V
 icon      = 糧
 class     = SEA
@@ -682,6 +806,10 @@ supply    = 1
 image     = gfx/units/t_plane.png
 cutin     = gfx/cutin/air.png
 name      = 輸送機「Cd-8型」
+name1     = 輸送機「IB-8」
+name2     = 鸛
+name3     = 三十二式輸送機
+name4     = 空の渡し
 evolve_to    = T_PLANE_V
 icon      = 挺
 class     = AIR
@@ -706,6 +834,10 @@ paradrop  = 1
 
 [unit INFANTRY_V]
 name         = 猟兵「精鋭歩兵」
+name1     = 親衛歩兵
+name2     = 猟犬兵
+name3     = 一式改歩兵
+name4     = 古参兵
 icon         = 猟
 cost         = 170
 image        = gfx/units/infantry.png
@@ -727,6 +859,10 @@ no_produce   = 1
 
 [unit AT_INFANTRY_V]
 name         = 戦車猟兵
+name1     = 親衛破甲兵
+name2     = 大蠍兵
+name3     = 二式改対戦車兵
+name4     = 戦車殺し
 icon         = 猟
 cost         = 240
 image        = gfx/units/at_infantry.png
@@ -748,6 +884,10 @@ no_produce   = 1
 
 [unit MILITIA_V]
 name         = 郷土防衛隊
+name1     = 労農親衛隊
+name2     = 番犬衆
+name3     = 十九式改郷土兵
+name4     = 町の守り
 icon         = 郷
 cost         = 110
 image        = gfx/units/militia.png
@@ -769,6 +909,10 @@ no_produce   = 1
 
 [unit MECH_INF_V]
 name         = 装甲擲弾兵
+name1     = 親衛狙撃兵
+name2     = 大狼騎兵
+name3     = 二十式改機械化歩兵
+name4     = 鉄箱乗り
 icon         = 擲
 cost         = 340
 image        = gfx/units/mech_inf.png
@@ -790,6 +934,10 @@ no_produce   = 1
 
 [unit AA_GUN_V]
 name         = 重高射砲「88式」
+name1     = 重高射砲「SV-12」
+name2     = 大針鼠
+name3     = 二十四式改高射砲
+name4     = 天突き
 icon         = 重
 cost         = 260
 image        = gfx/units/aa_gun.png
@@ -811,6 +959,10 @@ no_produce   = 1
 
 [unit RECON_V]
 name         = 装甲偵察車
+name1     = 装甲偵察車「ZB-6」
+name2     = 大鼬
+name3     = 三式改偵察車
+name4     = 先駆け
 recon        = 1
 icon         = 装
 cost         = 250
@@ -831,6 +983,10 @@ no_produce   = 1
 
 [unit LTANK_V]
 name         = 騎兵戦車「T-24型」
+name1     = 騎兵戦車「ZK-24」
+name2     = 大山猫
+name3     = 二十二式改軽戦車
+name4     = 跳ね馬
 icon         = 騎
 cost         = 310
 image        = gfx/units/ltank.png
@@ -851,6 +1007,10 @@ no_produce   = 1
 
 [unit TANK_V]
 name         = 主力戦車「T-55型」
+name1     = 主力戦車「ZK-55」
+name2     = 黒豹
+name3     = 四式改中戦車
+name4     = 大鉄牛
 icon         = 主
 cost         = 450
 image        = gfx/units/tank.png
@@ -871,6 +1031,10 @@ no_produce   = 1
 
 [unit HTANK_V]
 name         = 超重戦車「G-9型」
+name1     = 超重戦車「ZK-90」
+name2     = 大犀
+name3     = 五式改重戦車
+name4     = 動く砦
 icon         = 超
 cost         = 760
 image        = gfx/units/htank.png
@@ -891,6 +1055,10 @@ no_produce   = 1
 
 [unit AA_TANK_V]
 name         = 自走対空機関砲
+name1     = 対空機関砲「SV-18」
+name2     = 大豪猪
+name3     = 七式改対空戦車
+name4     = 弾幕改車
 icon         = 走
 cost         = 430
 image        = gfx/units/aa_tank.png
@@ -912,6 +1080,10 @@ no_produce   = 1
 
 [unit ARTILLERY_V]
 name         = 重自走砲「H-24型」
+name1     = 重自走砲「SV-24」
+name2     = 大象
+name3     = 六式改自走砲
+name4     = 大遠雷
 icon         = 重
 cost         = 480
 image        = gfx/units/artillery.png
@@ -935,6 +1107,10 @@ no_produce   = 1
 
 [unit ROCKET_V]
 name         = 多連装ロケット「R-16型」
+name1     = 多連装噴進砲「SV-16」
+name2     = 大猪
+name3     = 二十三式改噴進砲
+name4     = 火柱車
 icon         = 連
 cost         = 680
 image        = gfx/units/rocket.png
@@ -957,6 +1133,10 @@ no_produce   = 1
 
 [unit FIGHTER_V]
 name         = 迎撃機「Fk-12型」
+name1     = 迎撃機「YA-12」
+name2     = 大隼
+name3     = 十式改戦闘機
+name4     = 風斬り
 icon         = 迎
 cost         = 600
 image        = gfx/units/fighter.png
@@ -978,6 +1158,10 @@ no_produce   = 1
 
 [unit DIVE_BOMBER_V]
 name         = 対地攻撃機「Sk-9型」
+name1     = 対地攻撃機「IB-9」
+name2     = 大鳶
+name3     = 二十五式改襲撃機
+name4     = 地均し
 icon         = 攻
 cost         = 630
 image        = gfx/units/dive_bomber.png
@@ -998,6 +1182,10 @@ no_produce   = 1
 
 [unit BOMBER_V]
 name         = 重爆撃機「Bx-24型」
+name1     = 重爆撃機「IB-24」
+name2     = 大鷲
+name3     = 十一式改爆撃機
+name4     = 鉄の驟雨
 icon         = 重
 cost         = 830
 image        = gfx/units/bomber.png
@@ -1018,6 +1206,10 @@ no_produce   = 1
 
 [unit HELI_V]
 name         = 重攻撃ヘリ「Hv-8型」
+name1     = 重攻撃回転翼機「MV-8」
+name2     = 大蜂鷹
+name3     = 十二式改攻撃ヘリ
+name4     = 大羽虫
 icon         = 重
 cost         = 570
 image        = gfx/units/heli.png
@@ -1039,6 +1231,10 @@ no_produce   = 1
 
 [unit MISSILE_BOAT_V]
 name         = 高速ミサイル艇「Fk-9型」
+name1     = 高速噴進艇「計画19号」
+name2     = 大飛魚
+name3     = 三十式改噴進艇
+name4     = 早舟
 icon         = 速
 cost         = 480
 image        = gfx/units/missile_boat.png
@@ -1057,6 +1253,10 @@ no_produce   = 1
 
 [unit GUNBOAT_V]
 name         = 重砲艦「Bt-6型」
+name1     = 重砲艦「計画16号」
+name2     = 大河豚
+name3     = 二十九式改砲艦
+name4     = 大番船
 icon         = 重
 cost         = 530
 image        = gfx/units/gunboat.png
@@ -1078,6 +1278,10 @@ no_produce   = 1
 
 [unit DESTROYER_V]
 name         = 重駆逐艦「Dn-8型」
+name1     = 重駆逐艦「計画8号」
+name2     = 大鰹
+name3     = 十三式改駆逐艦
+name4     = 大走り舟
 icon         = 重
 cost         = 680
 image        = gfx/units/destroyer.png
@@ -1098,6 +1302,10 @@ no_produce   = 1
 
 [unit SUBMARINE_V]
 name         = 大型潜水艦「U-24型」
+name1     = 大型潜水艦「計画24号」
+name2     = 大鮫
+name3     = 十五式改潜水艦
+name4     = 深潜り
 icon         = 大
 cost         = 630
 image        = gfx/units/submarine.png
@@ -1118,6 +1326,10 @@ no_produce   = 1
 
 [unit CRUISER_V]
 name         = 重巡洋艦「Kv-6型」
+name1     = 重巡洋艦「計画61号」
+name2     = 大鮪
+name3     = 十四式改巡洋艦
+name4     = 大姉御
 icon         = 巡
 cost         = 1050
 image        = gfx/units/cruiser.png
@@ -1137,6 +1349,10 @@ no_produce   = 1
 
 [unit BATTLESHIP_V]
 name         = 超弩級戦艦「Rz-14型」
+name1     = 超弩級戦艦「計画14号」
+name2     = 大鯱
+name3     = 二十七式改戦艦
+name4     = 海の主
 icon         = 弩
 cost         = 1350
 image        = gfx/units/battleship.png
@@ -1159,6 +1375,10 @@ no_produce   = 1
 
 [unit CARRIER_V]
 name         = 大型空母「Hy-9型」
+name1     = 大型航空母艦「計画49号」
+name2     = 大鱏
+name3     = 二十八式改空母
+name4     = 大鳥籠
 icon         = 大
 cost         = 1400
 image        = gfx/units/carrier.png
@@ -1179,6 +1399,10 @@ no_produce   = 1
 
 [unit TRUCK_V]
 name         = 装甲兵員輸送車
+name1     = 装甲輸送車「ZB-8」
+name2     = 大駄馬
+name3     = 八式改輸送車
+name4     = 鉄の荷車
 icon         = 装
 cost         = 200
 image        = gfx/units/truck.png
@@ -1198,6 +1422,10 @@ no_produce   = 1
 
 [unit T_COPTER_V]
 name         = 強襲輸送ヘリ「Hv-9型」
+name1     = 強襲回転翼機「MV-9」
+name2     = 大鵜
+name3     = 九式改輸送ヘリ
+name4     = 大荷運び鳥
 icon         = 強
 cost         = 380
 image        = gfx/units/t_copter.png
@@ -1218,6 +1446,10 @@ no_produce   = 1
 
 [unit T_SHIP_V]
 name         = 強襲揚陸艦「Ln-6型」
+name1     = 強襲揚陸艦「計画36号」
+name2     = 大鯨
+name3     = 十六式改輸送艦
+name4     = 大渡し舟
 icon         = 揚
 cost         = 450
 image        = gfx/units/t_ship.png
@@ -1237,6 +1469,10 @@ no_produce   = 1
 
 [unit T_PLANE_V]
 name         = 大型輸送機「Cd-14型」
+name1     = 大型輸送機「IB-14」
+name2     = 大鸛
+name3     = 三十二式改輸送機
+name4     = 大空の渡し
 icon         = 大
 cost         = 500
 image        = gfx/units/t_plane.png
@@ -1258,6 +1494,10 @@ no_produce   = 1
 
 [unit SUPPLY_V]
 name         = 重補給車
+name1     = 重補給車「ZB-9」
+name2     = 大駱駝
+name3     = 十七式改補給車
+name4     = 大炊き出し車
 icon         = 重
 cost         = 300
 image        = gfx/units/supply.png
@@ -1278,6 +1518,10 @@ no_produce   = 1
 
 [unit SUPPLY_AIR_V]
 name         = 大型補給機「Cg-9型」
+name1     = 大型補給機「IB-29」
+name2     = 大鵲
+name3     = 十八式改補給機
+name4     = 大差し入れ便
 icon         = 大
 cost         = 420
 image        = gfx/units/supply_air.png
@@ -1297,6 +1541,10 @@ no_produce   = 1
 
 [unit SUPPLY_SHIP_V]
 name         = 高速補給艦「Ho-9型」
+name1     = 高速補給艦「計画29号」
+name2     = 大海豚
+name3     = 三十一式改補給艦
+name4     = 大母船
 icon         = 速
 cost         = 600
 image        = gfx/units/supply_ship.png
@@ -1316,6 +1564,10 @@ no_produce   = 1
 
 [unit SCOUT_PLANE_V]
 name         = 高高度偵察機「Mk-8型」
+name1     = 高高度偵察機「YA-8」
+name2     = 大雲雀
+name3     = 二十六式改偵察機
+name4     = 高見の鳥
 recon        = 1
 icon         = 高
 cost         = 280
@@ -1337,6 +1589,10 @@ no_produce   = 1
 
 [unit ENGINEER_V]
 name         = 機甲工兵
+name1     = 親衛工兵
+name2     = 大蟻兵
+name3     = 二十一式改工兵
+name4     = 大穴掘り
 icon         = 甲
 cost         = 330
 image        = gfx/units/engineer.png
@@ -1363,6 +1619,10 @@ no_produce   = 1
 
 [unit NIGHT_INF]
 name          = 夜間忍兵
+name1     = 夜襲兵
+name2     = 蝙蝠兵
+name3     = 三十三式夜戦兵
+name4     = 闇討ち
 evolve_to     = NIGHT_INF_V
 icon          = 忍
 image         = gfx/units/night_inf.png
@@ -1389,6 +1649,10 @@ transport_by  = TRUCK
 
 [unit NIGHT_BOAT]
 name          = 夜間突撃艦
+name1     = 夜襲艇「計画44号」
+name2     = 烏賊
+name3     = 三十四式夜戦艇
+name4     = 闇舟
 evolve_to     = NIGHT_BOAT_V
 icon          = 襲
 image         = gfx/units/night_boat.png
@@ -1411,6 +1675,10 @@ night         = 1
 
 [unit NIGHT_FIGHTER]
 name          = 夜間迎撃機
+name1     = 夜間迎撃機「YA-24」
+name2     = 梟
+name3     = 三十五式夜戦機
+name4     = 夜鷹
 evolve_to     = NIGHT_FIGHTER_V
 icon          = 迎
 image         = gfx/units/night_fighter.png
@@ -1438,6 +1706,10 @@ night         = 1
 
 [unit NIGHT_INF_V]
 name          = 闇夜特務兵
+name1     = 親衛夜襲兵
+name2     = 大蝙蝠兵
+name3     = 三十三式改夜戦兵
+name4     = 闇の手練
 icon          = 闇
 image         = gfx/units/night_inf.png
 class         = LAND_TRACK
@@ -1464,6 +1736,10 @@ no_produce    = 1
 
 [unit NIGHT_BOAT_V]
 name          = 黒潮強襲艦
+name1     = 夜襲強襲艇「計画64号」
+name2     = 大烏賊
+name3     = 三十四式改夜戦艇
+name4     = 黒舟
 icon          = 潮
 image         = gfx/units/night_boat.png
 class         = SEA
@@ -1486,6 +1762,10 @@ no_produce    = 1
 
 [unit NIGHT_FIGHTER_V]
 name          = 夜天迎撃機
+name1     = 高高度夜戦機「YA-36」
+name2     = 大梟
+name3     = 三十五式改夜戦機
+name4     = 夜の主
 icon          = 天
 image         = gfx/units/night_fighter.png
 class         = AIR
