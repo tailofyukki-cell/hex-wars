@@ -655,7 +655,7 @@ static void setup_draw_co_detail(App *a, int ci, int px, int py, int pw)
     char buf[192];
     int y = py;
 
-    snprintf(buf, sizeof buf, "【%s】", co->title);
+    snprintf(buf, sizeof buf, tx("CO_TITLE_FMT"), co->title);
     draw_text(a, a->font_s, px, y, COL_YELLOW, buf);
     y += LH;
     y = draw_text_wrap(a, a->font_s, px, y, pw, COL_GRAY, co->desc, LH);
@@ -1763,7 +1763,7 @@ static void cpnmap_draw(App *a)
         char cb[192];
         snprintf(cb, sizeof cb, tx("CPNMAP_CO_FMT"), co->name);
         draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 112, COL_YELLOW, cb);
-        snprintf(cb, sizeof cb, "【%s】%s", co->title, co->desc);
+        snprintf(cb, sizeof cb, tx("CO_TITLE_DESC_FMT"), co->title, co->desc);
         draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 90, COL_GRAY, cb);
     }
 }

@@ -2150,7 +2150,7 @@ static void draw_panels(App *a)
             char names[64] = "";
             for (int s = 0; s < 2; s++)
                 if (u->cargo[s] >= 0) {
-                    if (names[0]) strncat(names, "、", sizeof names - strlen(names) - 1);
+                    if (names[0]) strncat(names, tx("LIST_SEP"), sizeof names - strlen(names) - 1);
                     const Unit *cu = &g->units[u->cargo[s]];
                     strncat(names,
                             unit_name_of(&g->types[cu->type], cu->owner),

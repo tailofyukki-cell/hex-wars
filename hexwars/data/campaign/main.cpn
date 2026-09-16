@@ -35,6 +35,7 @@
 
 [campaign]
 name  = 西方の反攻
+name@en = The Western Counteroffensive
 start = M01
 
 [node M01]
@@ -67,6 +68,21 @@ sub = MAX_TURNS:12:12ターン以内に勝利する
 sub = MAX_LOSS:2:損失2部隊以内で勝利する
 event = TURN:8 | SPAWN:1:INFANTRY:26,19:2 | 敵の後続部隊が前線に到着した！
 
+# --- English ---
+title@en = Operation 1: Border Patrol Line
+brief@en = The Eastern Federation has crossed the border. Destroy the enemy vanguard along the patrol line
+brief@en = and take the enemy command post in the border region.
+brief@en = Capture cities with infantry to secure income, and build up your forces at factories.
+brief@en = (Win within 10 turns to advance before the enemy fortifies, and skip the next defensive battle.)
+story@en = The Eastern Federation crossed the border. There was no declaration of war.
+story@en = Lt. Mira|Commander, the patrol line is broken in three places. The vanguard can't hold.
+story@en = Lt. Mira|...Your orders? If we can't stop them here, the homeland is next.
+story_win@en = Lt. Mira|We pushed them back from the patrol line. The vanguard held well.
+story_win@en = Staff Officer Werner|But their main force hasn't moved yet. The real fight starts now.
+sub_desc@en = Win within 12 turns
+sub_desc@en = Win losing no more than 2 units
+event_msg@en = Enemy reinforcements have reached the front!
+
 [node M02]
 art   = gfx/brief/m02.png
 reward = gfx/reward/m02.png
@@ -92,6 +108,21 @@ sub = KEEP_BLD:6:自軍拠点を6個以上維持したまま勝利する
 sub = MAX_LOSS:4:損失4部隊以内で勝利する
 event = TURN:10 | SPAWN:1:TANK:30,11:2 | 敵戦車隊が森を迂回して現れた！
 event = LOSS:0:5 | SPAWN:0:INFANTRY:8,12:2 | 後方から予備兵力が到着した
+
+# --- English ---
+title@en = Operation 2: Forest Defense Line
+brief@en = The enemy armor has gone on the counterattack. We are outnumbered.
+brief@en = Use the defensive terrain of forests and cities, and hold the capital for 18 turns.
+brief@en = Hold the capital until the turn limit and you win.
+story@en = We couldn't push them back. The front has fallen back to the forests.
+story@en = Staff Officer Werner|Reinforcements are eighteen turns out. Hold the capital until then.
+story@en = Lt. Mira|Let's dig into the forests and cities. Defense is what we do best.
+story_win@en = The forest burned, but the capital still stands.
+story_win@en = Lt. Mira|We held. ...Next time, let's be the ones attacking.
+sub_desc@en = Win while holding at least 6 of your bases
+sub_desc@en = Win losing no more than 4 units
+event_msg@en = Enemy tanks came around the forest!
+event_msg@en = Reserve troops arrived from the rear
 
 [node M03]
 art   = gfx/brief/m03.png
@@ -127,6 +158,27 @@ sub = SURVIVE:1:ENGINEER:工兵を1部隊以上生存させる
 event = TURN:6 | TERRAIN:19,14:r | 敵が南の橋を落とした！工兵なら掛け直せる
 event = AREA:0:33,19:6 | SPAWN:1:AT_INFANTRY:33,19:3 | 対岸の守備隊が反撃に出た！
 
+# --- English ---
+title@en = Operation 3: River Breakthrough
+brief@en = The front is split by a great river, with only two bridges to cross.
+brief@en = The enemy is after the bridges too. Shell the far bank with SP guns, then rush across with armor.
+brief@en = Don't forget that infantry can wade across the river.
+brief@en = From now on you have engineers. They can demolish adjacent terrain and repair damaged terrain.
+brief@en = The enemy will blow the bridges. Keep engineers forward and you can rebuild them (for a fee).
+brief@en = Or blow a bridge yourself to stall the enemy armor.
+story@en = Lt. Mira|The enemy advance has stalled. Their supply lines are stretched thin.
+story@en = Staff Officer Werner|The tide is turning. Cross the river and take a bridgehead.
+story@en = Lt. Mira|The engineers are here. Blowing bridges and fixing them is their job.
+story@en = For the first time in two months, the arrows on the map pointed east.
+story_win@en = Lt. Mira|River crossed. We hold a bridgehead on the far bank.
+story_win@en = Lt. Mira|The engineers rebuilt the bridge under fire.
+story_win@en = Staff Officer Werner|Well done. This river is behind us now.
+sub_desc@en = Complete the crossing within 25 turns
+sub_desc@en = Destroy at least 8 enemy units
+sub_desc@en = Keep at least 1 engineer unit alive
+event_msg@en = The enemy blew the south bridge! Engineers can rebuild it
+event_msg@en = The garrison on the far bank is counterattacking!
+
 [node M04]
 art   = gfx/brief/m04.png
 reward = gfx/reward/m04.png
@@ -155,6 +207,21 @@ sub = SURVIVE:1:T_SHIP:輸送艦を1隻以上生存させる
 sub = MAX_LOSS:5:損失5部隊以内で勝利する
 event = TURN:12 | SPAWN:1:DESTROYER:37,13:2 | 敵艦隊が海峡に増援を送り込んだ！
 
+# --- English ---
+title@en = Operation 4: Strait Crossing
+brief@en = The time to strike back has come. Land on the enemy base across the strait.
+brief@en = Build transport ships at a port and carry tanks and infantry to the far shore.
+brief@en = Watch out for enemy destroyers and aircraft. Send destroyers along as escorts.
+brief@en = (Win within 18 turns to push inland before enemy reinforcements arrive.)
+story@en = Staff Officer Werner|The land route is fortified. We have to cross the strait.
+story@en = Lt. Mira|Loading troops onto the transports. ...Can you swim, Commander?
+story@en = Lt. Mira|Just kidding. We'll have escorts so they don't sink us.
+story_win@en = Lt. Mira|We're across the strait. No swimming needed, Commander.
+story_win@en = Staff Officer Werner|Don't joke. From here on our supplies travel by sea.
+sub_desc@en = Keep at least 1 transport ship alive
+sub_desc@en = Win losing no more than 5 units
+event_msg@en = Enemy fleet reinforcements entered the strait!
+
 [node M05]
 art   = gfx/brief/m05.png
 reward = gfx/reward/m05.png
@@ -181,6 +248,21 @@ sub = MAX_LOSS:4:損失4部隊以内で勝利する
 event = TURN:6 | SPAWN:1:TANK:25,19:2 | 敵の第一波が押し寄せる！
 event = TURN:16 | SPAWN:1:HTANK:25,19:2 | 敵重戦車隊が投入された！
 
+# --- English ---
+title@en = Operation 5: Hold the Beachhead
+brief@en = The landing succeeded, but the enemy counterattack has begun.
+brief@en = Hold the beachhead on the coast for 16 turns until reinforcements arrive.
+brief@en = Keep SP guns in the rear and use the defense bonus of cities to hold out.
+story@en = The landing succeeded. But the follow-up force is still at sea.
+story@en = Lt. Mira|Their counterattack is coming. Lose this and we start over.
+story@en = Staff Officer Werner|Hold. Whoever holds out gets the next move.
+story_win@en = The follow-up force finally arrived. The beach is no longer a battlefield.
+story_win@en = Lt. Mira|It was worth holding. The next move is ours.
+sub_desc@en = Hold at least 8 bases on the beachhead
+sub_desc@en = Win losing no more than 4 units
+event_msg@en = The enemy's first wave is coming!
+event_msg@en = Enemy heavy tanks have been committed!
+
 [node M06]
 art   = gfx/brief/m06.png
 reward = gfx/reward/m06.png
@@ -204,6 +286,19 @@ enemy_co = KARLA  # 山岳の隘路: 長期戦・索敵
 sub = MAX_TURNS:30:30ターン以内に隘路を突破する
 sub = MIN_KILLS:10:敵を10部隊以上撃破する
 event = AREA:0:29,8:5 | SPAWN:1:ROCKET:29,8:2 | 隘路の奥に伏兵がいた！
+
+# --- English ---
+title@en = Operation 6: Mountain Pass
+brief@en = The road inland is blocked by mountains, with only two narrow passes.
+brief@en = Numbers mean little on narrow roads. Lead with anti-tank infantry and SP guns,
+brief@en = and push forward one step at a time. Only infantry can cross the mountains.
+story@en = Lt. Mira|This pass is the only way inland.
+story@en = Lt. Mira|Tanks can't cross the mountains. Let's take the high ground with infantry.
+story_win@en = Lt. Mira|We're through the pass. The interior lies open.
+story_win@en = Staff Officer Werner|The enemy can't hide behind the terrain anymore.
+sub_desc@en = Break through the pass within 30 turns
+sub_desc@en = Destroy at least 10 enemy units
+event_msg@en = An ambush was waiting deep in the pass!
 
 [node M07]
 art   = gfx/brief/m07.png
@@ -229,6 +324,20 @@ enemy_co = EAGLE  # 空の要衝: 制空権を握られている
 sub = CAPTURE:11:拠点を11個以上確保する
 sub = SURVIVE:2:FIGHTER:戦闘機を2機以上生存させる
 event = TURN:10 | SPAWN:1:FIGHTER:32,4:2 | 敵の増援航空隊が飛来した！
+
+# --- English ---
+title@en = Operation 7: Key Airfields
+brief@en = Neutral airfields dot the shores of the great lake. Whoever takes them rules the skies.
+brief@en = The lake blocks ground units. Capture the lakeside airfields with infantry,
+brief@en = and intercept enemy bombers with fighters. Don't forget AA tank escorts.
+story@en = Abandoned airfields dot the lakeshore.
+story@en = Staff Officer Werner|Without the skies, we can't cross the plains ahead.
+story@en = Lt. Mira|Whoever takes the airfields first wins. Let's hurry.
+story_win@en = Lt. Mira|Airfields secured. The skies are ours.
+story_win@en = Staff Officer Werner|We can advance without watching overhead. Welcome news.
+sub_desc@en = Hold at least 11 bases
+sub_desc@en = Keep at least 2 fighters alive
+event_msg@en = Enemy air reinforcements have arrived!
 
 [node M13]
 art   = gfx/brief/m13.png
@@ -258,6 +367,24 @@ sub = MAX_TURNS:24:24ターン以内に勝利する
 sub = MAX_LOSS:3:損失3部隊以内で勝利する
 sub = SURVIVE:2:RECON:偵察部隊を2部隊以上生存させる
 event = TURN:10 | SPAWN:1:MECH_INF:30,12:2 | 敵の夜間警戒隊が動き出した！
+
+# --- English ---
+title@en = Operation 8: Night Raid
+brief@en = Having lost the skies, the enemy has stopped moving by day and moves only at night.
+brief@en = So we go out at night too. This operation is night from start to finish.
+brief@en = Vision is short at night. The open plain in the middle leaves you exposed.
+brief@en = Go around through the forests on both flanks, and find them before they find you.
+brief@en = Send recon units ahead, and keep seeing farther than the enemy does.
+story@en = Staff Officer Werner|The enemy stopped moving by day. Because we took the skies.
+story@en = Lt. Mira|So we go out at night as well?
+story@en = Staff Officer Werner|Yes. No one sees well at night. Whoever spots the other first wins.
+story@en = Lt. Mira|...I'll strengthen our recon. No lights allowed.
+story_win@en = Lt. Mira|Enemy position taken. They never managed to spot us.
+story_win@en = Staff Officer Werner|The night is no longer on their side.
+sub_desc@en = Win within 24 turns
+sub_desc@en = Win losing no more than 3 units
+sub_desc@en = Keep at least 2 recon units alive
+event_msg@en = The enemy night watch is on the move!
 
 [node M11]
 art   = gfx/brief/m11.png
@@ -294,6 +421,26 @@ event = TURN:2 | SPAWN:0:ENGINEER:5,7:1 | 工兵隊が到着した。隣接ヘ�
 event = TURN:12 | MSG | 南方連合が東部で攻勢に出た。此方は西から押せる！
 event = LOSS:1:8 | SPAWN:3:HTANK:6,24:2 | 北方同盟が重戦車を繰り出してきた！
 
+# --- English ---
+title@en = Operation 9: Joint Front
+brief@en = The Southern Union has joined the war. The Federation brought in the Northern Pact: 2 vs 2.
+brief@en = The Southern Union is an ally. You can't fire on them, and they won't fire on you.
+brief@en = You can't capture allied bases, but enemies the allies spot are visible to you too.
+brief@en = Engineers are coming. Demolish bases on adjacent hexes to cut enemy income and supply.
+brief@en = (Take the Eastern Federation capital to win, even if the Northern Pact still stands.)
+brief@en = (Holding 14 bases with your own forces also wins. Allied bases don't count.)
+story@en = The Southern Union entered the war, after a long neutrality.
+story@en = Lt. Mira|They're allies. We can't fire on them, and they won't fire on us.
+story@en = Staff Officer Werner|Don't rely on them. That nation acts in its own interest.
+story@en = Lt. Mira|...Still, less pressure from the east is welcome.
+story_win@en = Lt. Mira|Victory on the joint front. The Southern Union took losses too.
+story_win@en = Staff Officer Werner|...Thank them. They may not be on our side next time.
+sub_desc@en = Win within 30 turns
+sub_desc@en = Win losing no more than 6 units
+event_msg@en = Engineers arrived: demolish or restore adjacent terrain.
+event_msg@en = The Southern Union attacks in the east. Push from the west!
+event_msg@en = The Northern Pact has sent in heavy tanks!
+
 [node M08]
 art   = gfx/brief/m08.png
 reward = gfx/reward/m08.png
@@ -320,6 +467,21 @@ sub = CAPTURE:12:都市を含む拠点を12個以上確保する
 sub = MAX_LOSS:6:損失6部隊以内で勝利する
 event = BLD:0:14 | SPAWN:1:HTANK:31,8:2 | 都市を奪われた敵が本格的な反攻に出た！
 
+# --- English ---
+title@en = Operation 10: Battle for the Supply Cities
+brief@en = The last supply hub before the enemy capital region. Take the cities in the center
+brief@en = and our ability to keep fighting will rise sharply.
+brief@en = Rush infantry in by truck and seize the cities quickly.
+brief@en = (Hold 16 bases to win without taking the enemy capital.)
+story@en = Staff Officer Werner|Supplies to the enemy capital pass through these cities.
+story@en = Lt. Mira|Take them and their production will dwindle.
+story@en = Lt. Mira|Which also means they'll defend them desperately.
+story_win@en = Lt. Mira|Supply cities taken. Enemy production is visibly falling.
+story_win@en = Staff Officer Werner|The squeeze is working. But a starving army always lunges forward.
+sub_desc@en = Hold at least 12 bases, including cities
+sub_desc@en = Win losing no more than 6 units
+event_msg@en = Stripped of its cities, the enemy counterattacks in force!
+
 [node N1]
 art   = gfx/brief/m04.png
 reward = gfx/reward/m04.png
@@ -344,6 +506,20 @@ enemy_co = WOLF   # 制海権の争奪: 敵艦隊が強い
 sub = SURVIVE:1:BATTLESHIP:戦艦を1隻以上生存させる
 sub = MIN_KILLS:10:敵艦隊を10部隊以上撃破する
 event = TURN:15 | SPAWN:1:CRUISER:41,15:2 | 敵主力艦隊が出撃した！
+
+# --- English ---
+title@en = Operation 11: Command of the Sea
+brief@en = The enemy capital lies on a fortress island to the east. First we must win the seas around it.
+brief@en = Destroy the enemy fleet with battleships and cruisers, and win the air with carrier aircraft.
+brief@en = Once the sea is ours, ferry landing forces to the island and take the command post.
+brief@en = Bring supply ships along to keep the front-line ships supplied at sea.
+story@en = The sea is open. Neither fleet has sighted the other yet.
+story@en = Lt. Mira|We need command of the sea. Every operation from here starts on the water.
+story_win@en = The enemy ships vanished from the chart.
+story_win@en = Lt. Mira|Command of the sea secured. The sea lanes are open to us now.
+sub_desc@en = Keep at least 1 battleship alive
+sub_desc@en = Destroy at least 10 enemy fleet units
+event_msg@en = The enemy main fleet has sortied!
 
 [node M09]
 art   = gfx/brief/m09.png
@@ -373,6 +549,23 @@ sub = MAX_LOSS:8:損失8部隊以内で勝利する
 event = TURN:12 | SPAWN:1:TANK:41,13:3 | 敵機甲師団が展開した！
 event = LOSS:1:12 | FUNDS:0:1500 | 戦果が本国に伝わり、追加予算が下りた
 
+# --- English ---
+title@en = Operation 12: Decisive Battle on the Plains
+brief@en = The enemy field army's main force has deployed on the plains. Destroy it
+brief@en = and the road to the capital opens. It will be a great tank battle.
+brief@en = Don't neglect SP gun support fire or air defense.
+story@en = Marshal Zakharov|So you've come this far, commander of the West.
+story@en = Marshal Zakharov|But tricks don't work on the plains. Numbers and steel decide it.
+story@en = Lt. Mira|...Shall I cut the radio, Commander?
+story@en = Staff Officer Werner|No need. He's uneasy too.
+story_win@en = Marshal Zakharov|...Splendid. That was no trick.
+story_win@en = Lt. Mira|The marshal has withdrawn. The radio's gone silent too.
+story_win@en = Staff Officer Werner|He lost on the plains. Little stands between us and his homeland now.
+sub_desc@en = Win within 35 turns
+sub_desc@en = Win losing no more than 8 units
+event_msg@en = An enemy armored division has deployed!
+event_msg@en = News of our victories reached home. Extra funds approved
+
 [node N2]
 art   = gfx/brief/m02.png
 reward = gfx/reward/m02.png
@@ -398,6 +591,21 @@ enemy_co = EAGLE  # 敵首都上陸: 揚陸部隊を空から叩かれる
 sub = SURVIVE:1:T_SHIP:輸送艦を1隻以上生存させ橋頭堡を築く
 sub = MAX_TURNS:50:50ターン以内に上陸を成功させる
 event = AREA:0:43,15:8 | SPAWN:1:AT_INFANTRY:43,15:3 | 水際の防衛隊が展開した！
+
+# --- English ---
+title@en = Operation 16: Landing at the Enemy Capital
+brief@en = The enemy capital faces the eastern sea. Launch the largest landing in history from the west.
+brief@en = Pound the shore defenses with naval guns and carrier aircraft, then land troops from transports.
+brief@en = The enemy is dug in with coastal guns, AA, and armor. Clear coastal ships with escort destroyers,
+brief@en = build a bridgehead, then advance on the enemy command post inland.
+story@en = For the first time, Western flags turned toward the enemy's own coast.
+story@en = Lt. Mira|Landing now. From here on, it's their soil.
+story@en = Staff Officer Werner|Carefully. A cornered beast is the most dangerous.
+story_win@en = A Western flag stands on the enemy's home shore.
+story_win@en = Lt. Mira|The landing succeeded. ...We made it this far, Commander.
+sub_desc@en = Keep at least 1 transport ship alive and build a bridgehead
+sub_desc@en = Land successfully within 50 turns
+event_msg@en = The shoreline defenders have deployed!
 
 [node M14]
 art   = gfx/brief/m14.png
@@ -427,6 +635,25 @@ sub = SURVIVE:2:AT_INFANTRY:対戦車部隊を2部隊以上残して持ちこた
 sub = KEEP_BLD:4:拠点を4つ以上保ったまま持ちこたえる
 event = TURN:6 | SPAWN:1:LTANK:26,5:2 | 北の迂回路に敵の軽戦車が回り込んだ！
 event = TURN:9 | SPAWN:1:MECH_INF:26,18:2 | 南の隘路からも敵の機械化歩兵が現れた！
+
+# --- English ---
+title@en = Operation 13: Fallback Line
+brief@en = Our victory on the plains carried us too far. Enemy armor has appeared on our flank.
+brief@en = **There is no "destroy all enemies" victory here. Hold out for 16 turns and you win.**
+brief@en = The central valley is narrow and easy to hold, but there are detours to the north and south.
+brief@en = Leave them unguarded and the enemy will get behind you.
+brief@en = Block the passes with anti-tank units and SP guns. You can give up the cities. Hold the line.
+story@en = Lt. Mira|Commander, enemy armor on our flank. ...We advanced too fast.
+story@en = Staff Officer Werner|Fall back before we're surrounded. All units, to the fallback line.
+story@en = Lt. Mira|Fall back? After pushing them this far?
+story@en = Staff Officer Werner|Those who try to hold everything lose everything. Hold the line.
+story_win@en = Lt. Mira|The enemy pursuit has stopped. We're holding the fallback line.
+story_win@en = Staff Officer Werner|Lost towns can be retaken. The division is still alive.
+sub_desc@en = Hold out losing no more than 4 units
+sub_desc@en = Hold out with at least 2 anti-tank units left
+sub_desc@en = Hold out with at least 4 bases
+event_msg@en = Enemy light tanks swung around the north detour!
+event_msg@en = Enemy mech infantry emerged from the south pass too!
 
 [node M12]
 art   = gfx/brief/m12.png
@@ -459,6 +686,24 @@ event = TURN:2 | SPAWN:0:ENGINEER:5,7:1 | 工兵隊が到着した。道路を�
 event = TURN:14 | MSG | 東方連邦と南方連合が中央の丘で衝突した。今が好機だ！
 event = BLD:0:16 | SPAWN:1:ROCKET:20,4:1 | 拠点を取られすぎた東方連邦がロケット砲を投入した！
 
+# --- English ---
+title@en = Operation 14: Three-Way Crossroads
+brief@en = The Southern Union left the joint front and dug in on the key hill on its own.
+brief@en = Neither we nor they have any allies. It's a three-way melee.
+brief@en = To avoid a two-front war, it may pay to wait for the other two to clash.
+brief@en = (Hold 17 bases to win without crushing both armies.)
+story@en = The Southern Union dug in on the key hill on its own.
+story@en = Lt. Mira|They say the joint front is over. They wouldn't tell me why.
+story@en = Staff Officer Werner|I told you. That nation acts in its own interest.
+story@en = Lt. Mira|It's three-way now. We could wait for the other two to clash.
+story_win@en = Lt. Mira|We won the three-way battle. The Southern Union is pulling back west.
+story_win@en = Staff Officer Werner|Don't pursue. We can't afford more enemies right now.
+sub_desc@en = Hold at least 14 bases
+sub_desc@en = Destroy at least 12 units from both armies combined
+event_msg@en = Engineers arrived. Cut the roads to slow both armies down.
+event_msg@en = The Federation and the Union clashed on the hill. Strike now!
+event_msg@en = Losing too many bases, the Federation brings in rockets!
+
 [node N3]
 art   = gfx/brief/m03.png
 reward = gfx/reward/m03.png
@@ -487,6 +732,24 @@ event = TURN:14 | SPAWN:1:DESTROYER:35,15:2 | 敵増援艦隊が内海に進入�
 event = LOSS:1:10 | FUNDS:0:1200 | 内海の制海権が傾き、追加予算が下りた
 event = CAPTURED:0:18,12 | COPOWER:1 | 北の島の港を奪われた敵指揮官が全軍に反撃を命じた！
 event = TURN:26 | WEATHER:2:6 | 三角州に季節風が吹き込み、激しい雨になった
+
+# --- English ---
+title@en = Operation 15: Battle of the Delta
+brief@en = Before the enemy homeland lies a vast delta embracing an inland sea.
+brief@en = The inland sea cuts deep, so naval guns can directly support fighting on both shores.
+brief@en = The land bridges to the north and south are narrow, and armor has no other way through.
+brief@en = Take the island in the bay with transports to gain a forward base for ships and aircraft.
+brief@en = Mesh land, sea, and air together. No single arm will break through.
+story@en = Lt. Mira|The delta. We'll need land, sea, and air, all of it.
+story@en = Staff Officer Werner|Get through here and the enemy capital is right in front of us.
+story_win@en = Lt. Mira|We're through the delta. Land, sea, and air meshed well.
+story_win@en = Staff Officer Werner|The enemy capital is right ahead. Don't slack on preparations.
+sub_desc@en = Hold at least 16 bases (you start with 12: take 4 neutral ones in the bay)
+sub_desc@en = Win within 45 turns
+event_msg@en = Enemy fleet reinforcements entered the inland sea!
+event_msg@en = The inland sea is tilting our way. Extra funds approved
+event_msg@en = Losing the north island port, the enemy counterattacks!
+event_msg@en = Monsoon winds sweep the delta, bringing heavy rain
 
 [node N4]
 art   = gfx/brief/m09.png
@@ -519,6 +782,25 @@ event = AREA:0:42,21:6 | SPAWN:1:HTANK:45,25:2 | 要塞守備隊の重戦車が�
 event = TURN:18 | TERRAIN:19,22:r | 敵が南の橋を爆破した！残る渡河点は北の一本のみ
 event = CAPTURED:0:27,17 | FUNDS:0:1000 | 山稜の隘路を確保。後方から補給が届いた
 
+# --- English ---
+title@en = Operation 17: Harbor Fortress
+brief@en = One last barrier stands before the capital: a harbor fortress built on a peninsula.
+brief@en = The central ridge has only two passes, and only two bridges cross the river.
+brief@en = The land route alone won't break it. Shell its north shore from the northern bay,
+brief@en = win the skies, then send in the landing force.
+brief@en = Break through here and only the enemy capital remains.
+story@en = Lt. Mira|That fortress seals the bay. It's the last lid.
+story@en = Marshal Zakharov|I will not yield. Your bones will fill this wall.
+story@en = Lt. Mira|...You've lost some of your composure, Marshal.
+story_win@en = Lt. Mira|The fortress has fallen. The bay is open.
+story_win@en = Staff Officer Werner|The last lid is off. All the marshal has left is his capital.
+sub_desc@en = Take the fortress within 55 turns
+sub_desc@en = Destroy at least 14 enemy units
+event_msg@en = The fortress AA batteries have been reinforced!
+event_msg@en = Fortress heavy tanks have sortied!
+event_msg@en = Enemy blew the south bridge! Only the north crossing is left
+event_msg@en = Ridge pass secured. Supplies arrived from the rear
+
 [node M10]
 art   = gfx/brief/m10.png
 reward = gfx/reward/m10.png
@@ -549,6 +831,26 @@ sub = MIN_KILLS:12:敵を12部隊以上撃破する
 event = AREA:0:28,8:5 | SPAWN:1:HTANK:28,8:2 | 首都防衛隊が最後の抵抗を見せる！
 event = TURN:20 | SPAWN:1:ROCKET:28,8:2 | 敵が予備のロケット砲隊を投入した！
 event = CAPTURED:0:35,9 | COPOWER:1 | 軍港を失った敵が最後の力を振り絞る！
+
+# --- English ---
+title@en = Operation 18: Assault on the Capital
+brief@en = We hold a bridgehead on the enemy homeland. Only the fortress capital to the northeast remains.
+brief@en = The capital is ringed by ridges, and the approach narrows to two highways.
+brief@en = But a bay in the southeast wraps around to the east of the capital.
+brief@en = Pound the defenses beyond the ridge with naval guns, clear the highways, and push up.
+brief@en = It will take everything we have on land, sea, and air.
+brief@en = This battle will decide the fate of the continent.
+story@en = At the end of a long front, the enemy capital came into view.
+story@en = Staff Officer Werner|This is it. The rest is up to your command.
+story@en = Lt. Mira|Commander. ...Let's end this.
+story_win@en = The guns fell silent. A white flag rises over the capital.
+story_win@en = Marshal Zakharov|...The victory is yours. You fought well.
+story_win@en = Lt. Mira|Commander. It's over. ...It's really over.
+sub_desc@en = Take the capital losing no more than 8 units
+sub_desc@en = Destroy at least 12 enemy units
+event_msg@en = The capital guard makes its last stand!
+event_msg@en = The enemy commits its reserve rocket batteries!
+event_msg@en = Having lost the naval port, the enemy gives it everything!
 
 [node M19]
 art   = gfx/brief/m19.png
@@ -584,6 +886,25 @@ sub = MAX_TURNS:40:40ターン以内に勝利する
 sub = MAX_LOSS:20:損失20部隊以内で勝利する
 sub = MIN_KILLS:60:敵を60部隊以上撃破する
 
+# --- English ---
+title@en = Operation 19: Total War
+brief@en = Having lost its capital, the Eastern Federation has thrown every remaining force into this battle.
+brief@en = **At the start the enemy matches your numbers, but reinforcements arrive in two waves.**
+brief@en = By turn 3 the enemy will outnumber you two to one. Get your formation ready before then.
+brief@en = Land, sea, and air are all here. Don't hold back the units you've carried over.
+brief@en = Only 3 routes cross the central mountains, and only 2 cross the river to their east.
+story@en = Lt. Mira|Commander, every enemy unit is moving. Even their rear reserves.
+story@en = Staff Officer Werner|They lost the capital and can still field this much?
+story@en = Lt. Mira|...Even numbers at first. But more waves are coming. Twice our size in the end.
+story@en = Staff Officer Werner|Then take shape before they're all here. After that, just hold.
+story@en = General Graf had saved everything for this battle.
+story_win@en = Lt. Mira|...The enemy is withdrawing. We have no units able to pursue.
+story_win@en = Staff Officer Werner|No need to chase. That was their last blow.
+story_win@en = Staff Officer Werner|The next one ends it, Lieutenant.
+sub_desc@en = Win within 40 turns
+sub_desc@en = Win losing no more than 20 units
+sub_desc@en = Destroy at least 60 enemy units
+
 [node M20]
 art   = gfx/brief/m20.png
 reward = gfx/reward/m20.png
@@ -610,3 +931,18 @@ enemy_co = HERTA  # 残照: 最後まで残ったのは主計将校だった
 no_reinforce = 1  # 消化試合にする。持越しぶんの敵増援も出さない
 sub = MAX_TURNS:15:15ターン以内に勝利する
 sub = MAX_LOSS:1:損失1部隊以内で勝利する
+
+# --- English ---
+title@en = Final Operation: Last Light (Operation 20)
+brief@en = The Eastern Federation's resistance is over. Only the command post garrison remains.
+brief@en = The enemy has no reinforcements. With the units you carried over, bring the curtain down quietly.
+brief@en = Take the enemy capital and this war is over.
+story@en = Lt. Mira|Enemy command post confirmed. Garrison only. No sign of reinforcements.
+story@en = Staff Officer Werner|I see. ...Until yesterday, a whole army stood there.
+story@en = Lt. Mira|Commander. Your final order.
+story@en = For the first time in three years, not one enemy arrow remained on the map.
+story_win@en = Lt. Mira|Enemy command post taken. ...It's over. All of it.
+story_win@en = Staff Officer Werner|Yes. You held out well.
+story_win@en = Someone opened a window. It was the sound of a morning without guns.
+sub_desc@en = Win within 15 turns
+sub_desc@en = Win losing no more than 1 unit

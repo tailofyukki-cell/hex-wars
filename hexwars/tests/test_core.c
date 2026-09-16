@@ -382,6 +382,78 @@ static void test_layers(void)
  * name<N> を書いたユニットはその陣営だけ変わることを見る。
  * 名前は表示専用なので、ここが壊れてもルールは変わらない＝
  * 自動テストで拾わないと「敵の名前が空欄」に気づけない。 */
+/* 表示言語の切り替え（データの「キー@en」行）。
+ * 英語で読むと英語に、日本語で読むと従来どおりになること。
+ * 複数行のブリーフィングは日本語の行が残らず英語だけになること、
+ * イベントの知らせ・副目標の説明は条件を変えずに文だけ差し替わることを見る。 */
+static void test_language(void)
+{
+    char err[256];
+    static Campaign c;
+
+    /* ---- 日本語（既定）---- */
+    data_set_lang("ja");
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    int m01 = -1;
+    for (int i = 0; i < c.n_nodes; i++) if (!strcmp(c.nodes[i].id, "M01")) m01 = i;
+    CHECK(m01 >= 0);
+    int ja_brief = c.nodes[m01].n_brief;
+    int ja_evs = c.nodes[m01].n_evs;
+    CHECK((unsigned char)c.nodes[m01].title[0] >= 0x80);        /* 日本語の題 */
+
+    /* ---- 英語 ---- */
+    data_set_lang("en");
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    CHECK(!strncmp(c.name, "The Western", 11));
+    const CpnNode *n = &c.nodes[m01];
+    CHECK(!strncmp(n->title, "Operation 1", 11));
+    CHECK(n->n_brief == 4);                                     /* 日本語の行が混ざらない */
+    for (int i = 0; i < n->n_brief; i++)
+        CHECK((unsigned char)n->brief[i][0] < 0x80);
+    for (int i = 0; i < n->n_story; i++)
+        CHECK((unsigned char)n->story[i].text[0] < 0x80);
+    CHECK(n->n_evs == ja_evs);                                  /* 条件は増えも減りもしない */
+    CHECK((unsigned char)n->evs[0].msg[0] < 0x80);
+    CHECK((unsigned char)n->subs[0].desc[0] < 0x80);
+    (void)ja_brief;
+
+    /* 全ノードで、英語の題・説明が入っていること（訳し漏れの検出） */
+    for (int i = 0; i < c.n_nodes; i++) {
+        CHECK((unsigned char)c.nodes[i].title[0] < 0x80);
+        for (int k = 0; k < c.nodes[i].n_evs; k++)
+            CHECK((unsigned char)c.nodes[i].evs[k].msg[0] < 0x80);
+        for (int k = 0; k < c.nodes[i].n_subs; k++)
+            CHECK((unsigned char)c.nodes[i].subs[k].desc[0] < 0x80);
+    }
+
+    /* ユニット名・地形名 */
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    int tank = data_find_unit_type(g, "TANK");
+    CHECK(tank >= 0);
+    CHECK(!strcmp(unit_name_of(&g->types[tank], 0), "T-40 Medium Tank"));
+    CHECK(!strcmp(unit_name_of(&g->types[tank], 2), "Leopard"));
+    for (int t = 0; t < g->n_types; t++)
+        for (int p = 0; p < MAX_PLAYERS; p++)
+            CHECK((unsigned char)unit_name_of(&g->types[t], p)[0] < 0x80);
+    for (int t = 0; t < g->n_terrains; t++)
+        CHECK((unsigned char)g->terrains[t].name[0] < 0x80);
+
+    /* マップ一覧の3列目 */
+    static MapList ml;
+    CHECK(data_load_maplist(&ml, "data/maps/maplist.txt") == 0);
+    for (int i = 0; i < ml.n; i++)
+        CHECK((unsigned char)ml.name[i][0] < 0x80);
+
+    /* 他のテストに影響しないよう日本語へ戻す */
+    data_set_lang("ja");
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(!strcmp(unit_name_of(&g->types[tank], 0), "中戦車「T-40型」"));
+    printf("test_language OK\n");
+}
+
 static void test_unit_names(void)
 {
     Game *g = &s_game;
@@ -3997,6 +4069,7 @@ int main(void)
     test_layers();
     test_transport();
     test_unit_names();
+    test_language();
     test_paradrop();
     test_produce_layers();
     test_evolve();
