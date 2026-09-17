@@ -160,6 +160,10 @@ struct App {
      * 拡縮する（縦横比は保ち、余りは黒帯）。座標計算は一切変えなくてよい。 */
     int opt_fullscreen; /* 0=ウィンドウ / 1=フルスクリーン（デスクトップ解像度） */
     char opt_lang[8];   /* 表示言語 "ja" / "en" */
+    /* 遊び方の簡単化。1=マップどおり（既定） / 0=切る。
+     * 切ると天候は常に晴れ、昼夜は常に昼になる。難しいと感じる人向け。 */
+    int opt_weather_rule;
+    int opt_night_rule;
     int opt_win_w, opt_win_h;   /* ウィンドウ時の大きさ（端のドラッグでも変わる） */
     int cpn_scroll;     /* 作戦全体図の縦スクロールpx */
     /* 進捗（progress.cfg に永続化。指揮官の解禁条件に使う） */
@@ -303,6 +307,8 @@ void options_load(App *a);
 void options_save(App *a);
 /* opt_fullscreen / opt_win_w / opt_win_h を実際の窓へ反映する */
 void app_apply_window(App *a);
+/* 天候・昼夜のオプションを盤面へ反映する。**対戦を始めた直後とロード直後に必ず呼ぶ** */
+void app_apply_play_rules(App *a);
 /* 表示言語。options.cfg の lang。初回は OS の言語が日本語なら ja、それ以外は en */
 void options_load_lang(App *a);
 /* 文言（text_ja.def、英語なら text_en.def を重ねる）を読む */

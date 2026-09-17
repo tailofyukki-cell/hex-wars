@@ -52,6 +52,8 @@ void options_load(App *a)
      * 思考の中身は変わらない（行動の間の待ちフレーム数だけ）。 */
     a->opt_cpu_speed = 1;
     a->opt_fullscreen = 0;
+    a->opt_weather_rule = 1;   /* 既定はマップどおり（今までと同じ遊び方） */
+    a->opt_night_rule = 1;
     a->opt_win_w = WIN_W;
     a->opt_win_h = WIN_H;
     char path[600];
@@ -74,6 +76,8 @@ void options_load(App *a)
             else if (!strcmp(key, "cutin")) a->opt_cutin = atoi(val);
             else if (!strcmp(key, "weather_fx")) a->opt_weather_fx = atoi(val) ? 1 : 0;
             else if (!strcmp(key, "fullscreen")) a->opt_fullscreen = atoi(val) ? 1 : 0;
+            else if (!strcmp(key, "weather_rule")) a->opt_weather_rule = atoi(val) ? 1 : 0;
+            else if (!strcmp(key, "night_rule"))   a->opt_night_rule = atoi(val) ? 1 : 0;
             else if (!strcmp(key, "win_w")) a->opt_win_w = atoi(val);
             else if (!strcmp(key, "win_h")) a->opt_win_h = atoi(val);
         }
@@ -122,13 +126,29 @@ void options_save(App *a)
     fprintf(f, "bgm = %d\nse = %d\nanim = %d\nanim_video = %d\nbgm_track = %d\n"
                "se_set = %d\ntilt = %d\ncutin = %d\nweather_fx = %d\n"
                "cpu_speed = %d\nvolcurve = 2\n"
-               "fullscreen = %d\nwin_w = %d\nwin_h = %d\nlang = %s\n",
+               "fullscreen = %d\nwin_w = %d\nwin_h = %d\nlang = %s\n"
+               "weather_rule = %d\nnight_rule = %d\n",
             a->opt_bgm, a->opt_se, a->opt_anim, a->opt_anim_video,
             a->opt_bgm_track, a->opt_se_set, a->opt_tilt,
             a->opt_cutin, a->opt_weather_fx, a->opt_cpu_speed,
             a->opt_fullscreen, a->opt_win_w, a->opt_win_h,
-            options_lang_to_save(a));
+            options_lang_to_save(a),
+            a->opt_weather_rule, a->opt_night_rule);
     fclose(f);
+}
+
+/* ------------------------------------------------------------------ */
+/* 遊び方の簡単化（天候・昼夜）                                        */
+/* ------------------------------------------------------------------ */
+/* 切る方向にだけ働く。マップが天候なし・昼夜なしなら、オンにしても増えない。
+ * セーブには「その対戦で有効だったか」が残るので、途中で切ったものを
+ * オンに戻しても、再開した対戦ではなく**次に始める対戦から**効く。
+ * 天候を切ると game_weather() は常に晴れを返し、天候イベントも起きない。
+ * 昼夜を切ると game_is_night() は常に偽＝夜の視界・攻撃補正が無くなる。 */
+void app_apply_play_rules(App *a)
+{
+    if (!a->opt_weather_rule) a->game.weather_on = 0;
+    if (!a->opt_night_rule)   a->game.night_on = 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -628,9 +648,10 @@ static void setup_draw_info(App *a, int px, int py, int pw)
     /* 普通と違うところだけ並べる。全部書くと読まなくなる。 */
     char note[128];
     note[0] = 0;
-    if (g->night_on && g->day_turns == 0)
+    /* オプションで切っていれば、その特徴は遊ぶときに出ないので書かない */
+    if (a->opt_night_rule && g->night_on && g->day_turns == 0)
         snprintf(note, sizeof note, "%s", tx("SETUP_TAG_NIGHT"));
-    if (g->weather_on && g->weather_fixed >= 0) {
+    if (a->opt_weather_rule && g->weather_on && g->weather_fixed >= 0) {
         if (note[0]) strncat(note, " / ", sizeof note - strlen(note) - 1);
         strncat(note, tx("SETUP_TAG_WXFIXED"), sizeof note - strlen(note) - 1);
     }
@@ -824,6 +845,7 @@ static void setup_start(App *a)
         g->co_id[p] = (int8_t)(g->n_cos > 0 ? a->sel_co[p] : -1);
     }
     game_start(g, SDL_GetTicks() | 1u);
+    app_apply_play_rules(a);
     a->next_screen = SCREEN_BATTLE;
 }
 
@@ -976,10 +998,13 @@ static void setup_draw(App *a)
  * 並べ替えや追加はこの enum を触るだけで済むようにしてある。 */
 enum {
     OPT_LANG_ROW,
-    OPT_BGM_ROW, OPT_SE_ROW, OPT_ANIM_ROW, OPT_ANIMVID_ROW,
-    OPT_TRACK_ROW, OPT_SESET_ROW,
-    OPT_WINMODE_ROW, OPT_WINSIZE_ROW,
-    OPT_TILT_ROW, OPT_CUTIN_ROW, OPT_WXFX_ROW, OPT_CPUSPD_ROW,
+    /* 遊び方 */
+    OPT_WXRULE_ROW, OPT_NIGHTRULE_ROW, OPT_CPUSPD_ROW,
+    /* 音 */
+    OPT_BGM_ROW, OPT_SE_ROW, OPT_TRACK_ROW, OPT_SESET_ROW,
+    /* 演出・表示 */
+    OPT_ANIM_ROW, OPT_ANIMVID_ROW, OPT_CUTIN_ROW, OPT_WXFX_ROW,
+    OPT_WINMODE_ROW, OPT_WINSIZE_ROW, OPT_TILT_ROW,
     OPT_BACK_ROW,
     OPT_ROWS
 };
@@ -994,9 +1019,9 @@ static void opt_leave(App *a)
 }
 
 /* 行の高さと間隔は行数から決める。項目を足すたびに手で調整しないで済むように。 */
-#define OPT_TOP    150
-#define OPT_BOTTOM (WIN_H - 62)
-#define OPT_ROW_H  38
+#define OPT_TOP    138
+#define OPT_BOTTOM (WIN_H - 58)
+#define OPT_ROW_H  32   /* 16行を収めるため。17pt の文字が上下に余白を持って入る高さ */
 
 static SDL_Rect opt_row_rect(int i)
 {
@@ -1142,6 +1167,12 @@ static void opt_change(App *a, int dir)
         a->opt_fullscreen = !a->opt_fullscreen;
         app_apply_window(a);
         break;
+    case OPT_WXRULE_ROW:
+        a->opt_weather_rule = !a->opt_weather_rule;
+        break;
+    case OPT_NIGHTRULE_ROW:
+        a->opt_night_rule = !a->opt_night_rule;
+        break;
     case OPT_WINSIZE_ROW:
         if (a->opt_fullscreen) return;   /* フルスクリーン中は大きさを選べない */
         opt_step_win_size(a, dir);
@@ -1249,10 +1280,12 @@ static void draw_volume_bar(App *a, int x, int y, int val)
 static void opt_draw(App *a)
 {
     fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 32, 42, 52, 255 });
-    draw_text_center(a, a->font_xl, WIN_W / 2, 80, COL_WHITE, tx("OPT_TITLE"));
+    draw_text_center(a, a->font_xl, WIN_W / 2, 70, COL_WHITE, tx("OPT_TITLE"));
 
     const char *labels[OPT_ROWS];
     labels[OPT_LANG_ROW]    = tx("OPT_LANG");
+    labels[OPT_WXRULE_ROW]  = tx("OPT_WXRULE");
+    labels[OPT_NIGHTRULE_ROW] = tx("OPT_NIGHTRULE");
     labels[OPT_BGM_ROW]     = tx("OPT_BGM");
     labels[OPT_SE_ROW]      = tx("OPT_SE");
     labels[OPT_ANIM_ROW]    = tx("OPT_ANIM");
@@ -1267,7 +1300,7 @@ static void opt_draw(App *a)
     labels[OPT_CPUSPD_ROW]  = tx("OPT_CPU_SPEED");
     labels[OPT_BACK_ROW]    = tx("OPT_BACK");
 
-    const int ty = (OPT_ROW_H - 22) / 2;   /* 文字の縦位置（行の中央） */
+    const int ty = (OPT_ROW_H - 26) / 2;   /* 文字の縦位置（行の中央。字面が下寄りなので少し上げる） */
     for (int i = 0; i < OPT_ROWS; i++) {
         SDL_Rect r = opt_row_rect(i);
         bool sel = (a->opt_row == i);
@@ -1315,6 +1348,15 @@ static void opt_draw(App *a)
         }
         case OPT_SESET_ROW:
             draw_text(a, a->font_m, vx, vy, COL_YELLOW, snd_se_set_name(a->opt_se_set));
+            break;
+        case OPT_WXRULE_ROW:
+            /* 切っているときは目立たせる（難しさが変わっていることに気づけるように） */
+            draw_text(a, a->font_m, vx, vy, a->opt_weather_rule ? COL_YELLOW : COL_WHITE,
+                      tx(a->opt_weather_rule ? "OPT_RULE_MAP" : "OPT_WXRULE_OFF"));
+            break;
+        case OPT_NIGHTRULE_ROW:
+            draw_text(a, a->font_m, vx, vy, a->opt_night_rule ? COL_YELLOW : COL_WHITE,
+                      tx(a->opt_night_rule ? "OPT_RULE_MAP" : "OPT_NIGHTRULE_OFF"));
             break;
         case OPT_WINMODE_ROW:
             draw_text(a, a->font_m, vx, vy, COL_YELLOW,
@@ -1394,6 +1436,7 @@ static void load_select(App *a)
         snd_se(SE_CANCEL);
         return;
     }
+    app_apply_play_rules(a);
     snd_se(SE_OK);
     a->campaign_mode = a->cps.active;
     if (a->campaign_mode) {
@@ -1812,6 +1855,7 @@ static void brief_start_battle(App *a)
         return;
     }
     campaign_begin(&a->game, &a->cpn, &a->cps, a->dep_seed, NULL);
+    app_apply_play_rules(a);
     a->next_screen = SCREEN_BATTLE;
 }
 
@@ -2412,6 +2456,7 @@ static void deploy_confirm(App *a)
 {
     snd_se(SE_OK);
     campaign_begin(&a->game, &a->cpn, &a->cps, a->dep_seed, a->dep_sel);
+    app_apply_play_rules(a);
     a->next_screen = SCREEN_BATTLE;
 }
 

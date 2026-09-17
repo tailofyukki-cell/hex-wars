@@ -200,6 +200,7 @@ int main(int argc, char *argv[])
                 a->game.ctrl[1] = CTRL_CPU_NORMAL;
                 a->game.co_id[0] = a->game.co_id[1] = -1;
                 game_start(&a->game, 12345u);
+                app_apply_play_rules(a);   /* 下の引数で天候を指定したときはそちらが勝つ */
                 /* 見た目確認用:
                  *   --screen battle <map> <0=晴 1=曇 2=雨> [ターン]
                  * ターンを指定すると昼夜を選べる（昼3・夜2の固定周期なので
