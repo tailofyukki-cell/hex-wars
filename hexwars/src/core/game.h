@@ -106,6 +106,11 @@ typedef struct Game {
     /* 昼夜。現在が昼か夜かはターン数から決まるので保持しない。
      * ここにあるのは「そのマップで夜を使うか」の可否だけ。 */
     uint8_t night_on;       /* 0=このマップは常に昼（.map の night=0） */
+    /* マップ本来の天候・昼夜の有無（game_start で weather_on / night_on から写す）。
+     * weather_on / night_on はオプションで切られて 0 になることがあるので、
+     * 途中でオプションを戻したときに「元はあったか」をここで判断する。 */
+    uint8_t map_weather_on;
+    uint8_t map_night_on;
     /* 周期の長さ。.map の day_turns / night_turns で変えられる。
      * day_turns=0 にすると「常夜」のマップになる。 */
     uint8_t day_turns;

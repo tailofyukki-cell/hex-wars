@@ -1464,6 +1464,8 @@ static void end_player_turn(Game *g)
 void game_start(Game *g, uint32_t seed)
 {
     rng_seed(&g->rng, seed);
+    g->map_weather_on = g->weather_on;
+    g->map_night_on = g->night_on;
     g->winner = WINNER_NONE;
     g->turn = 1;
     g->current = 0;

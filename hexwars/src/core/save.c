@@ -190,6 +190,10 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
         w_u8(w, (uint8_t)v->owner); w_u8(w, (uint8_t)v->done);
         w_str(w, v->msg, sizeof v->msg);
     }
+
+    /* v16: マップ本来の天候・昼夜の有無 */
+    w_u8(w, g->map_weather_on);
+    w_u8(w, g->map_night_on);
 }
 
 static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
@@ -352,6 +356,16 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
             v->owner = (int8_t)r_u8(r); v->done = (int8_t)r_u8(r);
             r_str(r, v->msg, sizeof v->msg);
         }
+    }
+
+    /* v15 以前は持っていないので「今有効かどうか」で代用する。
+     * オプションで切ったまま保存したセーブは、戻しても復活しない（元が分からないため） */
+    if (ver >= 16) {
+        g->map_weather_on = r_u8(r);
+        g->map_night_on = r_u8(r);
+    } else {
+        g->map_weather_on = g->weather_on;
+        g->map_night_on = g->night_on;
     }
 
     return r->underflow ? -1 : 0;

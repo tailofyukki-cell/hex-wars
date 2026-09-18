@@ -21,7 +21,7 @@ static const char *ACT_KEYS[] = {
 };
 
 /* ターンメニューの項目（順番を変えたらここだけ直せば済むように名前を付ける） */
-enum { TM_UNITLIST = 0, TM_END, TM_SAVE, TM_TILT, TM_TITLE, TM_CLOSE, TMENU_ITEMS };
+enum { TM_UNITLIST = 0, TM_END, TM_SAVE, TM_TILT, TM_OPTIONS, TM_TITLE, TM_CLOSE, TMENU_ITEMS };
 
 #define UNITLIST_VISIBLE 10   /* 未行動一覧に一度に表示する行数 */
 /* 重なりセルの情報パネルを切り替える間隔（フレーム。60fps想定で約1.5秒） */
@@ -965,6 +965,14 @@ static void tmenu_select(App *a)
         snd_se(SE_CURSOR);
         break;                  /* メニューは開いたまま＝続けて見比べられる */
     }
+    case TM_OPTIONS:
+        /* 対戦を抜けずにオプションへ。戻ると同じ盤面から続く。
+         * 天候・昼夜をここで切れば、今の対戦がその場で楽になる */
+        a->bs = BS_IDLE;
+        a->opt_from_battle = true;
+        a->next_screen = SCREEN_OPTIONS;
+        snd_se(SE_OK);
+        break;
     case TM_TITLE:
         a->next_screen = SCREEN_TITLE;
         break;
@@ -1239,6 +1247,14 @@ static void cancel_action(App *a)
 /* ------------------------------------------------------------------ */
 void battle_enter(App *a)
 {
+    /* オプションから戻ってきただけ。盤面・カメラ・選択は開く前のまま続ける
+     * （begin_side を呼ぶと手番開始の処理＝収入や補給が二重に走る） */
+    if (a->battle_resume) {
+        a->battle_resume = false;
+        a->bs = BS_IDLE;
+        snd_music(snd_battle_music(a->opt_bgm_track, a->game.map_name), true);
+        return;
+    }
     a->human_out = false;   /* 前の戦闘の結果を引きずらない */
     a->zoom = 1;
     a->sel_unit = -1;
@@ -2507,7 +2523,7 @@ static void draw_menus(App *a)
                  tx(a->opt_tilt ? "OPT_TILT_ON" : "OPT_TILT_OFF"));
         const char *items[TMENU_ITEMS] = {
             tx("TMENU_UNITLIST"), tx("TMENU_END"), tx("TMENU_SAVE"),
-            tiltbuf, tx("TMENU_TITLE"), tx("TMENU_CLOSE")
+            tiltbuf, tx("TMENU_OPTIONS"), tx("TMENU_TITLE"), tx("TMENU_CLOSE")
         };
         fill_rect(a, WIN_W / 2 - 150, 240, 300, TMENU_ITEMS * 52 + 30,
                   (SDL_Color){ 28, 32, 38, 245 });

@@ -6,7 +6,8 @@
 #include "campaign.h"
 
 #define SAVE_MAGIC   "HXWS"
-#define SAVE_VERSION 15  /* v15: 段階的な敵増援の予定表。
+#define SAVE_VERSION 16  /* v16: マップ本来の天候・昼夜の有無（途中で入り切りするため）。
+                          * v15: 段階的な敵増援の予定表。
                           * v14: 天候固定（常時雨のマップ用）。
                           * v13: 昼夜の周期（常夜マップ用）。
                           * v12: タイルの「本来の地形」を追加（工兵の復旧先）。

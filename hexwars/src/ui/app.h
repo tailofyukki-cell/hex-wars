@@ -164,6 +164,10 @@ struct App {
      * 切ると天候は常に晴れ、昼夜は常に昼になる。難しいと感じる人向け。 */
     int opt_weather_rule;
     int opt_night_rule;
+    /* 対戦中にメニューからオプションを開いたか。戻り先を対戦にし、
+     * battle_enter で盤面を初期化し直さないために使う */
+    bool opt_from_battle;
+    bool battle_resume;
     int opt_win_w, opt_win_h;   /* ウィンドウ時の大きさ（端のドラッグでも変わる） */
     int cpn_scroll;     /* 作戦全体図の縦スクロールpx */
     /* 進捗（progress.cfg に永続化。指揮官の解禁条件に使う） */

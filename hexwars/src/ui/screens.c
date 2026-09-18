@@ -141,14 +141,20 @@ void options_save(App *a)
 /* 遊び方の簡単化（天候・昼夜）                                        */
 /* ------------------------------------------------------------------ */
 /* 切る方向にだけ働く。マップが天候なし・昼夜なしなら、オンにしても増えない。
- * セーブには「その対戦で有効だったか」が残るので、途中で切ったものを
- * オンに戻しても、再開した対戦ではなく**次に始める対戦から**効く。
+ * 対戦中にオプションを開いて切り替えれば、その場で盤面に反映される
+ * （マップ本来の有無は Game.map_weather_on / map_night_on に残っている）。
  * 天候を切ると game_weather() は常に晴れを返し、天候イベントも起きない。
  * 昼夜を切ると game_is_night() は常に偽＝夜の視界・攻撃補正が無くなる。 */
 void app_apply_play_rules(App *a)
 {
-    if (!a->opt_weather_rule) a->game.weather_on = 0;
-    if (!a->opt_night_rule)   a->game.night_on = 0;
+    Game *g = &a->game;
+    g->weather_on = (uint8_t)(g->map_weather_on && a->opt_weather_rule);
+    g->night_on   = (uint8_t)(g->map_night_on && a->opt_night_rule);
+    /* 途中で天候を戻したとき、残りターンが尽きていると天候が動き出さない */
+    if (g->weather_on && g->weather_fixed < 0 && g->weather_left <= 0)
+        g->weather_left = 2;
+    /* 夜の視界補正が変わるので見え方を計算し直す */
+    game_update_vision(g);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1011,11 +1017,20 @@ enum {
 
 static void opt_enter(App *a) { a->opt_row = 0; }
 
-/* 戦闘BGMを試聴したまま画面を出るとタイトルで戦闘曲が鳴り続けるので戻す */
+/* 出るときの戻り先。対戦中に開いたなら同じ対戦へ、そうでなければタイトルへ。
+ * 戦闘BGMを試聴したまま出るとタイトルで戦闘曲が鳴り続けるので戻す */
 static void opt_leave(App *a)
 {
     options_save(a);
+    if (a->opt_from_battle) {
+        a->opt_from_battle = false;
+        app_apply_play_rules(a);      /* 天候・昼夜の切り替えを今の盤面へ */
+        a->battle_resume = true;      /* battle_enter で盤面を初期化しない */
+        a->next_screen = SCREEN_BATTLE;
+        return;
+    }
     snd_music(HWM_TITLE, true);
+    a->next_screen = SCREEN_TITLE;
 }
 
 /* 行の高さと間隔は行数から決める。項目を足すたびに手で調整しないで済むように。 */
@@ -1122,6 +1137,7 @@ static void opt_change(App *a, int dir)
 {
     switch (a->opt_row) {
     case OPT_LANG_ROW: {
+        if (a->opt_from_battle) { snd_se(SE_CANCEL); return; }
         int cur = 0;
         for (int i = 0; i < N_LANGS; i++)
             if (!strcmp(LANGS[i], a->opt_lang)) cur = i;
@@ -1215,7 +1231,6 @@ static void opt_select(App *a)
     if (a->opt_row == OPT_BACK_ROW) {
         snd_se(SE_CANCEL);
         opt_leave(a);
-        a->next_screen = SCREEN_TITLE;
     } else {
         opt_change(a, 1);
     }
@@ -1239,7 +1254,6 @@ static void opt_event(App *a, const SDL_Event *e)
         if (k == SDLK_x || k == SDLK_ESCAPE) {
             snd_se(SE_CANCEL);
             opt_leave(a);
-            a->next_screen = SCREEN_TITLE;
         }
     }
     if (e->type == SDL_MOUSEMOTION) {
@@ -1253,7 +1267,6 @@ static void opt_event(App *a, const SDL_Event *e)
         if (e->button.button == SDL_BUTTON_RIGHT) {
             snd_se(SE_CANCEL);
             opt_leave(a);
-            a->next_screen = SCREEN_TITLE;
             return;
         }
         SDL_Point p = { e->button.x, e->button.y };
@@ -1298,7 +1311,7 @@ static void opt_draw(App *a)
     labels[OPT_CUTIN_ROW]   = tx("OPT_CUTIN");
     labels[OPT_WXFX_ROW]    = tx("OPT_WEATHER_FX");
     labels[OPT_CPUSPD_ROW]  = tx("OPT_CPU_SPEED");
-    labels[OPT_BACK_ROW]    = tx("OPT_BACK");
+    labels[OPT_BACK_ROW]    = tx(a->opt_from_battle ? "OPT_BACK_BATTLE" : "OPT_BACK");
 
     const int ty = (OPT_ROW_H - 26) / 2;   /* 文字の縦位置（行の中央。字面が下寄りなので少し上げる） */
     for (int i = 0; i < OPT_ROWS; i++) {
@@ -1320,9 +1333,18 @@ static void opt_draw(App *a)
         char buf[80];
         switch (i) {
         case OPT_LANG_ROW:
-            /* 言語名はどの言語で表示していてもその言語自身の書き方で出す */
-            draw_text(a, a->font_m, vx, vy, COL_YELLOW,
-                      !strcmp(a->opt_lang, "en") ? "English" : "日本語");
+            /* 言語名はどの言語で表示していてもその言語自身の書き方で出す。
+             * 対戦中は変えられないので暗く出し、理由を添える */
+            if (a->opt_from_battle) {
+                char lb[96];
+                snprintf(lb, sizeof lb, "%s  %s",
+                         !strcmp(a->opt_lang, "en") ? "English" : "日本語",
+                         tx("OPT_LANG_LOCKED"));
+                draw_text(a, a->font_m, vx, vy, COL_GRAY, lb);
+            } else {
+                draw_text(a, a->font_m, vx, vy, COL_YELLOW,
+                          !strcmp(a->opt_lang, "en") ? "English" : "日本語");
+            }
             break;
         case OPT_BGM_ROW: draw_volume_bar(a, vx, r.y + ty + 4, a->opt_bgm); break;
         case OPT_SE_ROW:  draw_volume_bar(a, vx, r.y + ty + 4, a->opt_se);  break;

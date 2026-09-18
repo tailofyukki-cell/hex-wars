@@ -1216,6 +1216,11 @@ static void test_save_load(void)
         g->tiles[3][4].orig_terrain = (uint8_t)city;
     }
 
+    /* v16: オプションで天候を切った状態でも、マップ本来は天候ありだったことが残る。
+     * 残らないと、ロード後にオプションを戻しても天候が復活しない */
+    g->map_weather_on = 1; g->weather_on = 0;
+    g->map_night_on = 1;   g->night_on = 0;
+
     CHECK(save_game(g, &cs, "tests/tmp_test.sav", err, sizeof err) == 0);
 
     Game g2;
@@ -1245,6 +1250,8 @@ static void test_save_load(void)
     CHECK(cs2.store[1].type == 7 && cs2.store[1].exp == 11);
     CHECK(cs2.cleared == 0x15);
     CHECK(g2.objective_count == 16 && g2.objective_player == 0);
+    CHECK(g2.map_weather_on == 1 && g2.weather_on == 0);
+    CHECK(g2.map_night_on == 1 && g2.night_on == 0);
 
     /* 破損検知: 1バイト書き換えたらCRC不一致 */
     {
