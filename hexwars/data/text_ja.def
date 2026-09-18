@@ -328,6 +328,7 @@ CPNMAP_CO_FMT      = 指揮官: %s   （C キー / ここをクリックで変�
 ULIST_TITLE_FMT = 未行動ユニット （%d体）
 ULIST_ROW_FMT   = HP%2d  %s  (%d,%d)
 ULIST_EXP_FMT   = 経験%3d (ランク%d)
+ULIST_FUEL_FMT  = 燃料%3d/%d
 ULIST_EMPTY     = 未行動のユニットはありません
 
 # --- 出撃部隊の編成（持越しが上限を超えたとき）---

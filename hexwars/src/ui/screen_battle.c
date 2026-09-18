@@ -885,9 +885,29 @@ static void next_unit(App *a)
 /* ------------------------------------------------------------------ */
 /* 未行動ユニット一覧                                                   */
 /* ------------------------------------------------------------------ */
+/* 燃料切れで部隊を失う危険度。0=心配なし 1=注意 2=危険。
+ * 燃料切れで失われる（墜落・漂流する）部隊だけが対象で、陸上部隊は
+ * 燃料が尽きても動けなくなるだけなので出さない。
+ * 維持燃料は「次の自分の手番の開始時」に引かれ、自軍の補給拠点の上なら
+ * 引かれない（game.c の手番開始処理と同じ規則）。
+ *   危険 … 今の燃料が1手番分の維持燃料以下＝補給拠点に入らないと次の手番で失う
+ *   注意 … 3手番分以下＝そろそろ補給に向かわないと戻れなくなる */
+static int ulist_fuel_danger(const Game *g, const Unit *u)
+{
+    const UnitType *ut = &g->types[u->type];
+    if (ut->no_fuel != NOFUEL_DIE && ut->no_fuel != NOFUEL_DAMAGE) return 0;
+    const Tile *tile = &g->tiles[u->pos.y][u->pos.x];
+    const TerrainType *t = &g->terrains[tile->terrain];
+    if (tile->owner == u->owner && (t->supplies & (1u << ut->mclass))) return 0;
+    int per_turn = ut->upkeep > 0 ? ut->upkeep : 0;
+    if (u->fuel == 0 || (per_turn > 0 && u->fuel <= per_turn)) return 2;
+    if (per_turn > 0 ? u->fuel <= per_turn * 3 : u->fuel * 5 <= ut->fuel) return 1;
+    return 0;
+}
+
 static SDL_Rect ulist_rect(App *a, int i)
 {
-    /* 幅は「名前 / 経験値 / HP・地形・座標」の3列が重ならない長さ。 */
+    /* 幅は「名前 / 経験値 / 燃料 / HP・地形・座標」の4列が重ならない長さ。 */
     SDL_Rect r = { WIN_W / 2 - 340, 150 + (i - a->ulist_scroll) * 42, 680, 38 };
     return r;
 }
@@ -2428,9 +2448,19 @@ static void draw_menus(App *a)
                  * 育っているものは出撃編成画面と同じく緑で目立たせる。 */
                 int rank = unit_rank(u);
                 snprintf(buf, sizeof buf, tx("ULIST_EXP_FMT"), u->exp, rank);
-                draw_text(a, a->font_s, r.x + 300, r.y + 9,
+                draw_text(a, a->font_s, r.x + 260, r.y + 9,
                           rank > 0 ? (SDL_Color){ 160, 240, 160, 255 }
                                    : (sel ? COL_WHITE : COL_GRAY), buf);
+                /* 残燃料。航空機・艦船は燃料が尽きると墜落・漂流するので、
+                 * 補給に戻さないと失う部隊を一覧で見つけられるようにする。 */
+                int fuel_lv = ulist_fuel_danger(g, u);
+                snprintf(buf, sizeof buf, tx("ULIST_FUEL_FMT"), u->fuel, ut->fuel);
+                draw_text(a, a->font_s, r.x + 390, r.y + 9,
+                          fuel_lv == 2 ? (SDL_Color){ 255, 110, 100, 255 }
+                        : fuel_lv == 1 ? COL_YELLOW
+                        : (sel ? COL_WHITE : COL_GRAY), buf);
+                if (fuel_lv == 2 && !sel)
+                    outline_rect(a, r.x, r.y, r.w, r.h, (SDL_Color){ 220, 80, 70, 255 });
                 /* 位置と状態（HPが減っていれば黄色で警告的に） */
                 snprintf(buf, sizeof buf, tx("ULIST_ROW_FMT"),
                          u->hp, game_terrain_at(g, u->pos.x, u->pos.y)->name,
