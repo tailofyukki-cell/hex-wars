@@ -199,6 +199,13 @@ JOIN_WARN_SPLIT  = はみ出したぶんは元の位置に部隊として残り�
 JOIN_YES         = 合流する
 JOIN_NO          = やめる
 HINT_JOIN        = ←→:選択  Z:決定  X:やめる
+FUEL_WARN_DIE_FMT   = %s は次の手番の開始時に燃料切れで墜落します
+FUEL_WARN_DRIFT_FMT = %s は燃料切れで漂流し、毎ターンHPが減ります
+FUEL_WARN_NUM_FMT   = 残り燃料 %d ／ 1手番ごとに %d 消費
+FUEL_WARN_HELP      = 自軍の空港・港・空母などの補給できる場所へ入れば失いません
+FUEL_WARN_YES       = このまま終える
+FUEL_WARN_NO        = 移動をやり直す
+HINT_FUEL           = ←→:選択  Z:決定  X:移動をやり直す
 
 TMENU_UNITLIST  = 未行動ユニット
 TMENU_END       = ターン終了

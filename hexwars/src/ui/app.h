@@ -46,6 +46,7 @@ typedef enum {
     BS_UNITLIST,       /* 未行動ユニット一覧（選ぶとカーソルが飛ぶ） */
     BS_EVOLVE_CONFIRM, /* 進化の確認（不可逆なので必ず一度止める） */
     BS_JOIN_CONFIRM,   /* 合流の確認（片方が盤上から消えるので一度止める） */
+    BS_FUEL_CONFIRM,   /* 燃料切れで次の手番に失う位置で行動を終えようとしたときの確認 */
     BS_BATTLE_ANIM,    /* 戦闘アニメ（仕様書 8.2） */
     BS_CPU_TURN,
     BS_HANDOVER,       /* ホットシート交代画面 */
@@ -232,6 +233,8 @@ struct App {
     /* セーブメニュー */
     int   smenu_idx;
     int   join_target;       /* 合流先 unit index（BS_JOIN_CONFIRM 中のみ有効） */
+    int   fuel_pending_act;  /* BS_FUEL_CONFIRM で「このまま終える」を選んだら実行する行動 */
+    bool  fuel_ack;          /* 確認済み。select_action が一度だけ確認を飛ばす */
     /* 降車先候補。隣接6方向 + 空挺降下の「真下」1つで最大7 */
     int   unload_x[7], unload_y[7];
     int   n_unload;

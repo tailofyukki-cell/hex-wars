@@ -637,8 +637,49 @@ static void execute_attack(App *a, int target)
     }
 }
 
+/* 燃料切れで部隊を失う危険度。0=心配なし 1=注意 2=危険。
+ * 燃料切れで失われる（墜落・漂流する）部隊だけが対象で、陸上部隊は
+ * 燃料が尽きても動けなくなるだけなので出さない。
+ * 維持燃料は「次の自分の手番の開始時」に引かれ、自軍の補給拠点の上なら
+ * 引かれない（game.c の手番開始処理と同じ規則）。
+ *   危険 … 今の燃料が1手番分の維持燃料以下＝補給拠点に入らないと次の手番で失う
+ *   注意 … 3手番分以下＝そろそろ補給に向かわないと戻れなくなる */
+static int ulist_fuel_danger(const Game *g, const Unit *u)
+{
+    const UnitType *ut = &g->types[u->type];
+    if (ut->no_fuel != NOFUEL_DIE && ut->no_fuel != NOFUEL_DAMAGE) return 0;
+    const Tile *tile = &g->tiles[u->pos.y][u->pos.x];
+    const TerrainType *t = &g->terrains[tile->terrain];
+    if (tile->owner == u->owner && (t->supplies & (1u << ut->mclass))) return 0;
+    int per_turn = ut->upkeep > 0 ? ut->upkeep : 0;
+    if (u->fuel == 0 || (per_turn > 0 && u->fuel <= per_turn)) return 2;
+    if (per_turn > 0 ? u->fuel <= per_turn * 3 : u->fuel * 5 <= ut->fuel) return 1;
+    return 0;
+}
+
+/* 行動を終えたら盤上に残る行動か（燃料切れの確認を出す対象）。
+ * 取り消しや、確認ダイアログを自分で持つ進化、工兵の工作（地上部隊）は除く */
+static bool act_ends_on_board(int act)
+{
+    return act == ACT_WAIT || act == ACT_ATTACK || act == ACT_CAPTURE ||
+           act == ACT_UNLOAD || act == ACT_SUPPLY || act == ACT_HEAL;
+}
+
 static void select_action(App *a, int act)
 {
+    /* 燃料切れで次の自分の手番に失う位置で行動を終えようとしたら、一度止めて確認する。
+     * 移動はまだ巻き戻せる段階なので、ここで気づけば救える。 */
+    if (act_ends_on_board(act) && a->sel_unit >= 0) {
+        if (a->fuel_ack) {
+            a->fuel_ack = false;
+        } else if (ulist_fuel_danger(&a->game, &a->game.units[a->sel_unit]) == 2) {
+            a->fuel_pending_act = act;
+            a->amenu_idx = 1;          /* 既定は安全な側（移動をやり直す）に置く */
+            a->bs = BS_FUEL_CONFIRM;
+            snd_se(SE_CANCEL);
+            return;
+        }
+    }
     Game *g = &a->game;
     Unit *u = &g->units[a->sel_unit];
     switch (act) {
@@ -885,26 +926,6 @@ static void next_unit(App *a)
 /* ------------------------------------------------------------------ */
 /* 未行動ユニット一覧                                                   */
 /* ------------------------------------------------------------------ */
-/* 燃料切れで部隊を失う危険度。0=心配なし 1=注意 2=危険。
- * 燃料切れで失われる（墜落・漂流する）部隊だけが対象で、陸上部隊は
- * 燃料が尽きても動けなくなるだけなので出さない。
- * 維持燃料は「次の自分の手番の開始時」に引かれ、自軍の補給拠点の上なら
- * 引かれない（game.c の手番開始処理と同じ規則）。
- *   危険 … 今の燃料が1手番分の維持燃料以下＝補給拠点に入らないと次の手番で失う
- *   注意 … 3手番分以下＝そろそろ補給に向かわないと戻れなくなる */
-static int ulist_fuel_danger(const Game *g, const Unit *u)
-{
-    const UnitType *ut = &g->types[u->type];
-    if (ut->no_fuel != NOFUEL_DIE && ut->no_fuel != NOFUEL_DAMAGE) return 0;
-    const Tile *tile = &g->tiles[u->pos.y][u->pos.x];
-    const TerrainType *t = &g->terrains[tile->terrain];
-    if (tile->owner == u->owner && (t->supplies & (1u << ut->mclass))) return 0;
-    int per_turn = ut->upkeep > 0 ? ut->upkeep : 0;
-    if (u->fuel == 0 || (per_turn > 0 && u->fuel <= per_turn)) return 2;
-    if (per_turn > 0 ? u->fuel <= per_turn * 3 : u->fuel * 5 <= ut->fuel) return 1;
-    return 0;
-}
-
 static SDL_Rect ulist_rect(App *a, int i)
 {
     /* 幅は「名前 / 経験値 / 燃料 / HP・地形・座標」の4列が重ならない長さ。 */
@@ -1233,6 +1254,11 @@ static void cancel_action(App *a)
     case BS_EVOLVE_CONFIRM:
         build_action_menu(a);        /* 行動メニューへ戻す（何も変えない） */
         break;
+    case BS_FUEL_CONFIRM:
+        /* やめる＝移動を巻き戻して選び直させる（補給できる場所へ動かし直せる） */
+        a->fuel_ack = false;
+        select_action(a, ACT_CANCEL);
+        break;
     case BS_JOIN_CONFIRM: {
         /* 相手と重なったまま止めているので、移動を巻き戻してから選び直させる */
         if (a->sel_unit >= 0) {
@@ -1410,7 +1436,8 @@ void battle_event(App *a, const SDL_Event *e)
             }
             /* メニューのホバー */
             SDL_Point p = { e->motion.x, e->motion.y };
-            if (a->bs == BS_EVOLVE_CONFIRM || a->bs == BS_JOIN_CONFIRM) {
+            if (a->bs == BS_EVOLVE_CONFIRM || a->bs == BS_JOIN_CONFIRM ||
+                a->bs == BS_FUEL_CONFIRM) {
                 for (int i = 0; i < 2; i++) {
                     SDL_Rect r = evo_rect(i);
                     if (SDL_PointInRect(&p, &r)) a->amenu_idx = i;
@@ -1524,6 +1551,17 @@ void battle_event(App *a, const SDL_Event *e)
             cancel_action(a);   /* 一覧の外をクリックしたら閉じる */
             return;
         }
+        if (a->bs == BS_FUEL_CONFIRM) {
+            for (int i = 0; i < 2; i++) {
+                SDL_Rect r = evo_rect(i);
+                if (SDL_PointInRect(&p, &r)) {
+                    if (i == 0) { a->fuel_ack = true; select_action(a, a->fuel_pending_act); }
+                    else cancel_action(a);
+                    return;
+                }
+            }
+            return;   /* 外のクリックでは閉じない（うっかり落とさないため） */
+        }
         if (a->bs == BS_EVOLVE_CONFIRM || a->bs == BS_JOIN_CONFIRM) {
             bool join = (a->bs == BS_JOIN_CONFIRM);
             for (int i = 0; i < 2; i++) {
@@ -1594,6 +1632,16 @@ void battle_event(App *a, const SDL_Event *e)
             if (k == SDLK_RIGHT) a->amenu_idx = 1;
             if (k == SDLK_z || k == SDLK_RETURN) {
                 if (a->amenu_idx == 0) do_join(a);
+                else cancel_action(a);
+            }
+            if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
+            return;
+        }
+        if (a->bs == BS_FUEL_CONFIRM) {
+            if (k == SDLK_LEFT)  a->amenu_idx = 0;
+            if (k == SDLK_RIGHT) a->amenu_idx = 1;
+            if (k == SDLK_z || k == SDLK_RETURN) {
+                if (a->amenu_idx == 0) { a->fuel_ack = true; select_action(a, a->fuel_pending_act); }
                 else cancel_action(a);
             }
             if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
@@ -2219,6 +2267,7 @@ static void draw_panels(App *a)
     case BS_LAYER_PICK:    hint = tx("HINT_LAYER_PICK"); break;
     case BS_EVOLVE_CONFIRM: hint = tx("HINT_EVOLVE"); break;
     case BS_JOIN_CONFIRM:  hint = tx("HINT_JOIN"); break;
+    case BS_FUEL_CONFIRM:  hint = tx("HINT_FUEL"); break;
     case BS_UNITLIST:      hint = tx("HINT_UNITLIST"); break;
     case BS_PRODUCTION:    hint = tx("HINT_PROD"); break;
     case BS_SAVE_MENU:     hint = tx("HINT_SAVE"); break;
@@ -2504,6 +2553,35 @@ static void draw_menus(App *a)
             draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
                              sel ? COL_WHITE : COL_GRAY,
                              tx(i == 0 ? "EVOLVE_YES" : "EVOLVE_NO"));
+        }
+    }
+    /* 燃料切れの確認。何が起きるか（墜落か漂流か）と、今の燃料・1手番の消費を見せる */
+    if (a->bs == BS_FUEL_CONFIRM && a->sel_unit >= 0) {
+        const Unit *u = &g->units[a->sel_unit];
+        const UnitType *ut = &g->types[u->type];
+        int bw = 720, bh = 208;
+        int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 108;
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 130 });
+        fill_rect(a, bx, by, bw, bh, (SDL_Color){ 38, 26, 26, 248 });
+        outline_rect(a, bx, by, bw, bh, (SDL_Color){ 230, 90, 80, 255 });
+        char buf[192];
+        snprintf(buf, sizeof buf,
+                 tx(ut->no_fuel == NOFUEL_DIE ? "FUEL_WARN_DIE_FMT" : "FUEL_WARN_DRIFT_FMT"),
+                 unit_name_of(ut, u->owner));
+        draw_text_center(a, a->font_m, WIN_W / 2, by + 16, (SDL_Color){ 255, 150, 140, 255 }, buf);
+        snprintf(buf, sizeof buf, tx("FUEL_WARN_NUM_FMT"), u->fuel, ut->upkeep);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 52, COL_YELLOW, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 76, COL_GRAY, tx("FUEL_WARN_HELP"));
+        for (int i = 0; i < 2; i++) {
+            SDL_Rect r = evo_rect(i);
+            bool sel = (a->amenu_idx == i);
+            fill_rect(a, r.x, r.y, r.w, r.h,
+                      sel ? (SDL_Color){ 80, 110, 160, 255 }
+                          : (SDL_Color){ 40, 48, 60, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
+                             sel ? COL_WHITE : COL_GRAY,
+                             tx(i == 0 ? "FUEL_WARN_YES" : "FUEL_WARN_NO"));
         }
     }
     /* 合流の確認。合流後のHPと払い戻しを先に見せる（片方は盤上から消えるため） */

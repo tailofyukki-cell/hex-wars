@@ -203,6 +203,13 @@ JOIN_WARN_SPLIT  = The overflow stays behind as a unit
 JOIN_YES         = Join
 JOIN_NO          = Cancel
 HINT_JOIN        = Left/Right: Select  Z: Confirm  X: Cancel
+FUEL_WARN_DIE_FMT   = %s will crash from lack of fuel next turn
+FUEL_WARN_DRIFT_FMT = %s will run dry and drift, losing HP each turn
+FUEL_WARN_NUM_FMT   = Fuel left %d / %d used per turn
+FUEL_WARN_HELP      = Safe if it ends inside a friendly airport, port, or carrier
+FUEL_WARN_YES       = End anyway
+FUEL_WARN_NO        = Undo move
+HINT_FUEL           = Left/Right: Select  Z: Confirm  X: Undo move
 
 TMENU_UNITLIST  = Units Ready
 TMENU_END       = End Turn
