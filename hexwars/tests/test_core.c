@@ -1606,6 +1606,7 @@ static void test_commanders(void)
 
     /* HEAL: 全軍のHPが回復し、ゲージは0に戻る */
     g->units[ha].hp = 5;
+    g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
     g->co_gauge[0] = g->cos[graf].power_cost;
     CHECK(game_co_power_ready(g, 0));
     CHECK(game_co_activate(g, 0));
@@ -1613,9 +1614,29 @@ static void test_commanders(void)
     CHECK(g->co_gauge[0] == 0);
     CHECK(!game_co_power_ready(g, 0));
 
+    /* 必殺技は1手番に1回まで。RUSH は再行動で殴ったぶんゲージが溜まり直すので、
+     * 制限が無いと同じ手番のうちに何度も撃ててしまう。 */
+    {
+        g->co_id[0] = (int8_t)liese;
+        g->current = 0;
+        g->co_used_turn[0] = 0;
+        g->co_gauge[0] = g->cos[liese].power_cost;
+        CHECK(game_co_activate(g, 0));                 /* 1回目は撃てる */
+        g->co_gauge[0] = g->cos[liese].power_cost;     /* 溜め直しても */
+        CHECK(!game_co_power_ready(g, 0));             /* 同じ手番では撃てない */
+        CHECK(!game_co_activate(g, 0));
+        /* 一周して自分の手番が来れば、また撃てる */
+        int guard = 0;
+        do { game_end_turn(g); } while (g->current != 0 && ++guard < MAX_PLAYERS + 2);
+        CHECK(g->current == 0);
+        g->co_gauge[0] = g->cos[liese].power_cost;
+        CHECK(game_co_power_ready(g, 0));
+    }
+
     /* RUSH: 行動済みフラグが解除される */
     g->co_id[0] = (int8_t)liese;
     g->units[ha].flags |= UF_DONE;
+    g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
     g->co_gauge[0] = g->cos[liese].power_cost;
     CHECK(game_co_activate(g, 0));
     CHECK(!(g->units[ha].flags & UF_DONE));
@@ -1624,6 +1645,7 @@ static void test_commanders(void)
     g->co_id[0] = (int8_t)balt;
     g->co_power_turns[0] = 0;
     int before = battle_expect_damage_x10(g, &g->units[ha], &g->units[hb]);
+    g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
     g->co_gauge[0] = g->cos[balt].power_cost;
     CHECK(game_co_activate(g, 0));
     CHECK(g->co_power_turns[0] == 1);
@@ -1655,6 +1677,7 @@ static void test_commanders(void)
         g->co_id[0] = (int8_t)herta;
         g->units[ha].fuel = 1;
         g->units[ha].ammo = 0;
+        g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
         g->co_gauge[0] = g->cos[herta].power_cost;
         CHECK(game_co_activate(g, 0));
         const UnitType *ut = &g->types[g->units[ha].type];
@@ -1668,10 +1691,12 @@ static void test_commanders(void)
         CHECK(noel >= 0);
         g->co_id[0] = (int8_t)noel;
         g->units[ha].exp = 10;
+        g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
         g->co_gauge[0] = g->cos[noel].power_cost;
         CHECK(game_co_activate(g, 0));
         CHECK(g->units[ha].exp == 50);                 /* 10 + power_val(40) */
         g->units[ha].exp = 90;
+        g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
         g->co_gauge[0] = g->cos[noel].power_cost;
         CHECK(game_co_activate(g, 0));
         CHECK(g->units[ha].exp == 100);                /* 上限で止まる */
@@ -1684,6 +1709,7 @@ static void test_commanders(void)
         int far_enemy = game_spawn_unit(g, 1, inf, 20, 14, 10);
         CHECK(far_enemy >= 0);
         g->units[hb].hp = 10;                          /* ha に隣接している */
+        g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
         g->co_gauge[0] = g->cos[wolf2].power_cost;
         CHECK(game_co_activate(g, 0));
         CHECK(g->units[hb].hp == 7);                   /* 10 - power_val(3) */
@@ -1703,6 +1729,7 @@ static void test_commanders(void)
             g->turn = 4;                               /* 夜にする */
             CHECK(game_is_night(g));
             g->units[hb].hp = 10;
+            g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
             g->co_gauge[0] = g->cos[wolf2].power_cost;
             CHECK(game_co_activate(g, 0));
             CHECK(g->units[hb].hp == 7);               /* 陸の敵 */
@@ -1711,6 +1738,7 @@ static void test_commanders(void)
             g->units[ea].flags &= (uint8_t)~UF_ALIVE;
         }
         g->units[hb].hp = 2;
+        g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
         g->co_gauge[0] = g->cos[wolf2].power_cost;
         CHECK(game_co_activate(g, 0));
         CHECK(g->units[hb].hp == 1);                   /* とどめは刷さない */
@@ -1723,6 +1751,7 @@ static void test_commanders(void)
         g->co_id[0] = (int8_t)dieter;
         g->co_power_turns[0] = 0;
         int base_b = game_co_move_bonus(g, 0, &g->units[ha]);
+        g->co_used_turn[0] = 0;   /* 1手番1回の制限をテスト用に解除 */
         g->co_gauge[0] = g->cos[dieter].power_cost;
         CHECK(game_co_activate(g, 0));
         CHECK(game_co_move_bonus(g, 0, &g->units[ha])

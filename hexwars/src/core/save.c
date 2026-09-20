@@ -194,6 +194,8 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
     /* v16: マップ本来の天候・昼夜の有無 */
     w_u8(w, g->map_weather_on);
     w_u8(w, g->map_night_on);
+    /* v17: この手番に必殺技を使ったか（手番の途中で保存しても制限が続くように） */
+    for (int p = 0; p < MAX_PLAYERS; p++) w_u8(w, g->co_used_turn[p]);
 }
 
 static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
@@ -367,6 +369,9 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
         g->map_weather_on = g->weather_on;
         g->map_night_on = g->night_on;
     }
+    memset(g->co_used_turn, 0, sizeof g->co_used_turn);
+    if (ver >= 17)
+        for (int p = 0; p < MAX_PLAYERS; p++) g->co_used_turn[p] = r_u8(r);
 
     return r->underflow ? -1 : 0;
 }

@@ -2067,6 +2067,8 @@ static void draw_topbar(App *a)
             char cb[96];
             if (ready)
                 snprintf(cb, sizeof cb, "%s  %s", co->name, tx("CO_READY"));
+            else if (g->co_used_turn[g->current] && cur >= cost)
+                snprintf(cb, sizeof cb, "%s  %s", co->name, tx("CO_USED"));
             else
                 snprintf(cb, sizeof cb, "%s  %d%%", co->name, cur * 100 / cost);
             draw_text(a, a->font_s, r.x + 8, r.y + 5,

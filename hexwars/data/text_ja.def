@@ -328,6 +328,7 @@ CO_TITLE_FMT       = 【%s】
 CO_TITLE_DESC_FMT  = 【%s】%s
 LIST_SEP           = 、
 CO_READY           = 必殺技 準備完了！(P)
+CO_USED            = この手番は使用済み
 CO_POWER_BANNER_FMT = %s ─ %s ！
 CPNMAP_CO_FMT      = 指揮官: %s   （C キー / ここをクリックで変更）
 

@@ -330,6 +330,7 @@ CO_TITLE_FMT       = [%s]
 CO_TITLE_DESC_FMT  = [%s] %s
 LIST_SEP           = , 
 CO_READY           = Power ready! (P)
+CO_USED            = Already used this turn
 CO_POWER_BANNER_FMT = %s - %s!
 CPNMAP_CO_FMT      = Commander: %s   (C key / click here to change)
 

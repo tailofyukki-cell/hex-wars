@@ -87,6 +87,10 @@ typedef struct Game {
     /* 指揮官（CO）。co_id は cos[] の index（-1 または n_cos 超過で「なし」） */
     int8_t  co_id[MAX_PLAYERS];
     int16_t co_gauge[MAX_PLAYERS];       /* 必殺技ゲージ（power_cost で満タン） */
+    /* この手番で必殺技を使ったか。**1手番に1回まで**にするための印。
+     * 特に RUSH（全軍再行動）は、再行動で殴ったぶんゲージが溜まり直すので、
+     * これが無いと同じ手番のうちに何度も撃てて止まらなくなる。 */
+    uint8_t co_used_turn[MAX_PLAYERS];
     int8_t  co_power_turns[MAX_PLAYERS]; /* 効果継続ターン数（STRIKE/SCOUT用） */
 
     /* 天候（ラウンド単位で抽選し weather_left ターン継続。両陣営に同じ天候） */

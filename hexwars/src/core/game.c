@@ -582,6 +582,8 @@ void game_co_add_gauge(Game *g, int p, int amount)
 bool game_co_power_ready(const Game *g, int p)
 {
     const CommanderType *c = game_co(g, p);
+    if (p < 0 || p >= MAX_PLAYERS) return false;
+    if (g->co_used_turn[p]) return false;   /* 1手番に1回まで */
     return c && g->co_gauge[p] >= c->power_cost;
 }
 
@@ -590,6 +592,7 @@ bool game_co_activate(Game *g, int p)
     const CommanderType *c = game_co(g, p);
     if (!game_co_power_ready(g, p)) return false;
     g->co_gauge[p] = 0;
+    g->co_used_turn[p] = 1;
 
     switch (c->power_type) {
     case CO_POW_HEAL:
@@ -1356,6 +1359,8 @@ static int income_for(const Game *g, int player)
 /* 収入 + 補給 + 行動フラグリセット */
 static void begin_player_turn(Game *g)
 {
+    /* 新しい手番なのでまた1回使える */
+    if (g->current >= 0 && g->current < MAX_PLAYERS) g->co_used_turn[g->current] = 0;
     int p = g->current;
     g->funds[p] += income_for(g, p);
 
@@ -1466,6 +1471,7 @@ void game_start(Game *g, uint32_t seed)
     rng_seed(&g->rng, seed);
     g->map_weather_on = g->weather_on;
     g->map_night_on = g->night_on;
+    memset(g->co_used_turn, 0, sizeof g->co_used_turn);
     g->winner = WINNER_NONE;
     g->turn = 1;
     g->current = 0;
@@ -1645,6 +1651,7 @@ static void ev_run(Game *g, const MapEvent *e)
         if (game_co(g, e->a1)) {
             /* ゲージを満タンにしてから発動させる（通常の経路を通す） */
             g->co_gauge[e->a1] = game_co(g, e->a1)->power_cost;
+            g->co_used_turn[e->a1] = 0;   /* イベントの強制発動は制限を無視する */
             game_co_activate(g, e->a1);
         }
         break;
