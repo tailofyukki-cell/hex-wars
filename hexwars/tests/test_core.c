@@ -454,6 +454,91 @@ static void test_language(void)
     printf("test_language OK\n");
 }
 
+/* 隠れている敵（森・都市の中と潜水艦）の発見距離。
+ * **視界の半分まで**見つけられる（隠れた相手には1マスにつき視界を2使う）。
+ * 視界1の部隊でも隣接だけは見つけられる（下限1）。 */
+static void test_hidden_sight(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    game_start(g, 1234u);
+    g->fog = true;
+    g->co_id[0] = g->co_id[1] = -1;          /* 指揮官の視界補正を混ぜない */
+    g->weather_on = 0; g->night_on = 0;      /* 天候・夜の視界補正も切る */
+
+    int forest = -1;
+    for (int i = 0; i < g->n_terrains; i++)
+        if (!strcmp(g->terrains[i].id, "FOREST")) forest = i;
+    CHECK(forest >= 0);
+
+    int inf = data_find_unit_type(g, "INFANTRY");
+    int recon = data_find_unit_type(g, "RECON");
+    CHECK(inf >= 0 && recon >= 0);
+    int v_inf = g->types[inf].vision, v_rec = g->types[recon].vision;
+
+    /* 森に隠れた敵歩兵。まわりを平地にして視界そのものは通るようにする */
+    g->n_units = 0;
+    for (int x = 2; x <= 14; x++) g->tiles[6][x].terrain = 0;   /* PLAIN */
+    g->tiles[6][10].terrain = (uint8_t)forest;
+    int hid = game_spawn_unit(g, 1, inf, 10, 6, 10);
+    CHECK(hid >= 0);
+
+    /* 視界の半分ちょうどの距離なら見える。1マス外なら見えない */
+    for (int d = 1; d <= 6; d++) {
+        g->n_units = hid + 1;                       /* 観測者を置き直す */
+        int ob = game_spawn_unit(g, 0, recon, 10 - d, 6, 10);
+        CHECK(ob >= 0);
+        CHECK(game_unit_vision(g, &g->units[ob]) == v_rec);
+        game_update_vision(g);
+        bool seen = game_unit_visible_to(g, 0, &g->units[hid]);
+        CHECK(seen == (d <= v_rec / 2));
+        g->units[ob].flags = 0;                     /* 退場させて次の距離へ */
+    }
+
+    /* 視界の狭い部隊でも隣接なら見つけられる（下限1） */
+    {
+        g->n_units = hid + 1;
+        int ob = game_spawn_unit(g, 0, inf, 9, 6, 10);
+        game_update_vision(g);
+        CHECK(game_hidden_sight(g, &g->units[ob]) >= 1);
+        CHECK(game_unit_visible_to(g, 0, &g->units[hid]));
+        (void)v_inf;
+        g->units[ob].flags = 0;
+    }
+
+    /* 潜水艦は対潜ユニットからしか見つけられない（距離は同じく視界の半分） */
+    {
+        int sub = data_find_unit_type(g, "SUBMARINE");
+        int dd  = data_find_unit_type(g, "DESTROYER");
+        int cr  = data_find_unit_type(g, "CRUISER");
+        CHECK(sub >= 0 && dd >= 0 && cr >= 0);
+        CHECK(g->types[dd].anti_sub && !g->types[cr].anti_sub);
+        int sea = -1;
+        for (int i = 0; i < g->n_terrains; i++)
+            if (!strcmp(g->terrains[i].id, "SEA")) sea = i;
+        CHECK(sea >= 0);
+        for (int x = 2; x <= 14; x++) g->tiles[8][x].terrain = (uint8_t)sea;
+        g->n_units = 0;
+        int su = game_spawn_unit(g, 1, sub, 10, 8, 10);
+        int d2 = g->types[dd].vision / 2;
+        if (d2 < 1) d2 = 1;
+        int de = game_spawn_unit(g, 0, dd, 10 - d2, 8, 10);
+        game_update_vision(g);
+        CHECK(game_unit_visible_to(g, 0, &g->units[su]));      /* 駆逐艦は見つける */
+        g->units[de].flags = 0;
+        /* 対潜でない巡洋艦は、同じ距離でも見つけられない */
+        int cu = game_spawn_unit(g, 0, cr, 10 - d2, 8, 10);
+        game_update_vision(g);
+        CHECK(!game_unit_visible_to(g, 0, &g->units[su]));
+        (void)cu;
+    }
+    printf("test_hidden_sight OK\n");
+}
+
 static void test_unit_names(void)
 {
     Game *g = &s_game;
@@ -4105,6 +4190,7 @@ int main(void)
     test_layers();
     test_transport();
     test_unit_names();
+    test_hidden_sight();
     test_language();
     test_paradrop();
     test_produce_layers();

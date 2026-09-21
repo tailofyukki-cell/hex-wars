@@ -303,6 +303,14 @@ int  game_co_move_bonus(const Game *g, int p, const Unit *u);
 bool game_co_power_ready(const Game *g, int p);
 /* 必殺技を発動。成功=true（ゲージを消費し効果を適用） */
 bool game_co_activate(Game *g, int p);
+
+/* そのユニットの実際の視界（指揮官・天候・夜・CPU難易度の補正込み。下限1）。
+ * マップを照らす範囲にも、隠れた敵を見つけられる距離にも同じ値を使う。 */
+int  game_unit_vision(const Game *g, const Unit *u);
+/* 隠れている敵（森・都市の中、潜水艦）を見つけられる距離。
+ * **隠れた相手には視界を2マスぶん使う**ので、実際の視界の半分まで。
+ * 隣接だけは必ず見つけられるようにしたいので下限1。 */
+int  game_hidden_sight(const Game *g, const Unit *u);
 /* ゲージを加算（内部でも使うが、UI/テストから確認できるよう公開） */
 void game_co_add_gauge(Game *g, int p, int amount);
 

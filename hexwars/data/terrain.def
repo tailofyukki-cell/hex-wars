@@ -58,7 +58,7 @@ cost_foot  = 4
 cost_wheel = 6
 cost_track = 4
 cost_air   = 2
-hide       = 1
+hide       = 1   # 中の敵は「視界の半分」の距離まで見つけられる（隣接は必ず見つかる）
 color      = 55884F
 height     = 4
 

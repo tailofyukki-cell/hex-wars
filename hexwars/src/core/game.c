@@ -137,20 +137,7 @@ void game_update_vision(Game *g)
             const Unit *u = &g->units[i];
             if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
             if (!game_same_team(g, u->owner, p)) continue;
-            /* 視界の広さは**そのユニットの持ち主基準**で決める。
-             * 援軍の部隊にこちらの指揮官効果を乗せるのはおかしいため。 */
-            int o = u->owner;
-            const CommanderType *oco = game_co(g, o);
-            int vb = (g->ctrl[o] == CTRL_CPU_HARD) ? 1 : 0;   /* HARDのみ視界+1 */
-            if (oco && oco->vision_bonus && game_co_affects(g, o, u))
-                vb += oco->vision_bonus;
-            /* 天候による視界低下（下限1は必ず確保する） */
-            int vis = unit_type(g, u)->vision + vb + game_weather_vision_mod(g);
-            /* 夜は見えなくなるが、夜間ユニットだけは落ちない。
-             * この非対称が夜間ユニットを「偵察役」にする。 */
-            if (!unit_type(g, u)->night) vis += game_night_vision_mod(g);
-            if (vis < 1) vis = 1;
-            reveal_around(g, p, u->pos.x, u->pos.y, vis);
+            reveal_around(g, p, u->pos.x, u->pos.y, game_unit_vision(g, u));
         }
         /* チームの所有建物: 視界2 */
         int bonus = (g->ctrl[p] == CTRL_CPU_HARD) ? 1 : 0;
@@ -163,6 +150,29 @@ void game_update_vision(Game *g)
                     reveal_around(g, p, x, y, 2 + bonus);
             }
     }
+}
+
+/* そのユニットの実際の視界。**視界の広さは持ち主基準**で決める
+ * （援軍の部隊にこちらの指揮官効果を乗せるのはおかしいため）。 */
+int game_unit_vision(const Game *g, const Unit *u)
+{
+    int o = u->owner;
+    const CommanderType *oco = game_co(g, o);
+    int vb = (g->ctrl[o] == CTRL_CPU_HARD) ? 1 : 0;   /* HARDのみ視界+1 */
+    if (oco && oco->vision_bonus && game_co_affects(g, o, u))
+        vb += oco->vision_bonus;
+    /* 天候による視界低下（下限1は必ず確保する） */
+    int vis = unit_type(g, u)->vision + vb + game_weather_vision_mod(g);
+    /* 夜は見えなくなるが、夜間ユニットだけは落ちない。
+     * この非対称が夜間ユニットを「偵察役」にする。 */
+    if (!unit_type(g, u)->night) vis += game_night_vision_mod(g);
+    return vis < 1 ? 1 : vis;
+}
+
+int game_hidden_sight(const Game *g, const Unit *u)
+{
+    int d = game_unit_vision(g, u) / 2;   /* 隠れた相手には1マスにつき2使う */
+    return d < 1 ? 1 : d;                 /* 隣接だけは必ず見つけられる */
 }
 
 /* viewer から見てユニット u が見えるか（森・都市の隠蔽と潜水艦を考慮） */
@@ -182,12 +192,17 @@ bool game_unit_visible_to(const Game *g, int viewer, const Unit *u)
     bool need_adjacent = t->hide || ut->is_sub;
     if (!need_adjacent) return true;
 
-    /* 隣接する viewer ユニットがあれば視認可。潜水艦は対潜ユニット限定 */
+    /* 隠れている相手は**視界の半分の距離**まで見つけられる（game_hidden_sight）。
+     * 視界の広い偵察機ほど森や都市の中を覗ける一方、視界1の部隊は隣接が要る。
+     * 潜水艦は対潜ユニットからしか見つけられないのは従来どおり。
+     * 味方（チーム）の目も使う。探せるのは盤上に出ている部隊だけ。 */
     for (int i = 0; i < g->n_units; i++) {
         const Unit *v = &g->units[i];
-        if (!(v->flags & UF_ALIVE) || v->owner != viewer) continue;
-        if (hex_distance(v->pos.x, v->pos.y, u->pos.x, u->pos.y) > 1) continue;
+        if (!(v->flags & UF_ALIVE) || (v->flags & UF_LOADED)) continue;
+        if (!game_same_team(g, v->owner, viewer)) continue;
         if (ut->is_sub && !unit_type(g, v)->anti_sub) continue;
+        if (hex_distance(v->pos.x, v->pos.y, u->pos.x, u->pos.y)
+            > game_hidden_sight(g, v)) continue;
         return true;
     }
     return false;
