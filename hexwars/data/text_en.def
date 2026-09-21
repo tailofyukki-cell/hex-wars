@@ -245,7 +245,7 @@ CARGO_ROW_FMT    = %s   HP %d/10   Fuel %d/%d   Ammo %d/%d
 CARGO_ROW_SUP_FMT = %s   HP %d/10   Fuel %d/%d   Supplies %d/%d
 PANEL_SUPPLY_HINT = Supply: -1 per unit  Repair: 10 supplies = 1 HP
 
-HINT_IDLE       = Z: Select  N: Next unit  P: Power  E: Menu  Wheel: Zoom  Middle: Scroll
+HINT_IDLE       = Z: Select  Space: Next ready unit  N: Next  P: Power  E: Menu  Wheel: Zoom  Middle: Scroll
 HINT_MOVE       = Z: Move here  X: Cancel
 HINT_MENU       = Up/Down: Select  Z: Confirm  X: Back
 HINT_TARGET     = Choose a target  Left/Right: Switch  Z: Attack  X: Back

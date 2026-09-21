@@ -904,7 +904,9 @@ static void prod_select(App *a)
 /* ------------------------------------------------------------------ */
 /* 次の未行動ユニット（Nキー）                                          */
 /* ------------------------------------------------------------------ */
-static void next_unit(App *a)
+/* 次の未行動ユニットへカーソルを移す。見つかれば true。
+ * 今カーソルがいるユニットの「次」から探すので、押すたびに順に回れる。 */
+static bool next_unit(App *a)
 {
     Game *g = &a->game;
     int start = 0;
@@ -914,13 +916,29 @@ static void next_unit(App *a)
         int i = (start + k) % g->n_units;
         const Unit *u = &g->units[i];
         if ((u->flags & UF_ALIVE) && u->owner == g->current &&
-            !(u->flags & UF_DONE)) {
+            !(u->flags & UF_DONE) && !(u->flags & UF_LOADED)) {
             a->cur_x = u->pos.x; a->cur_y = u->pos.y;
             ensure_cursor_visible(a);
             center_camera(a, u->pos.x, u->pos.y);
-            return;
+            return true;
         }
     }
+    return false;
+}
+
+/* この2つはもっと下で定義しているので先に宣言しておく */
+static void confirm_at(App *a, int hx, int hy);
+static void cancel_action(App *a);
+
+/* 次の未行動ユニットへ飛んで、そのまま選択する（移動範囲まで出す）。
+ * 部隊が多いときに「N で回す → Z で選ぶ」の2手を1手にするためのもの。
+ * 選択は confirm_at に任せるので、重なりセルではレイヤー選択が普通に出る。 */
+static void next_unit_and_select(App *a)
+{
+    if (a->bs == BS_UNIT_SELECTED) cancel_action(a);   /* 選択中なら一度戻す */
+    if (a->bs != BS_IDLE) return;
+    if (!next_unit(a)) { snd_se(SE_CANCEL); return; }  /* もう残っていない */
+    confirm_at(a, a->cur_x, a->cur_y);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1744,6 +1762,12 @@ void battle_event(App *a, const SDL_Event *e)
         }
         if (k == SDLK_x || k == SDLK_ESCAPE) { cancel_action(a); return; }
         if (k == SDLK_n && a->bs == BS_IDLE) { next_unit(a); return; }
+        /* Space / Tab: 次の未行動ユニットへ飛んで選択まで済ませる */
+        if ((k == SDLK_SPACE || k == SDLK_TAB) &&
+            (a->bs == BS_IDLE || a->bs == BS_UNIT_SELECTED)) {
+            next_unit_and_select(a);
+            return;
+        }
         if (k == SDLK_p && a->bs == BS_IDLE) { try_co_power(a); return; }
         if (k == SDLK_e && a->bs == BS_IDLE) {
             a->tmenu_idx = 0;

@@ -241,7 +241,7 @@ CARGO_ROW_FMT    = %s   HP %d/10   燃料 %d/%d   弾薬 %d/%d
 CARGO_ROW_SUP_FMT = %s   HP %d/10   燃料 %d/%d   物資 %d/%d
 PANEL_SUPPLY_HINT = 補給:物資-1/体  回復:物資10で1HP(1回1HP)
 
-HINT_IDLE       = Z:選択  N:次ユニット  P:必殺技  E:メニュー  ホイール:ズーム  中ボタン:スクロール
+HINT_IDLE       = Z:選択  Space:次の未行動を選択  N:次へ  P:必殺技  E:メニュー  ホイール:ズーム  中ボタン:スクロール
 HINT_MOVE       = Z:移動先決定  X:キャンセル
 HINT_MENU       = ↑↓:選択  Z:決定  X:戻る
 HINT_TARGET     = 対象を選択  ←→:切替  Z:攻撃  X:戻る
