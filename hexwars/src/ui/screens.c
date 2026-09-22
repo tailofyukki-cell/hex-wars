@@ -786,6 +786,55 @@ static const char *co_label(App *a, int idx)
     return a->game.cos[idx].name;
 }
 
+/* その行のラベル（lbuf へ）と値の文字列を作る。
+ * 描画と「◀ ▶ のどちらを押したか」の判定で同じものを使うための共用関数。
+ * 開始・戻るの行には値が無いので NULL を返す。 */
+static const char *setup_row_value(App *a, int i, char *lbuf, size_t lsz)
+{
+    int n = setup_nparts(a);
+    lbuf[0] = 0;
+    if (i == setup_start_row(a) || i == setup_back_row(a)) return NULL;
+    if (i == 0) {
+        snprintf(lbuf, lsz, "%s", tx("SETUP_MAP"));
+        return a->maps.n ? a->maps.name[a->sel_map] : tx("SETUP_NOMAP");
+    }
+    if (i == 1) {
+        snprintf(lbuf, lsz, "%s", tx("SETUP_FOG"));
+        return tx(a->sel_fog == 0 ? "ON" : "OFF");
+    }
+    int rr = i - SETUP_FIXED_TOP;
+    if (rr < n) {
+        int p = setup_part_at(a, rr);
+        snprintf(lbuf, lsz, tx("SETUP_CTRL_FMT"), faction_name(p));
+        return tx(P2_KEYS[a->sel_ctrl[p]]);
+    }
+    int p = setup_part_at(a, rr - n);
+    snprintf(lbuf, lsz, tx("SETUP_CO_FMT"), faction_name(p));
+    return co_label(a, a->sel_co[p]);
+}
+
+/* 値の左右に出している ◀ ▶ のどちらを押したか。-1=左 / +1=右 / 0=それ以外。
+ * 文字の幅から位置を出すので、言語や値の長さが変わっても追従する。
+ * 押しやすいよう、矢印の周りに少し余裕（PAD）を持たせる。 */
+static int setup_arrow_hit(App *a, int i, int mx)
+{
+    char lbuf[96];
+    const char *val = setup_row_value(a, i, lbuf, sizeof lbuf);
+    if (!val) return 0;
+    TTF_Font *f = (setup_rows(a) > 8) ? a->font_s : a->font_m;
+    SDL_Rect r = setup_row_rect(a, i);
+    const int PAD = 8;
+    int x0 = r.x + 300;                       /* 値を描き始める位置（描画と揃える） */
+    int wl = text_width(a, f, "◀");
+    char mid[128];
+    snprintf(mid, sizeof mid, "◀ %s ", val);
+    int wm = text_width(a, f, mid);
+    int wr = text_width(a, f, "▶");
+    if (mx >= x0 - PAD && mx <= x0 + wl + PAD) return -1;
+    if (mx >= x0 + wm - PAD && mx <= x0 + wm + wr + PAD) return 1;
+    return 0;
+}
+
 static void setup_change(App *a, int dir)
 {
     snd_se(SE_CURSOR);
@@ -902,7 +951,12 @@ static void setup_event(App *a, const SDL_Event *e)
         }
         for (int i = 0; i < rows; i++) {
             SDL_Rect r = setup_row_rect(a, i);
-            if (SDL_PointInRect(&p, &r)) { a->setup_row = i; setup_select(a); }
+            if (!SDL_PointInRect(&p, &r)) continue;
+            a->setup_row = i;
+            /* ◀ を押したら前へ、▶ を押したら次へ。それ以外の場所は今までどおり次へ */
+            int dir = setup_arrow_hit(a, i, p.x);
+            if (dir != 0) setup_change(a, dir);
+            else setup_select(a);
         }
     }
 }
@@ -940,26 +994,7 @@ static void setup_draw(App *a)
 
         char lbuf[96], vbuf[96];
         const char *label = lbuf;
-        const char *val = "";
-        lbuf[0] = 0;
-        if (i == 0) {
-            snprintf(lbuf, sizeof lbuf, "%s", tx("SETUP_MAP"));
-            val = a->maps.n ? a->maps.name[a->sel_map] : tx("SETUP_NOMAP");
-        } else if (i == 1) {
-            snprintf(lbuf, sizeof lbuf, "%s", tx("SETUP_FOG"));
-            val = tx(a->sel_fog == 0 ? "ON" : "OFF");
-        } else {
-            int rr = i - SETUP_FIXED_TOP;
-            if (rr < n) {
-                int p = setup_part_at(a, rr);
-                snprintf(lbuf, sizeof lbuf, tx("SETUP_CTRL_FMT"), faction_name(p));
-                val = tx(P2_KEYS[a->sel_ctrl[p]]);
-            } else {
-                int p = setup_part_at(a, rr - n);
-                snprintf(lbuf, sizeof lbuf, tx("SETUP_CO_FMT"), faction_name(p));
-                val = co_label(a, a->sel_co[p]);
-            }
-        }
+        const char *val = setup_row_value(a, i, lbuf, sizeof lbuf);
         /* 陣営の行はその陣営の色でラベルを出す（対応が一目で分かる） */
         SDL_Color lc = sel ? COL_WHITE : COL_GRAY;
         if (i >= SETUP_FIXED_TOP) {
