@@ -1168,6 +1168,26 @@ static void opt_step_win_size(App *a, int dir)
     app_apply_window(a);
 }
 
+/* 値の左右に出す ◀ ▶ の位置。dir=-1 が左、+1 が右。
+ * フリー対戦の設定画面と同じ操作感にするために置いている。 */
+static SDL_Rect opt_arrow_rect(int i, int dir)
+{
+    SDL_Rect r = opt_row_rect(i);
+    int w = 26, h = OPT_ROW_H - 10;
+    SDL_Rect a = { dir < 0 ? r.x + 288 : r.x + r.w - 34, r.y + 5, w, h };
+    return a;
+}
+
+/* その行は左右で変えられるか。戻る行と、今は触れない行には矢印を出さない
+ * （出すと押しても何も起きず、壊れているように見える）。 */
+static bool opt_row_changeable(const App *a, int i)
+{
+    if (i == OPT_BACK_ROW) return false;
+    if (i == OPT_LANG_ROW && a->opt_from_battle) return false;   /* 対戦中は変更不可 */
+    if (i == OPT_WINSIZE_ROW && a->opt_fullscreen) return false; /* 全画面中は選べない */
+    return true;
+}
+
 static void opt_change(App *a, int dir)
 {
     switch (a->opt_row) {
@@ -1307,7 +1327,17 @@ static void opt_event(App *a, const SDL_Event *e)
         SDL_Point p = { e->button.x, e->button.y };
         for (int i = 0; i < OPT_ROWS; i++) {
             SDL_Rect r = opt_row_rect(i);
-            if (SDL_PointInRect(&p, &r)) { a->opt_row = i; opt_select(a); }
+            if (!SDL_PointInRect(&p, &r)) continue;
+            a->opt_row = i;
+            /* ◀ で前へ、▶ で次へ。それ以外の場所は今までどおり次へ進む */
+            int dir = 0;
+            if (opt_row_changeable(a, i)) {
+                SDL_Rect al = opt_arrow_rect(i, -1), ar = opt_arrow_rect(i, 1);
+                if (SDL_PointInRect(&p, &al)) dir = -1;
+                else if (SDL_PointInRect(&p, &ar)) dir = 1;
+            }
+            if (dir != 0) opt_change(a, dir);
+            else opt_select(a);
         }
     }
 }
@@ -1364,6 +1394,14 @@ static void opt_draw(App *a)
         }
         draw_text(a, a->font_m, r.x + 20, r.y + ty,
                   sel ? COL_WHITE : COL_GRAY, labels[i]);
+        if (opt_row_changeable(a, i)) {
+            SDL_Color ac = sel ? COL_YELLOW : COL_DIM;
+            for (int d = -1; d <= 1; d += 2) {
+                SDL_Rect ar = opt_arrow_rect(i, d);
+                draw_text_center(a, a->font_m, ar.x + ar.w / 2, ar.y + 2, ac,
+                                 d < 0 ? "◀" : "▶");
+            }
+        }
         int vx = r.x + 320, vy = r.y + ty;
         char buf[80];
         switch (i) {
