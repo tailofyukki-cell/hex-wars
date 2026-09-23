@@ -30,7 +30,8 @@ def scan(deffile, header_re, keys, category):
 
 scan("terrain.def",       r"\[terrain\s+(\w+)\]",   ["image"], "terrain")
 scan("units.def",         r"\[unit\s+(\w+)\]",
-     ["image", "image0", "image1", "anim", "cutin"], "unit")
+     ["image", "image0", "image1", "image2", "image3", "image4",
+      "anim", "cutin"], "unit")
 scan("commanders.def",    r"\[commander\s+(\w+)\]", ["image", "cutin"], "co")
 scan("campaign/main.cpn", r"\[node\s+(\w+)\]",
      ["art", "reward", "reward_video"], "cpn")
@@ -56,8 +57,9 @@ SEC = [
     ("terrain", "地形（マップのセル）", "`data/terrain.def` の `image =`",
      "真上から見た地面の模様。六角形に切り抜いて貼られるので、正方形の"
      "タイル画像でよい。斜め見下ろし表示でも同じ画像を使う（別途用意は不要）。"),
-    ("unit",    "ユニット", "`data/units.def` の `image = / image0 = / image1 =`",
-     "`image` は両陣営共通、`image0`/`image1` は陣営ごとに分けたいとき。"
+    ("unit",    "ユニット", "`data/units.def` の `image = / image0 =` 〜 `image4 =`",
+     "`image` は全陣営共通で `gfx/units/common/` に置く。`image0`〜`image4` は"
+     "その陣営だけ差し替えたいときで、`gfx/units/faction0/`〜`faction4/` に置く。"
      "背景は透過。`anim` は戦闘アニメ、`cutin` は攻撃時の1枚絵。"),
     ("co",      "指揮官", "`data/commanders.def` の `image = / cutin =`",
      "`image` は指揮官選択と全体図に出す顔絵（縦長）。`cutin` は必殺技の1枚絵。"),

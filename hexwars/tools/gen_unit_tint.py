@@ -1,8 +1,10 @@
 # gen_unit_tint.py - ユニットのスプライトを陣営色に染めた版を作る（Pillow）
 #
-# units.def の `image = gfx/units/xxx.png` を読み、陣営ごとの色違いを
-#   assets/gfx/units/xxx_p0.png … xxx_p4.png
+# units.def の `image = gfx/units/common/xxx.png` を読み、陣営ごとの色違いを
+#   assets/gfx/units/faction0/xxx.png … faction4/xxx.png
 # として書き出し、units.def に貼れる image0〜image4 の行を出力する。
+# 元絵と同じ名前のまま陣営フォルダへ置くので、あとで手描きの絵に
+# 差し替えるときも units.def を直さなくていい。
 #
 #   python tools/gen_unit_tint.py            # 生成して、貼る行を画面に出す
 #   python tools/gen_unit_tint.py --apply    # units.def に直接書き込む
@@ -97,15 +99,17 @@ def main():
         if not os.path.exists(src):
             print("  元絵なし、飛ばす: %s (%s)" % (uid, rel))
             continue
-        stem, ext = os.path.splitext(rel)
+        base = os.path.basename(rel)
         rows = []
         for p, rgb in enumerate(TINT):
-            out_rel = "%s_p%d%s" % (stem, p, ext)
-            tint(src, os.path.join(ASSETS, out_rel.replace("/", os.sep)), rgb)
+            out_rel = "gfx/units/faction%d/%s" % (p, base)
+            dst = os.path.join(ASSETS, out_rel.replace("/", os.sep))
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            tint(src, dst, rgb)
             rows.append("image%d    = %s" % (p, out_rel))
             made += 1
         lines_for[uid] = rows
-        print("  %s -> %s_p0..p4%s" % (uid, stem, ext))
+        print("  %s -> faction0..4/%s" % (uid, base))
 
     print("\n%d 枚生成した。" % made)
     if not apply_to_def:

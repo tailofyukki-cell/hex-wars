@@ -3,7 +3,10 @@
 from PIL import Image, ImageDraw
 import os
 
-OUT = os.path.join(os.path.dirname(__file__), "..", "assets", "gfx", "units")
+# 全陣営で使う絵なので common/ へ。陣営ごとの絵は gen_unit_tint.py が
+# faction0〜4 に書き出す。
+OUT = os.path.join(os.path.dirname(__file__), "..",
+                   "assets", "gfx", "units", "common")
 os.makedirs(OUT, exist_ok=True)
 
 S = 192          # 作業キャンバス

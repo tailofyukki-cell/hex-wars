@@ -8,9 +8,11 @@
 #         **参照は id で行われるので、名前をいくら変えてもルールは変わらない。**
 # image … 盤上のスプライト（assets/ からの相対パス。未指定は図形描画）。
 #         陣営ごとに別の絵にしたいときは image0 〜 image4 を使う。
-#           image  = gfx/units/tank.png        ← 全陣営これ
-#           image0 = gfx/units/tank_blue.png   ← 陣営0だけ差し替え
-#           image2 = gfx/units/tank_green.png  ← 陣営2だけ差し替え
+#           image  = gfx/units/common/tank.png    ← 全陣営これ
+#           image0 = gfx/units/faction0/tank.png  ← 陣営0だけ差し替え
+#           image2 = gfx/units/faction2/tank.png  ← 陣営2だけ差し替え
+#         絵は assets/gfx/units/ の下を陣営ごとのフォルダに分けてある
+#         （common / faction0〜faction4）。差し替えるときは同じ名前で置けばいい。
 #         番号は陣営番号（0～4。自軍が0）。image の**あと**に書くこと（後勝ち）。
 #         描画は画像に陣営色を乗せない（陣営は足元のチップで示す）ので、
 #         色別の絵を用意するならここで指定する。
@@ -28,7 +30,7 @@
 # 未指定・読込失敗のユニットは従来のHPバー演出になる。詳しくは assets/gfx/anim/README.txt
 
 [unit INFANTRY]
-image     = gfx/units/infantry.png
+image     = gfx/units/common/infantry.png
 cutin     = gfx/cutin/infantry.png
 name      = 歩兵
 name1     = 人民歩兵
@@ -59,7 +61,7 @@ can_capture = 1
 transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 
 [unit AT_INFANTRY]
-image     = gfx/units/at_infantry.png
+image     = gfx/units/common/at_infantry.png
 cutin     = gfx/cutin/infantry.png
 name      = 対戦車兵
 name1     = 破甲兵
@@ -90,7 +92,7 @@ can_capture = 1
 transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 
 [unit RECON]
-image     = gfx/units/recon.png
+image     = gfx/units/common/recon.png
 name      = 偵察車
 name1     = 偵察装甲車「ZB-1」
 name2     = 鼬
@@ -120,7 +122,7 @@ def       = 25
 transport_by = T_SHIP
 
 [unit TANK]
-image     = gfx/units/tank.png
+image     = gfx/units/common/tank.png
 cutin     = gfx/cutin/tank.png
 # 戦闘アニメ動画のサンプル（実際の動画に差し替えてください）
 anim      = gfx/anim/sample_land.mp4
@@ -152,7 +154,7 @@ def       = 45
 transport_by = T_SHIP
 
 [unit HTANK]
-image     = gfx/units/htank.png
+image     = gfx/units/common/htank.png
 cutin     = gfx/cutin/tank.png
 name      = 重戦車「G-6型」
 name1     = 重戦車「ZK-60」
@@ -182,7 +184,7 @@ def       = 60
 transport_by = T_SHIP
 
 [unit ARTILLERY]
-image     = gfx/units/artillery.png
+image     = gfx/units/common/artillery.png
 cutin     = gfx/cutin/tank.png
 name      = 自走砲「H-15型」
 name1     = 自走砲「SV-15」
@@ -215,7 +217,7 @@ move_and_fire = 0
 transport_by = T_SHIP
 
 [unit AA_TANK]
-image     = gfx/units/aa_tank.png
+image     = gfx/units/common/aa_tank.png
 name      = 対空戦車「F-8型」
 name1     = 対空自走砲「SV-8」
 name2     = 豪猪
@@ -244,7 +246,7 @@ def       = 35
 transport_by = T_SHIP
 
 [unit TRUCK]
-image     = gfx/units/truck.png
+image     = gfx/units/common/truck.png
 name      = トラック
 name1     = 輸送車「ZB-3」
 name2     = 駄馬
@@ -273,7 +275,7 @@ def       = 10
 capacity  = 1
 
 [unit T_COPTER]
-image     = gfx/units/t_copter.png
+image     = gfx/units/common/t_copter.png
 name      = 輸送ヘリ「Hv-4型」
 name1     = 輸送回転翼機「MV-4」
 name2     = 鵜
@@ -302,7 +304,7 @@ def       = 20
 capacity  = 1
 
 [unit FIGHTER]
-image     = gfx/units/fighter.png
+image     = gfx/units/common/fighter.png
 cutin     = gfx/cutin/air.png
 name      = 戦闘機「Fk-9型」
 name1     = 戦闘機「YA-9」
@@ -332,7 +334,7 @@ def       = 40
 transport_by = CARRIER
 
 [unit BOMBER]
-image     = gfx/units/bomber.png
+image     = gfx/units/common/bomber.png
 cutin     = gfx/cutin/air.png
 name      = 爆撃機「Bx-17型」
 name1     = 爆撃機「IB-17」
@@ -362,7 +364,7 @@ def       = 35
 transport_by = CARRIER
 
 [unit HELI]
-image     = gfx/units/heli.png
+image     = gfx/units/common/heli.png
 cutin     = gfx/cutin/air.png
 name      = 攻撃ヘリ「Hv-2型」
 name1     = 攻撃回転翼機「MV-2」
@@ -393,7 +395,7 @@ anti_sub  = 1
 transport_by = CARRIER
 
 [unit DESTROYER]
-image     = gfx/units/destroyer.png
+image     = gfx/units/common/destroyer.png
 cutin     = gfx/cutin/ship.png
 name      = 駆逐艦「Dn-3型」
 name1     = 駆逐艦「計画3号」
@@ -423,7 +425,7 @@ def       = 45
 anti_sub  = 1
 
 [unit CRUISER]
-image     = gfx/units/cruiser.png
+image     = gfx/units/common/cruiser.png
 cutin     = gfx/cutin/ship.png
 name      = 巡洋艦「Kv-1型」
 name1     = 巡洋艦「計画11号」
@@ -452,7 +454,7 @@ atk_sea   = 70
 def       = 55
 
 [unit SUBMARINE]
-image     = gfx/units/submarine.png
+image     = gfx/units/common/submarine.png
 cutin     = gfx/cutin/ship.png
 name      = 潜水艦「U-11型」
 name1     = 潜水艦「計画21号」
@@ -482,7 +484,7 @@ def       = 40
 is_sub    = 1
 
 [unit T_SHIP]
-image     = gfx/units/t_ship.png
+image     = gfx/units/common/t_ship.png
 name      = 輸送艦「Ln-2型」
 name1     = 揚陸艦「計画32号」
 name2     = 鯨
@@ -514,7 +516,7 @@ capacity  = 2
 # 手動「補給」＋手番開始時に自動）、コマンド「回復」で物資10を使い1HP回復（1回1HPのみ）。
 # 物資は自軍の都市・工場・首都に乗るとターン開始時に満タン(10)まで補充。
 [unit SUPPLY]
-image     = gfx/units/supply.png
+image     = gfx/units/common/supply.png
 name      = 補給車
 name1     = 補給車「ZB-5」
 name2     = 駱駝
@@ -545,7 +547,7 @@ transport_by = T_SHIP
 
 # 補給機（航空用の補給車。物資最大10。空港でターン開始時に補充）
 [unit SUPPLY_AIR]
-image     = gfx/units/supply_air.png
+image     = gfx/units/common/supply_air.png
 name      = 補給機「Cg-5型」
 name1     = 補給機「IB-25」
 name2     = 鵲
@@ -576,7 +578,7 @@ supply    = 1
 # ---- 以下、拡充ユニット（仕様書11章の24種構成へ）。セーブ互換のため末尾追加 ----
 
 [unit MILITIA]
-image     = gfx/units/militia.png
+image     = gfx/units/common/militia.png
 cutin     = gfx/cutin/infantry.png
 name      = 民兵
 name1     = 労農兵
@@ -607,7 +609,7 @@ can_capture = 1
 transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 
 [unit MECH_INF]
-image     = gfx/units/mech_inf.png
+image     = gfx/units/common/mech_inf.png
 cutin     = gfx/cutin/infantry.png
 name      = 機械化歩兵
 name1     = 自動車化狙撃兵
@@ -638,7 +640,7 @@ can_capture = 1
 transport_by = T_SHIP
 
 [unit ENGINEER]
-image     = gfx/units/engineer.png
+image     = gfx/units/common/engineer.png
 name      = 工兵
 name1     = 人民工兵
 name2     = 蟻兵
@@ -670,7 +672,7 @@ engineer  = 1
 transport_by = TRUCK,T_COPTER,T_SHIP,T_PLANE
 
 [unit LTANK]
-image     = gfx/units/ltank.png
+image     = gfx/units/common/ltank.png
 cutin     = gfx/cutin/tank.png
 name      = 軽戦車「T-20型」
 name1     = 軽戦車「ZK-20」
@@ -700,7 +702,7 @@ def       = 32
 transport_by = T_SHIP
 
 [unit ROCKET]
-image     = gfx/units/rocket.png
+image     = gfx/units/common/rocket.png
 name      = 自走ロケット砲「R-8型」
 name1     = 噴進砲「SV-8」
 name2     = 猪
@@ -732,7 +734,7 @@ move_and_fire = 0
 transport_by = T_SHIP
 
 [unit AA_GUN]
-image     = gfx/units/aa_gun.png
+image     = gfx/units/common/aa_gun.png
 name      = 高射砲
 name1     = 高射砲「SV-2」
 name2     = 針鼠
@@ -763,7 +765,7 @@ range_max = 4
 transport_by = TRUCK,T_SHIP,T_PLANE
 
 [unit DIVE_BOMBER]
-image     = gfx/units/dive_bomber.png
+image     = gfx/units/common/dive_bomber.png
 cutin     = gfx/cutin/air.png
 name      = 襲撃機「Sk-6型」
 name1     = 襲撃機「IB-6」
@@ -793,7 +795,7 @@ def       = 32
 transport_by = CARRIER
 
 [unit SCOUT_PLANE]
-image     = gfx/units/scout_plane.png
+image     = gfx/units/common/scout_plane.png
 name      = 偵察機「Mk-3型」
 name1     = 偵察機「YA-3」
 name2     = 雲雀
@@ -826,7 +828,7 @@ transport_by = CARRIER
 
 # 戦艦: 射程2-5の巨砲を持つ海の主力。対地・対艦に絶大、鈍足で対空は苦手
 [unit BATTLESHIP]
-image     = gfx/units/battleship.png
+image     = gfx/units/common/battleship.png
 cutin     = gfx/cutin/ship.png
 # 戦闘アニメ動画のサンプル（ユニット毎に別の動画を指定できる）
 anim      = gfx/anim/sample_sea.gif
@@ -862,7 +864,7 @@ move_and_fire = 0
 # 空母: 航空ユニットを2機まで搭載して海を越えて運ぶ洋上基地（隣接ヘクスへ発艦）。
 # 搭載中の航空機はターン開始時に空港と同様に燃料・弾薬回復＋HP+2修理される
 [unit CARRIER]
-image     = gfx/units/carrier.png
+image     = gfx/units/common/carrier.png
 name      = 空母「Hy-4型」
 name1     = 航空母艦「計画41号」
 name2     = 鱏
@@ -893,7 +895,7 @@ resupply_cargo = 1
 
 # 砲艦: 安価な沿岸砲撃艦。射程2の間接攻撃で上陸支援
 [unit GUNBOAT]
-image     = gfx/units/gunboat.png
+image     = gfx/units/common/gunboat.png
 name      = 砲艦「Bt-2型」
 name1     = 砲艦「計画12号」
 name2     = 河豚
@@ -925,7 +927,7 @@ move_and_fire = 0
 
 # ミサイル艇: 高速・対艦特化の小型艇。安く数を揃えて群狼戦法
 [unit MISSILE_BOAT]
-image     = gfx/units/missile_boat.png
+image     = gfx/units/common/missile_boat.png
 name      = ミサイル艇「Fk-5型」
 name1     = 噴進艇「計画15号」
 name2     = 飛魚
@@ -956,7 +958,7 @@ def       = 25
 # 「回復」でHPも回復できる（補給車=陸/補給機=空と同じくドメイン限定＝船のみが対象）。
 # 物資は自軍の港でターン開始時に補充。セーブ互換のため末尾追加。
 [unit SUPPLY_SHIP]
-image     = gfx/units/supply_ship.png
+image     = gfx/units/common/supply_ship.png
 name      = 補給艦「Ho-6型」
 name1     = 補給艦「計画26号」
 name2     = 海豚
@@ -989,7 +991,7 @@ supply    = 1
 # 定員2・鈍足だが航続が長い。丸腰なので戦闘機・対空に狙われると脆い。
 # セーブ互換のため末尾に追加すること。
 [unit T_PLANE]
-image     = gfx/units/t_plane.png
+image     = gfx/units/common/t_plane.png
 cutin     = gfx/cutin/air.png
 name      = 輸送機「Cd-8型」
 name1     = 輸送機「IB-8」
@@ -1038,7 +1040,7 @@ name4@en  = Veterans
 icon         = 猟
 icon@en   = I+
 cost         = 170
-image        = gfx/units/infantry.png
+image        = gfx/units/common/infantry.png
 cutin        = gfx/cutin/infantry.png
 class        = LAND_FOOT
 armor        = SOFT
@@ -1069,7 +1071,7 @@ name4@en  = Tank Killers
 icon         = 猟
 icon@en   = AT+
 cost         = 240
-image        = gfx/units/at_infantry.png
+image        = gfx/units/common/at_infantry.png
 cutin        = gfx/cutin/infantry.png
 class        = LAND_FOOT
 armor        = SOFT
@@ -1100,7 +1102,7 @@ name4@en  = Town Wardens
 icon         = 郷
 icon@en   = M+
 cost         = 110
-image        = gfx/units/militia.png
+image        = gfx/units/common/militia.png
 cutin        = gfx/cutin/infantry.png
 class        = LAND_FOOT
 armor        = SOFT
@@ -1131,7 +1133,7 @@ name4@en  = Tin Can Riders
 icon         = 擲
 icon@en   = MI+
 cost         = 340
-image        = gfx/units/mech_inf.png
+image        = gfx/units/common/mech_inf.png
 cutin        = gfx/cutin/infantry.png
 class        = LAND_TRACK
 armor        = HARD
@@ -1162,7 +1164,7 @@ name4@en  = Sky Piercer
 icon         = 重
 icon@en   = AG+
 cost         = 260
-image        = gfx/units/aa_gun.png
+image        = gfx/units/common/aa_gun.png
 class        = LAND_FOOT
 armor        = SOFT
 move         = 1
@@ -1194,7 +1196,7 @@ recon        = 1
 icon         = 装
 icon@en   = Rc+
 cost         = 250
-image        = gfx/units/recon.png
+image        = gfx/units/common/recon.png
 class        = LAND_WHEEL
 armor        = HARD
 move         = 8
@@ -1223,7 +1225,7 @@ name4@en  = Bucking Horse
 icon         = 騎
 icon@en   = LT+
 cost         = 310
-image        = gfx/units/ltank.png
+image        = gfx/units/common/ltank.png
 cutin        = gfx/cutin/tank.png
 class        = LAND_TRACK
 armor        = HARD
@@ -1253,7 +1255,7 @@ name4@en  = Great Iron Ox
 icon         = 主
 icon@en   = T+
 cost         = 450
-image        = gfx/units/tank.png
+image        = gfx/units/common/tank.png
 cutin        = gfx/cutin/tank.png
 class        = LAND_TRACK
 armor        = HARD
@@ -1283,7 +1285,7 @@ name4@en  = Moving Fortress
 icon         = 超
 icon@en   = HT+
 cost         = 760
-image        = gfx/units/htank.png
+image        = gfx/units/common/htank.png
 cutin        = gfx/cutin/tank.png
 class        = LAND_TRACK
 armor        = HARD
@@ -1313,7 +1315,7 @@ name4@en  = Wall of Flak
 icon         = 走
 icon@en   = AA+
 cost         = 430
-image        = gfx/units/aa_tank.png
+image        = gfx/units/common/aa_tank.png
 class        = LAND_TRACK
 armor        = HARD
 move         = 5
@@ -1344,7 +1346,7 @@ name4@en  = Great Thunder
 icon         = 重
 icon@en   = A+
 cost         = 480
-image        = gfx/units/artillery.png
+image        = gfx/units/common/artillery.png
 cutin        = gfx/cutin/tank.png
 class        = LAND_TRACK
 armor        = HARD
@@ -1377,7 +1379,7 @@ name4@en  = Pillar of Fire
 icon         = 連
 icon@en   = R+
 cost         = 680
-image        = gfx/units/rocket.png
+image        = gfx/units/common/rocket.png
 class        = LAND_WHEEL
 armor        = HARD
 move         = 4
@@ -1409,7 +1411,7 @@ name4@en  = Windslicer
 icon         = 迎
 icon@en   = F+
 cost         = 600
-image        = gfx/units/fighter.png
+image        = gfx/units/common/fighter.png
 cutin        = gfx/cutin/air.png
 class        = AIR
 armor        = AIR
@@ -1440,7 +1442,7 @@ name4@en  = Steamroller
 icon         = 攻
 icon@en   = At+
 cost         = 630
-image        = gfx/units/dive_bomber.png
+image        = gfx/units/common/dive_bomber.png
 cutin        = gfx/cutin/air.png
 class        = AIR
 armor        = AIR
@@ -1470,7 +1472,7 @@ name4@en  = Iron Downpour
 icon         = 重
 icon@en   = B+
 cost         = 830
-image        = gfx/units/bomber.png
+image        = gfx/units/common/bomber.png
 cutin        = gfx/cutin/air.png
 class        = AIR
 armor        = AIR
@@ -1500,7 +1502,7 @@ name4@en  = Big Gnat
 icon         = 重
 icon@en   = H+
 cost         = 570
-image        = gfx/units/heli.png
+image        = gfx/units/common/heli.png
 cutin        = gfx/cutin/air.png
 class        = AIR
 armor        = AIR
@@ -1531,7 +1533,7 @@ name4@en  = Quick Boat
 icon         = 速
 icon@en   = MB+
 cost         = 480
-image        = gfx/units/missile_boat.png
+image        = gfx/units/common/missile_boat.png
 class        = SEA
 armor        = SEA
 move         = 9
@@ -1559,7 +1561,7 @@ name4@en  = Big Watch Boat
 icon         = 重
 icon@en   = G+
 cost         = 530
-image        = gfx/units/gunboat.png
+image        = gfx/units/common/gunboat.png
 class        = SEA
 armor        = SEA
 move         = 5
@@ -1590,7 +1592,7 @@ name4@en  = Big Runner Boat
 icon         = 重
 icon@en   = D+
 cost         = 680
-image        = gfx/units/destroyer.png
+image        = gfx/units/common/destroyer.png
 cutin        = gfx/cutin/ship.png
 class        = SEA
 armor        = SEA
@@ -1620,7 +1622,7 @@ name4@en  = Deep Diver
 icon         = 大
 icon@en   = S+
 cost         = 630
-image        = gfx/units/submarine.png
+image        = gfx/units/common/submarine.png
 cutin        = gfx/cutin/ship.png
 class        = SEA_SUB
 armor        = SEA
@@ -1650,7 +1652,7 @@ name4@en  = Grand Dame
 icon         = 巡
 icon@en   = C+
 cost         = 1050
-image        = gfx/units/cruiser.png
+image        = gfx/units/common/cruiser.png
 cutin        = gfx/cutin/ship.png
 class        = SEA
 armor        = SEA
@@ -1679,7 +1681,7 @@ name4@en  = Lord of the Sea
 icon         = 弩
 icon@en   = BB+
 cost         = 1350
-image        = gfx/units/battleship.png
+image        = gfx/units/common/battleship.png
 cutin        = gfx/cutin/ship.png
 class        = SEA
 armor        = SEA
@@ -1711,7 +1713,7 @@ name4@en  = Great Birdcage
 icon         = 大
 icon@en   = CV+
 cost         = 1400
-image        = gfx/units/carrier.png
+image        = gfx/units/common/carrier.png
 class        = SEA
 armor        = SEA
 move         = 6
@@ -1741,7 +1743,7 @@ name4@en  = Iron Wagon
 icon         = 装
 icon@en   = Tr+
 cost         = 200
-image        = gfx/units/truck.png
+image        = gfx/units/common/truck.png
 class        = LAND_WHEEL
 armor        = HARD
 move         = 7
@@ -1770,7 +1772,7 @@ name4@en  = Big Pack Bird
 icon         = 強
 icon@en   = TH+
 cost         = 380
-image        = gfx/units/t_copter.png
+image        = gfx/units/common/t_copter.png
 class        = AIR
 armor        = AIR
 move         = 8
@@ -1800,7 +1802,7 @@ name4@en  = Big Ferry
 icon         = 揚
 icon@en   = TS+
 cost         = 450
-image        = gfx/units/t_ship.png
+image        = gfx/units/common/t_ship.png
 class        = SEA
 armor        = SEA
 move         = 6
@@ -1829,7 +1831,7 @@ name4@en  = Big Sky Ferry
 icon         = 大
 icon@en   = TP+
 cost         = 500
-image        = gfx/units/t_plane.png
+image        = gfx/units/common/t_plane.png
 cutin        = gfx/cutin/air.png
 class        = AIR
 armor        = AIR
@@ -1860,7 +1862,7 @@ name4@en  = Big Field Kitchen
 icon         = 重
 icon@en   = Sp+
 cost         = 300
-image        = gfx/units/supply.png
+image        = gfx/units/common/supply.png
 class        = LAND_WHEEL
 armor        = HARD
 move         = 6
@@ -1890,7 +1892,7 @@ name4@en  = Big Care Package
 icon         = 大
 icon@en   = SP+
 cost         = 420
-image        = gfx/units/supply_air.png
+image        = gfx/units/common/supply_air.png
 class        = AIR
 armor        = AIR
 move         = 8
@@ -1919,7 +1921,7 @@ name4@en  = Big Mother Ship
 icon         = 速
 icon@en   = SS+
 cost         = 600
-image        = gfx/units/supply_ship.png
+image        = gfx/units/common/supply_ship.png
 class        = SEA
 armor        = SEA
 move         = 6
@@ -1949,7 +1951,7 @@ recon        = 1
 icon         = 高
 icon@en   = RP+
 cost         = 280
-image        = gfx/units/scout_plane.png
+image        = gfx/units/common/scout_plane.png
 class        = AIR
 armor        = AIR
 move         = 11
@@ -1979,7 +1981,7 @@ name4@en  = Master Diggers
 icon         = 甲
 icon@en   = E+
 cost         = 330
-image        = gfx/units/engineer.png
+image        = gfx/units/common/engineer.png
 class        = LAND_FOOT
 armor        = SOFT
 move         = 4
@@ -2015,7 +2017,7 @@ name4@en  = Night Blades
 evolve_to     = NIGHT_INF_V
 icon          = 忍
 icon@en   = N
-image         = gfx/units/night_inf.png
+image         = gfx/units/common/night_inf.png
 class         = LAND_TRACK
 armor         = HARD
 cost          = 240
@@ -2051,7 +2053,7 @@ name4@en  = Dark Boat
 evolve_to     = NIGHT_BOAT_V
 icon          = 襲
 icon@en   = NB
-image         = gfx/units/night_boat.png
+image         = gfx/units/common/night_boat.png
 class         = SEA
 armor         = SEA
 cost          = 340
@@ -2083,7 +2085,7 @@ name4@en  = Nighthawk
 evolve_to     = NIGHT_FIGHTER_V
 icon          = 迎
 icon@en   = NF
-image         = gfx/units/night_fighter.png
+image         = gfx/units/common/night_fighter.png
 class         = AIR
 armor         = AIR
 cost          = 420
@@ -2119,7 +2121,7 @@ name3@en  = Type 33 Kai Night Infantry
 name4@en  = Masters of the Dark
 icon          = 闇
 icon@en   = N+
-image         = gfx/units/night_inf.png
+image         = gfx/units/common/night_inf.png
 class         = LAND_TRACK
 armor         = HARD
 cost          = 360
@@ -2155,7 +2157,7 @@ name3@en  = Type 34 Kai Night Boat
 name4@en  = Black Boat
 icon          = 潮
 icon@en   = NB+
-image         = gfx/units/night_boat.png
+image         = gfx/units/common/night_boat.png
 class         = SEA
 armor         = SEA
 cost          = 500
@@ -2187,7 +2189,7 @@ name3@en  = Type 35 Kai Night Fighter
 name4@en  = Lord of the Night
 icon          = 天
 icon@en   = NF+
-image         = gfx/units/night_fighter.png
+image         = gfx/units/common/night_fighter.png
 class         = AIR
 armor         = AIR
 cost          = 620

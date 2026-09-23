@@ -134,7 +134,7 @@ static void test_data_and_battle(void)
         int inf_t = data_find_unit_type(g, "INFANTRY");
         CHECK(inf_t >= 0);
         for (int pi = 0; pi < MAX_PLAYERS; pi++)
-            CHECK(strcmp(g->types[inf_t].image[pi], "gfx/units/infantry.png") == 0);
+            CHECK(strcmp(g->types[inf_t].image[pi], "gfx/units/common/infantry.png") == 0);
     }
 
     CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);

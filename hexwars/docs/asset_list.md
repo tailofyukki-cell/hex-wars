@@ -6,91 +6,85 @@
 
 | | 数 |
 |---|---|
-| 参照されているパス | 90 |
-| うち実体あり | 75 |
-| うち**未用意** | **15** |
-
-音はこの一覧の対象外。BGMと効果音は `data/audio.def` で差し替える
-（キャンペーン全クリア後のスタッフロール曲は `[music ENDING]`）。
+| 参照されているパス | 100 |
+| うち実体あり | 77 |
+| うち**未用意** | **23** |
 
 
-## 地形（マップのセル）（14本）
+## 地形（マップのセル）（16本）
 
 定義場所: `data/terrain.def` の `image =`
 
 真上から見た地面の模様。六角形に切り抜いて貼られるので、正方形のタイル画像でよい。斜め見下ろし表示でも同じ画像を使う（別途用意は不要）。
 
-**`road.png` だけは「路肩の地面」を描くこと。舗装の帯を描き込んではいけない。**
-絵に帯を焼き込むと向きが固定され、縦に走る道でも横向きの舗装が出て道が繋がって見えない。
-舗装は `terrain.def` の `link_road` を見て描画側が隣接マスへ繋いで描く
-（`link_road = 1` が道路そのもの、`2` が道の伸びてくる先＝街や港）。
+| パス | 用途 | 現物 | 実寸 |
+|---|---|---|---|
+| `gfx/terrain/plain.png` | PLAIN（Plains） | ○ | 192x192 |
+| `gfx/terrain/road.png` | ROAD（Road） | ○ | 192x192 |
+| `gfx/terrain/forest.png` | FOREST（Forest） | ○ | 192x192 |
+| `gfx/terrain/mountain.png` | MOUNTAIN（Mountain） | ○ | 192x192 |
+| `gfx/terrain/river.png` | RIVER（River） | ○ | 192x192 |
+| `gfx/terrain/sea.png` | SEA（Sea） | ○ | 192x192 |
+| `gfx/terrain/city.png` | CITY（City） | ○ | 192x192 |
+| `gfx/terrain/factory.png` | FACTORY（Factory） | ○ | 192x192 |
+| `gfx/terrain/airport.png` | AIRPORT（Airport） | ○ | 192x192 |
+| `gfx/terrain/port.png` | PORT（Port） | ○ | 192x192 |
+| `gfx/terrain/hill.png` | HILL（Hill） | ○ | 192x192 |
+| `gfx/terrain/hq.png` | HQ（HQ） | ○ | 192x192 |
+| `gfx/terrain/airstrip.png` | AIRSTRIP（Airstrip） | **未** | - |
+| `gfx/terrain/anchorage.png` | ANCHORAGE（Anchorage） | **未** | - |
+| `gfx/terrain/rubble.png` | RUBBLE（Rubble） | **未** | - |
+| `gfx/terrain/rubble_port.png` | RUBBLE_PORT（Ruined Port） | **未** | - |
+
+## ユニット（41本）
+
+定義場所: `data/units.def` の `image = / image0 =` 〜 `image4 =`
+
+`image` は全陣営共通で `gfx/units/common/` に置く。`image0`〜`image4` はその陣営だけ差し替えたいときで、`gfx/units/faction0/`〜`faction4/` に置く。背景は透過。`anim` は戦闘アニメ、`cutin` は攻撃時の1枚絵。
 
 | パス | 用途 | 現物 | 実寸 |
 |---|---|---|---|
-| `gfx/terrain/plain.png` | PLAIN（平地） | ○ | 192x192 |
-| `gfx/terrain/road.png` | ROAD（道路） | ○ | 192x192 |
-| `gfx/terrain/forest.png` | FOREST（森） | ○ | 192x192 |
-| `gfx/terrain/mountain.png` | MOUNTAIN（山） | ○ | 192x192 |
-| `gfx/terrain/river.png` | RIVER（川） | ○ | 192x192 |
-| `gfx/terrain/sea.png` | SEA（海） | ○ | 192x192 |
-| `gfx/terrain/city.png` | CITY（都市） | ○ | 192x192 |
-| `gfx/terrain/factory.png` | FACTORY（工場） | ○ | 192x192 |
-| `gfx/terrain/airport.png` | AIRPORT（空港） | ○ | 192x192 |
-| `gfx/terrain/port.png` | PORT（港） | ○ | 192x192 |
-| `gfx/terrain/hill.png` | HILL（丘） | ○ | 192x192 |
-| `gfx/terrain/hq.png` | HQ（首都） | ○ | 192x192 |
-| `gfx/terrain/airstrip.png` | AIRSTRIP（野戦飛行場） | **未** | - |
-| `gfx/terrain/anchorage.png` | ANCHORAGE（泊地） | **未** | - |
-
-## ユニット（40本）
-
-定義場所: `data/units.def` の `image = / image0 = / image1 =`
-
-`image` は両陣営共通、`image0`/`image1` は陣営ごとに分けたいとき。背景は透過。`anim` は戦闘アニメ、`cutin` は攻撃時の1枚絵。
-
-| パス | 用途 | 現物 | 実寸 |
-|---|---|---|---|
-| `gfx/units/infantry.png` | INFANTRY ほか1件 | ○ | 96x96 |
+| `gfx/units/common/infantry.png` | INFANTRY ほか1件 | ○ | 96x96 |
 | `gfx/cutin/infantry.png` | INFANTRY ほか7件 | ○ | 520x900 |
-| `gfx/units/at_infantry.png` | AT_INFANTRY ほか1件 | ○ | 96x96 |
-| `gfx/units/recon.png` | RECON ほか1件 | ○ | 96x96 |
-| `gfx/units/tank.png` | TANK ほか1件 | ○ | 96x96 |
+| `gfx/units/common/at_infantry.png` | AT_INFANTRY ほか1件 | ○ | 96x96 |
+| `gfx/units/common/recon.png` | RECON ほか1件 | ○ | 96x96 |
+| `gfx/units/common/tank.png` | TANK ほか1件 | ○ | 96x96 |
 | `gfx/cutin/tank.png` | TANK ほか7件 | ○ | 520x900 |
 | `gfx/anim/sample_land.mp4` | TANK | ○ | - |
-| `gfx/units/htank.png` | HTANK ほか1件 | ○ | 96x96 |
-| `gfx/units/artillery.png` | ARTILLERY ほか1件 | ○ | 96x96 |
-| `gfx/units/aa_tank.png` | AA_TANK ほか1件 | ○ | 96x96 |
-| `gfx/units/truck.png` | TRUCK ほか1件 | ○ | 96x96 |
-| `gfx/units/t_copter.png` | T_COPTER ほか1件 | ○ | 96x96 |
-| `gfx/units/fighter.png` | FIGHTER ほか1件 | ○ | 96x96 |
+| `gfx/units/common/htank.png` | HTANK ほか1件 | ○ | 96x96 |
+| `gfx/units/common/artillery.png` | ARTILLERY ほか1件 | ○ | 96x96 |
+| `gfx/units/common/aa_tank.png` | AA_TANK ほか1件 | ○ | 96x96 |
+| `gfx/units/common/truck.png` | TRUCK ほか1件 | ○ | 96x96 |
+| `gfx/units/common/t_copter.png` | T_COPTER ほか1件 | ○ | 96x96 |
+| `gfx/units/common/fighter.png` | FIGHTER ほか1件 | ○ | 96x96 |
 | `gfx/cutin/air.png` | FIGHTER ほか9件 | ○ | 520x900 |
-| `gfx/units/bomber.png` | BOMBER ほか1件 | ○ | 96x96 |
-| `gfx/units/heli.png` | HELI ほか1件 | ○ | 96x96 |
-| `gfx/units/destroyer.png` | DESTROYER ほか1件 | ○ | 96x96 |
+| `gfx/units/common/bomber.png` | BOMBER ほか1件 | ○ | 96x96 |
+| `gfx/units/common/heli.png` | HELI ほか1件 | ○ | 96x96 |
+| `gfx/units/common/destroyer.png` | DESTROYER ほか1件 | ○ | 96x96 |
 | `gfx/cutin/ship.png` | DESTROYER ほか7件 | ○ | 520x900 |
-| `gfx/units/cruiser.png` | CRUISER ほか1件 | ○ | 96x96 |
-| `gfx/units/submarine.png` | SUBMARINE ほか1件 | ○ | 96x96 |
-| `gfx/units/t_ship.png` | T_SHIP ほか1件 | ○ | 96x96 |
-| `gfx/units/supply.png` | SUPPLY ほか1件 | ○ | 96x96 |
-| `gfx/units/supply_air.png` | SUPPLY_AIR ほか1件 | ○ | 96x96 |
-| `gfx/units/militia.png` | MILITIA ほか1件 | ○ | 96x96 |
-| `gfx/units/mech_inf.png` | MECH_INF ほか1件 | ○ | 96x96 |
-| `gfx/units/ltank.png` | LTANK ほか1件 | ○ | 96x96 |
-| `gfx/units/rocket.png` | ROCKET ほか1件 | ○ | 96x96 |
-| `gfx/units/aa_gun.png` | AA_GUN ほか1件 | ○ | 96x96 |
-| `gfx/units/dive_bomber.png` | DIVE_BOMBER ほか1件 | ○ | 96x96 |
-| `gfx/units/scout_plane.png` | SCOUT_PLANE ほか1件 | ○ | 96x96 |
-| `gfx/units/battleship.png` | BATTLESHIP ほか1件 | ○ | 96x96 |
+| `gfx/units/common/cruiser.png` | CRUISER ほか1件 | ○ | 96x96 |
+| `gfx/units/common/submarine.png` | SUBMARINE ほか1件 | ○ | 96x96 |
+| `gfx/units/common/t_ship.png` | T_SHIP ほか1件 | ○ | 96x96 |
+| `gfx/units/common/supply.png` | SUPPLY ほか1件 | ○ | 96x96 |
+| `gfx/units/common/supply_air.png` | SUPPLY_AIR ほか1件 | ○ | 96x96 |
+| `gfx/units/common/militia.png` | MILITIA ほか1件 | ○ | 96x96 |
+| `gfx/units/common/mech_inf.png` | MECH_INF ほか1件 | ○ | 96x96 |
+| `gfx/units/common/engineer.png` | ENGINEER ほか1件 | **未** | - |
+| `gfx/units/common/ltank.png` | LTANK ほか1件 | ○ | 96x96 |
+| `gfx/units/common/rocket.png` | ROCKET ほか1件 | ○ | 96x96 |
+| `gfx/units/common/aa_gun.png` | AA_GUN ほか1件 | ○ | 96x96 |
+| `gfx/units/common/dive_bomber.png` | DIVE_BOMBER ほか1件 | ○ | 96x96 |
+| `gfx/units/common/scout_plane.png` | SCOUT_PLANE ほか1件 | ○ | 96x96 |
+| `gfx/units/common/battleship.png` | BATTLESHIP ほか1件 | ○ | 96x96 |
 | `gfx/anim/sample_sea.gif` | BATTLESHIP | ○ | 640x360 |
-| `gfx/units/carrier.png` | CARRIER ほか1件 | ○ | 96x96 |
-| `gfx/units/gunboat.png` | GUNBOAT ほか1件 | ○ | 96x96 |
-| `gfx/units/missile_boat.png` | MISSILE_BOAT ほか1件 | ○ | 96x96 |
-| `gfx/units/supply_ship.png` | SUPPLY_SHIP ほか1件 | ○ | 96x96 |
-| `gfx/units/t_plane.png` | T_PLANE ほか1件 | ○ | 96x96 |
-| `gfx/units/engineer.png` | ENGINEER ほか1件（工兵） | **未** | - |
-| `gfx/units/night_inf.png` | NIGHT_INF ほか1件（夜間忍兵） | **未** | - |
-| `gfx/units/night_boat.png` | NIGHT_BOAT ほか1件（夜間突撃艦） | **未** | - |
-| `gfx/units/night_fighter.png` | NIGHT_FIGHTER ほか1件（夜間迎撃機） | **未** | - |
+| `gfx/units/common/carrier.png` | CARRIER ほか1件 | ○ | 96x96 |
+| `gfx/units/common/gunboat.png` | GUNBOAT ほか1件 | ○ | 96x96 |
+| `gfx/units/common/missile_boat.png` | MISSILE_BOAT ほか1件 | ○ | 96x96 |
+| `gfx/units/common/supply_ship.png` | SUPPLY_SHIP ほか1件 | ○ | 96x96 |
+| `gfx/units/common/t_plane.png` | T_PLANE ほか1件 | ○ | 96x96 |
+| `gfx/units/common/night_inf.png` | NIGHT_INF（Night Blades） ほか1件 | **未** | - |
+| `gfx/units/common/night_boat.png` | NIGHT_BOAT（Dark Boat） ほか1件 | **未** | - |
+| `gfx/units/common/night_fighter.png` | NIGHT_FIGHTER（Nighthawk） ほか1件 | **未** | - |
 
 ## 指揮官（11本）
 
@@ -100,19 +94,19 @@
 
 | パス | 用途 | 現物 | 実寸 |
 |---|---|---|---|
-| `gfx/cutin/co_west.png` | GRAF（グレーフ将軍） ほか4件 | ○ | 520x900 |
-| `gfx/co/graf.png` | GRAF（グレーフ将軍） | ○ | 480x640 |
-| `gfx/co/liese.png` | LIESE（リーゼ中佐） | ○ | 480x640 |
-| `gfx/cutin/co_east.png` | BALT（バルト大佐） ほか3件 | ○ | 520x900 |
-| `gfx/co/balt.png` | BALT（バルト大佐） | ○ | 480x640 |
-| `gfx/co/wolf.png` | WOLF（ヴォルフ提督） | ○ | 480x640 |
-| `gfx/co/karla.png` | KARLA（カーラ参謀） | ○ | 480x640 |
-| `gfx/co/eagle.png` | EAGLE（アドラー中佐） | ○ | 480x640 |
-| `gfx/co/herta.png` | HERTA（ヘルタ主計大尉） | **未** | - |
-| `gfx/co/noel.png` | NOEL（ノエル教官） | **未** | - |
-| `gfx/co/dieter.png` | DIETER（ディーター大尉） | **未** | - |
+| `gfx/cutin/co_west.png` | GRAF（General Graf） ほか4件 | ○ | 520x900 |
+| `gfx/co/graf.png` | GRAF（General Graf） | ○ | 480x640 |
+| `gfx/co/liese.png` | LIESE（Lt. Col. Liese） | ○ | 480x640 |
+| `gfx/cutin/co_east.png` | BALT（Colonel Balt） ほか3件 | ○ | 520x900 |
+| `gfx/co/balt.png` | BALT（Colonel Balt） | ○ | 480x640 |
+| `gfx/co/wolf.png` | WOLF（Admiral Wolf） | ○ | 480x640 |
+| `gfx/co/karla.png` | KARLA（Staff Officer Karla） | ○ | 480x640 |
+| `gfx/co/eagle.png` | EAGLE（Lt. Col. Adler） | ○ | 480x640 |
+| `gfx/co/herta.png` | HERTA（Paymaster Capt. Herta） | **未** | - |
+| `gfx/co/noel.png` | NOEL（Instructor Noel） | **未** | - |
+| `gfx/co/dieter.png` | DIETER（Captain Dieter） | **未** | - |
 
-## キャンペーン（40本）
+## キャンペーン（32本）
 
 定義場所: `data/campaign/main.cpn` の `art = / reward = / reward_video =`
 
@@ -134,70 +128,52 @@
 | `gfx/reward/m06.png` | M06 | ○ | 640x480 |
 | `gfx/brief/m07.png` | M07 | ○ | 800x220 |
 | `gfx/reward/m07.png` | M07 | ○ | 640x480 |
+| `gfx/brief/m13.png` | M13 | **未** | - |
+| `gfx/reward/m13.png` | M13 | **未** | - |
+| `gfx/brief/m11.png` | M11 | **未** | - |
+| `gfx/reward/m11.png` | M11 | **未** | - |
 | `gfx/brief/m08.png` | M08 | ○ | 800x220 |
 | `gfx/reward/m08.png` | M08 | ○ | 640x480 |
 | `gfx/brief/m09.png` | M09 ほか1件 | ○ | 800x220 |
 | `gfx/reward/m09.png` | M09 ほか1件 | ○ | 640x480 |
+| `gfx/brief/m14.png` | M14 | **未** | - |
+| `gfx/reward/m14.png` | M14 | **未** | - |
+| `gfx/brief/m12.png` | M12 | **未** | - |
+| `gfx/reward/m12.png` | M12 | **未** | - |
 | `gfx/brief/m10.png` | M10 | ○ | 800x220 |
 | `gfx/reward/m10.png` | M10 | ○ | 640x480 |
+| `gfx/brief/m19.png` | M19 | **未** | - |
+| `gfx/reward/m19.png` | M19 | **未** | - |
+| `gfx/brief/m20.png` | M20 | **未** | - |
+| `gfx/reward/m20.png` | M20 | **未** | - |
 
 ## 未用意のもの
 
 | パス | 用途 |
 |---|---|
-| `gfx/terrain/airstrip.png` | AIRSTRIP（野戦飛行場） |
-| `gfx/terrain/anchorage.png` | ANCHORAGE（泊地） |
-| `gfx/units/engineer.png` | ENGINEER（工兵） |
-| `gfx/terrain/rubble.png` | RUBBLE（瓦礫。工兵に壊された拠点） |
-| `gfx/terrain/rubble_port.png` | RUBBLE_PORT（破壊された港湾） |
-| `gfx/brief/m11.png` | 第9作戦「共同戦線」のブリーフィング絵 |
-| `gfx/brief/m12.png` | 第14作戦「三つ巴の要衝」のブリーフィング絵 |
-| `gfx/reward/m11.png` | 第9作戦のクリア絵 |
-| `gfx/reward/m12.png` | 第14作戦のクリア絵 |
-| `gfx/brief/m13.png` | 第8作戦「夜襲」のブリーフィング絵（夜の森と兵） |
-| `gfx/reward/m13.png` | 第8作戦のクリア絵 |
-| `gfx/brief/m14.png` | 第13作戦「後退線」のブリーフィング絵（隠路を塞ぐ対戦車部隊） |
-| `gfx/reward/m14.png` | 第13作戦のクリア絵（損耗しつつも線を保った部隊） |
-| `gfx/brief/m19.png` | 第19作戦「総力戦」のブリーフィング絵（ラスボス。地平線まで埋める敵軍） |
-| `gfx/reward/m19.png` | 第19作戦のクリア絵（燃える戦場と立つ自軍） |
-| `gfx/brief/m20.png` | 最終作戦「残照」のブリーフィング絵（静かな敵司令部） |
-| `gfx/reward/m20.png` | 最終作戦のクリア絵（砲声の無い朝） |
-| `gfx/units/night_inf.png` | NIGHT_INF（夜間忍兵） |
-| `gfx/units/night_boat.png` | NIGHT_BOAT（夜間突撃艦） |
-| `gfx/units/night_fighter.png` | NIGHT_FIGHTER（夜間迎撃機） |
-| `gfx/co/herta.png` | HERTA（ヘルタ主計大尉） |
-| `gfx/co/noel.png` | NOEL（ノエル教官） |
-| `gfx/co/dieter.png` | DIETER（ディーター大尉） |
-
-## 陣営ごとのユニット絵
-
-`units.def` の `image =` は全陣営共通。陣営ごとに別の絵にしたいときは
-`image0` 〜 `image4` を `image` の**あと**に書く（後に書いた方が勝つ）。
-
-```
-[unit TANK]
-image  = gfx/units/tank.png        # 全陣営これ
-image0 = gfx/units/tank_blue.png   # 陣営0（自軍）だけ
-image1 = gfx/units/tank_red.png    # 陣営1だけ
-```
-
-番号は陣営番号（0～4）。書かなかった陣営は `image` の絵のままになる。
-
-描画は画像に陣営色を乗せない（陣営は足元のチップの色と形で示す）ので、
-色分けされた絵が欲しければここで指定すること。
-全兵種分を揃える必要はなく、差し替えたものだけ変わる。
-
-元絵を陣営色に染めた仮絵なら `tools/gen_unit_tint.py` で一括生成できる。
-
-```bash
-python tools/gen_unit_tint.py             # 生成して、貼る行を画面に出す
-python tools/gen_unit_tint.py --apply     # units.def に直接書き込む
-python tools/gen_unit_tint.py --only INFANTRY,TANK
-```
-
-明度を保ったまま色相だけ寄せるので元絵の陰影は残る。あくまで仮絵で、
-描いた絵を同じ名前で上書きすればそのまま差し替わる。
-既に `image0` が書いてある兵種は飛ばすので、何度実行しても壊れない。
+| `gfx/terrain/airstrip.png` | AIRSTRIP（Airstrip） |
+| `gfx/terrain/anchorage.png` | ANCHORAGE（Anchorage） |
+| `gfx/terrain/rubble.png` | RUBBLE（Rubble） |
+| `gfx/terrain/rubble_port.png` | RUBBLE_PORT（Ruined Port） |
+| `gfx/units/common/engineer.png` | ENGINEER／ENGINEER_V（Master Diggers） |
+| `gfx/units/common/night_inf.png` | NIGHT_INF（Night Blades）／NIGHT_INF_V（Masters of the Dark） |
+| `gfx/units/common/night_boat.png` | NIGHT_BOAT（Dark Boat）／NIGHT_BOAT_V（Black Boat） |
+| `gfx/units/common/night_fighter.png` | NIGHT_FIGHTER（Nighthawk）／NIGHT_FIGHTER_V（Lord of the Night） |
+| `gfx/co/herta.png` | HERTA（Paymaster Capt. Herta） |
+| `gfx/co/noel.png` | NOEL（Instructor Noel） |
+| `gfx/co/dieter.png` | DIETER（Captain Dieter） |
+| `gfx/brief/m13.png` | M13 |
+| `gfx/reward/m13.png` | M13 |
+| `gfx/brief/m11.png` | M11 |
+| `gfx/reward/m11.png` | M11 |
+| `gfx/brief/m14.png` | M14 |
+| `gfx/reward/m14.png` | M14 |
+| `gfx/brief/m12.png` | M12 |
+| `gfx/reward/m12.png` | M12 |
+| `gfx/brief/m19.png` | M19 |
+| `gfx/reward/m19.png` | M19 |
+| `gfx/brief/m20.png` | M20 |
+| `gfx/reward/m20.png` | M20 |
 
 ## 寸法の目安
 

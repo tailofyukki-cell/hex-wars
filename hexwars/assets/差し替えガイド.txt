@@ -16,10 +16,17 @@
 data/units.def の各ユニットに書きます。
 
   [unit TANK]
-  image  = gfx/units/tank.png        ← 両陣営で同じ絵を使う場合
-  image0 = gfx/units/tank_blue.png   ← 自軍（青）だけ差し替える場合
-  image1 = gfx/units/tank_red.png    ← 敵軍（赤）だけ差し替える場合
+  image  = gfx/units/common/tank.png     ← 全陣営で同じ絵を使う場合
+  image0 = gfx/units/faction0/tank.png   ← 陣営0（自軍）だけ差し替える場合
+  image1 = gfx/units/faction1/tank.png   ← 陣営1だけ差し替える場合
 
+・絵の置き場所は陣営ごとにフォルダが分けてあります
+    gfx/units/common/      全陣営で使う絵
+    gfx/units/faction0〜4/ その陣営だけの絵（0=西方連合 1=東方連邦
+                           2=南方同盟 3=北方協商 4=自由軍）
+  くわしくは assets/gfx/units/README.txt を見てください
+・絵を描き替えるだけなら common/ の中を同じ名前で上書きすれば済みます
+  （units.def を触る必要はありません）
 ・パスは assets/ からの相対
 ・使える形式: PNG / JPG（透過を使うなら PNG）
 ・サイズは自由。ヘクスの大きさに合わせて自動で拡大縮小されます

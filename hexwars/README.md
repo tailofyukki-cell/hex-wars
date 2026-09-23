@@ -316,9 +316,9 @@ units.def の各ユニットに `image =` で任意のPNG（`assets/` からの�
 
 ```
 [unit TANK]
-image  = gfx/units/tank.png      # 両陣営共通
-#image0 = gfx/units/tank_blue.png   # 陣営別にする場合
-#image1 = gfx/units/tank_red.png
+image  = gfx/units/common/tank.png      # 全陣営共通
+#image0 = gfx/units/faction0/tank.png   # 陣営別にする場合
+#image1 = gfx/units/faction1/tank.png
 ```
 
 `image` を書かなければ従来どおり図形+兵科文字（歩・戦…）で描画されます。
