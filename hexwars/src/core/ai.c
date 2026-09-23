@@ -73,6 +73,22 @@ static int nearest_capture_goal(const Game *g, int me, int fx, int fy)
     return best;
 }
 
+/* 最寄りの敵/中立の生産拠点までの距離。
+ * 首都の無いマップ（海戦マップ・空戦マップ）で前進の向きを作るためのもの。 */
+static int nearest_enemy_base(const Game *g, int me, int fx, int fy)
+{
+    int best = 9999;
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++) {
+            const TerrainType *t = &g->terrains[g->tiles[y][x].terrain];
+            if (!t->capturable || t->produces == PROD_NONE) continue;
+            if (!ai_can_take(g, me, g->tiles[y][x].owner)) continue;
+            int d = hex_distance(fx, fy, x, y);
+            if (d < best) best = d;
+        }
+    return best;
+}
+
 /* 最寄りの可視敵ユニット/敵首都までの距離（攻撃役割の目標） */
 static int nearest_enemy_goal(const Game *g, int me, int fx, int fy)
 {
@@ -91,6 +107,19 @@ static int nearest_enemy_goal(const Game *g, int me, int fx, int fy)
                 int d = hex_distance(fx, fy, x, y);
                 if (d < best) best = d;
             }
+    /* 見える敵も、狙える敵首都も無いときだけ、敵の生産拠点を目標にする。
+     *
+     * 首都の無いマップ（群狼の海・蒼穹の戦線）では、敵が視界に入るまで
+     * ここが全マスで 9999 を返していた。距離の項が一律になると移動先の
+     * 点数が地形防御だけで決まり、海や空の上で防御を持つのは自軍の港・
+     * 空港しかないので、部隊が母港に貼り付いて動かなくなる。そのまま
+     * 生産マスを塞ぐので増援も止まり、両軍が何もしないまま時間切れに
+     * なっていた（実測: 群狼の海で最初の5ターン、資金4900を抱えたまま
+     * 1隻も出せていなかった）。
+     *
+     * **常に候補へ入れてはいけない。** 首都より近い工場に釣られて進軍が
+     * 逸れる。ここは「目標がゼロ」のときだけ効く受け皿にとどめること。 */
+    if (best >= 9999) best = nearest_enemy_base(g, me, fx, fy);
     return best;
 }
 
