@@ -180,6 +180,54 @@ static int cpu_wait_frames(const App *a)
     }
 }
 
+/* 盤面を見せる相手。CPU手番中も人間側の視点を使う（render.c と同じ決め方） */
+static int battle_viewer(const Game *g)
+{
+    if (g->ctrl[g->current] == CTRL_HUMAN) return g->current;
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (g->ctrl[p] == CTRL_HUMAN && game_player_in_play(g, p))
+            return p;
+    return g->current;
+}
+
+/* CPU が今の1手で動かしたものを、人間に見せられるか。見せる場所を *sx,*sy に返す。
+ *
+ * 霧の中で動いた敵にカメラを寄せると、見えないはずの敵の居場所が分かって
+ * しまっていた。待ちも毎手入れていたので、大決戦マップでは1手番154手×
+ * 0.23秒＝36秒、何も見えない場所へカメラが飛ぶのを待たされていた。
+ *
+ * 動いた部隊が見えていればそこを見せる。見えない部隊に撃たれた場合は、
+ * 撃たれた側（たいてい自軍）を見せる——撃たれたことは分かるべきだが、
+ * 撃った側の場所まで教えてはいけない。部隊に紐づかない手（生産・必殺技）は
+ * 従来どおり待つだけでカメラは動かさない。 */
+static bool cpu_step_shown(const App *a, int *sx, int *sy)
+{
+    const Game *g = &a->game;
+    int ui = a->ai.last_unit, ti = a->ai.last_target;
+    *sx = *sy = -1;
+    if (ui < 0 || ui >= g->n_units) return true;
+    int viewer = battle_viewer(g);
+    const Unit *u = &g->units[ui];
+    bool alive = (u->flags & UF_ALIVE) != 0;
+    /* 霧なしでも、倒された部隊の位置へは寄せない（従来どおり） */
+    if (!g->fog) {
+        if (alive) { *sx = u->pos.x; *sy = u->pos.y; }
+        return true;
+    }
+    if (alive && game_unit_visible_to(g, viewer, u)) {
+        *sx = u->pos.x; *sy = u->pos.y;
+        return true;
+    }
+    if (ti >= 0 && ti < g->n_units) {
+        const Unit *t = &g->units[ti];
+        if (g->visible[viewer][t->pos.y][t->pos.x]) {
+            *sx = t->pos.x; *sy = t->pos.y;
+            return true;
+        }
+    }
+    return false;
+}
+
 static void begin_side(App *a)
 {
     Game *g = &a->game;
@@ -1866,16 +1914,17 @@ void battle_update(App *a)
         /* CPUの行動で自軍が全滅することがあるのでここも無条件に */
         check_over(a);
         if (a->bs == BS_GAMEOVER) return;
-        if (a->ai.last_unit >= 0 &&
-            (g->units[a->ai.last_unit].flags & UF_ALIVE)) {
-            const Unit *u = &g->units[a->ai.last_unit];
-            a->cur_x = u->pos.x; a->cur_y = u->pos.y;
-            center_camera(a, u->pos.x, u->pos.y);
+        int sx, sy;
+        bool shown = cpu_step_shown(a, &sx, &sy);
+        if (sx >= 0) {
+            a->cur_x = sx; a->cur_y = sy;
+            center_camera(a, sx, sy);
         }
         if (!cont) {
             begin_side(a);
         } else {
-            a->cpu_wait = cpu_wait_frames(a);
+            /* 見えない手は待たずに次へ（1フレーム1手で流す） */
+            a->cpu_wait = shown ? cpu_wait_frames(a) : 0;
         }
         return;
     }
@@ -2163,12 +2212,7 @@ static void draw_panels(App *a)
         draw_text(a, a->font_s, 14, py + 68, COL_GRAY, buf);
     }
     /* CPU手番中も人間側の視点で表示する。地形・ユニットの両方で使う。 */
-    int viewer = g->current;
-    if (g->ctrl[viewer] != CTRL_HUMAN)
-        for (int p = 0; p < MAX_PLAYERS; p++)
-            if (g->ctrl[p] == CTRL_HUMAN && game_player_in_play(g, p)) {
-                viewer = p; break;
-            }
+    int viewer = battle_viewer(g);
 
     if (t->capturable) {
         char ownbuf[64];
