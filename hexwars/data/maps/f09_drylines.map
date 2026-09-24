@@ -72,6 +72,3 @@ unit = 0,SUPPLY,6,11
 unit = 1,SUPPLY,31,14
 unit = 0,SUPPLY,7,11
 unit = 1,SUPPLY,30,14
-unit = 1,TANK,29,10
-unit = 1,AT_INFANTRY,30,10
-unit = 1,MECH_INF,31,10
