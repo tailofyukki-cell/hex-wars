@@ -172,6 +172,36 @@ static int advance_goal(const Game *g, int me, const Unit *self, int fx, int fy)
     return d < h ? d : h;
 }
 
+/* 目指す先が1つも無いか（見える敵も、狙える敵首都も、敵の生産拠点も無い）。
+ * 拠点の無いマップ（涸れた戦線）で、敵がまだ視界に入っていない状態。
+ * このとき前進の距離はどのマスでも 9999 になり、部隊は防御地形に座った
+ * まま動かなくなる。nearest_enemy_goal は目標が無いときだけ 9999 を返すので、
+ * どこから測っても同じ（座標は何でもいい）。 */
+static bool nothing_to_head_for(const Game *g, int me)
+{
+    return nearest_enemy_goal(g, me, 0, 0) >= 9999;
+}
+
+/* 索敵の向き。まずマップ中央を目指し、中央が見えたら最寄りの
+ * 「まだ見えていない、この部隊が入れるマス」を目指す。
+ * 中央を先に置くのは、見えていないマスは自軍の背後にも広がっていて、
+ * 最寄りの霧だけを追うと部隊が四方に散って後ろへ下がる者まで出るため。
+ * 対称なマップなら敵も中央へ出てくるので、そこで接触できる。 */
+static int scout_goal(const Game *g, int me, MoveClass mc, int x, int y)
+{
+    int cx = g->w / 2, cy = g->h / 2;
+    if (!g->visible[me][cy][cx]) return hex_distance(x, y, cx, cy);
+    int best = 9999;
+    for (int yy = 0; yy < g->h; yy++)
+        for (int xx = 0; xx < g->w; xx++) {
+            if (g->visible[me][yy][xx]) continue;
+            if (g->terrains[g->tiles[yy][xx].terrain].mcost[mc] <= 0) continue;
+            int d = hex_distance(x, y, xx, yy);
+            if (d < best) best = d;
+        }
+    return best;
+}
+
 /* 最寄りの「補給・回復が必要な味方」までの距離（補給車の目標）。
  * 燃料/弾薬切れに加え、損傷ユニット（HP<8）も対象にする（回復用）。 */
 static int nearest_needy(const Game *g, int me, int self, int fx, int fy)
@@ -221,6 +251,59 @@ static int nearest_supply(const Game *g, int me, MoveClass mc, int fx, int fy)
             if (d < best) best = d;
         }
     return best;
+}
+
+/* 最寄りの「降りられる」補給地点までの距離。そのレイヤーが空いているか、
+ * 自分自身が乗っている補給地点だけを数える。空いている所が1つも無ければ
+ * 埋まっている所も含めた距離を返す（とにかく帰る向きは作る）。
+ *
+ * 空港1マスに航空機は1機しか入れない。空いているかを見ずに最寄りへ戻すと、
+ * 先客のいる空港の隣で着陸待ちのまま燃料が尽きる。実測では燃料切れで
+ * 落ちた964機のうち870機が「最寄りの空港が埋まっていた」ものだった。 */
+static int nearest_free_supply(const Game *g, int me, int ui, MoveClass mc,
+                               int fx, int fy)
+{
+    Layer L = unit_layer(mc);
+    int best = 9999;
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++) {
+            const Tile *tl = &g->tiles[y][x];
+            const TerrainType *t = &g->terrains[tl->terrain];
+            if (tl->owner != me || !(t->supplies & (1u << mc))) continue;
+            int occ = game_unit_at_layer(g, x, y, L);
+            if (occ >= 0 && occ != ui) continue;
+            int d = hex_distance(fx, fy, x, y);
+            if (d < best) best = d;
+        }
+    return best < 9999 ? best : nearest_supply(g, me, mc, fx, fy);
+}
+
+/* 燃料が帰り道ぎりぎりか。行動順を決めるのに使う（build_order で最後に回す）。
+ * 移動先ごとの判定は act_unit の「燃料の安全圏」が別にやっている。
+ *
+ * 航空機は空中にいるだけで毎ターン upkeep（既定4）を払い、0 になると墜落する。
+ * 燃料を見る判断が何も無かったころは、短縮コースのCPU対戦1回で 605 機が
+ * 燃料切れで落ちていた。
+ *
+ * 帰り道に要る燃料 = 距離ぶんの移動燃料 + 着くまでの手番ぶんの維持燃料。
+ * 1手番ぶん余裕を持たせる。移動燃料はその移動種別の最も重い地形で見積もる
+ * （経路の地形までは追わない。多めに見れば早めに帰るだけで済む）。 */
+static bool needs_fuel_return(const Game *g, int me, const Unit *u)
+{
+    const UnitType *ut = &g->types[u->type];
+    if (ut->no_fuel != NOFUEL_DIE && ut->no_fuel != NOFUEL_DAMAGE) return false;
+    MoveClass mc = (MoveClass)ut->mclass;
+    int d = nearest_free_supply(g, me, (int)(u - g->units), mc, u->pos.x, u->pos.y);
+    if (d <= 0 || d >= 9999) return false;   /* 補給地点の上にいる / 戻る先が無い */
+
+    int max_cost = 2;
+    for (int t = 0; t < g->n_terrains; t++)
+        if (g->terrains[t].mcost[mc] > max_cost) max_cost = g->terrains[t].mcost[mc];
+    int per_hex = (max_cost + 1) / 2;         /* path_walk と同じく コスト÷2 が燃料 */
+    int move = ut->move > 0 ? ut->move : 1;
+    int turns = (d + move - 1) / move;
+    int need = d * per_hex + (turns + 1) * ut->upkeep;
+    return u->fuel <= need;
 }
 
 /* ------------------------------------------------------------------ */
@@ -355,19 +438,41 @@ static void build_order(const Game *g, AiState *s)
     int me = g->current;
     s->n_order = 0;
     s->idx = 0;
-    int pass_order[3] = {0, 1, 2};
-    for (int pass = 0; pass < 3; pass++) {
+    /* 3 = 燃料が帰り道ぎりぎりの部隊。**最後に動かす**。先に動く部隊（補給を
+     * 終えた機体や、前の手番に生産した機体）が空港を空けてから降りるため。
+     * 先に動かすと埋まった空港の隣で着陸待ちになり、そのまま墜落する。 */
+    int pass_order[4] = {0, 1, 2, 3};
+    int n_front = 0;   /* 燃料の苦しい部隊（最後に回す）より前の数 */
+    for (int pass = 0; pass < 4; pass++) {
+        if (pass_order[pass] == 3) n_front = s->n_order;
         for (int i = 0; i < g->n_units; i++) {
             const Unit *u = &g->units[i];
             if (!(u->flags & UF_ALIVE) || u->owner != me) continue;
             if (u->flags & UF_DONE) continue;
             const UnitType *t = &g->types[u->type];
             int cls;
-            if (t->range_min >= 2) cls = 0;
+            if (needs_fuel_return(g, me, u)) cls = 3;
+            else if (t->range_min >= 2) cls = 0;
             else if (t->can_capture) cls = 2;
             else cls = 1;
             if (cls == pass_order[pass])
                 s->order[s->n_order++] = i;
+        }
+    }
+    /* 索敵中（目指す先が1つも無い）は、視界の広い部隊から動かす。
+     * 先に動いた部隊が見える範囲を広げ、あとの部隊はその広がった範囲の中で
+     * 動ける（act_unit は索敵中、今見えているマスにしか動かない）。
+     * 挿入ソートで安定に並べる。燃料の苦しい部隊は最後のまま。 */
+    if (g->fog && nothing_to_head_for(g, me)) {
+        for (int i = 1; i < n_front; i++) {
+            int ui = s->order[i];
+            int vi = game_unit_vision(g, &g->units[ui]);
+            int j = i - 1;
+            while (j >= 0 && game_unit_vision(g, &g->units[s->order[j]]) < vi) {
+                s->order[j + 1] = s->order[j];
+                j--;
+            }
+            s->order[j + 1] = ui;
         }
     }
 }
@@ -594,6 +699,47 @@ static void act_unit(Game *g, AiState *s, int ui)
 
     path_move_range(g, ui, &s_mr);
 
+    /* 索敵中か。前の部隊が動いて敵が見えたら、この部隊からは通常の判断に戻る */
+    bool scouting = g->fog && nothing_to_head_for(g, me);
+
+    /* 燃料の安全圏。空中にいるだけで燃料を食い、尽きると失う部隊（航空機）は、
+     * 「そのマスで手番を終えても、次の手番以降に降りられる補給地点まで
+     * 帰り着けるか」を候補マスごとに見る。帰れないマスへ「ただ動く」のは
+     * 強く減点する（攻撃は除く。理由は減点を掛ける所に書いた）。
+     *
+     * 手番の頭で1回だけ「まだ帰れるか」を判定していたときは、判定を通った機体が
+     * その手番のうちに7マス前進して帰れない所まで出てしまい、爆撃機を中心に
+     * 大量に落ちていた。帰り道に要る燃料は 距離×1マスの燃料 ＋ 着くまでの
+     * 手番数×維持燃料。難易度に関係なく掛ける。
+     *
+     * 航空機の生産に「空港1つにつき3機まで」の上限を掛ける案も試したが、
+     * 旧AIとの直接対戦で 13勝23敗と負け越したので採っていない。 */
+    int home_x[64], home_y[64], n_home = 0;
+    int fuel_per_hex = 1;
+    bool fuel_guard = ut->upkeep > 0 &&
+                      (ut->no_fuel == NOFUEL_DIE || ut->no_fuel == NOFUEL_DAMAGE);
+    if (fuel_guard) {
+        Layer L = unit_layer(mc);
+        /* まず先客のいない補給地点だけを数える。全部埋まっているときは
+         * 埋まっている所も数える——次の手番には空くかもしれず、ここで判定を
+         * 切ると帰る気のないまま飛んでいって落ちる。 */
+        for (int pass = 0; pass < 2 && n_home == 0; pass++)
+            for (int y = 0; y < g->h && n_home < 64; y++)
+                for (int x = 0; x < g->w && n_home < 64; x++) {
+                    const Tile *tl = &g->tiles[y][x];
+                    if (tl->owner != me ||
+                        !(g->terrains[tl->terrain].supplies & (1u << mc))) continue;
+                    int occ = game_unit_at_layer(g, x, y, L);
+                    if (pass == 0 && occ >= 0 && occ != ui) continue;
+                    home_x[n_home] = x; home_y[n_home] = y; n_home++;
+                }
+        int max_cost = 2;
+        for (int t = 0; t < g->n_terrains; t++)
+            if (g->terrains[t].mcost[mc] > max_cost) max_cost = g->terrains[t].mcost[mc];
+        fuel_per_hex = (max_cost + 1) / 2;
+        if (n_home == 0) fuel_guard = false;   /* 帰る先が無いなら判定しても仕方ない */
+    }
+
     /* このユニットが受ける脅威は「自分の装甲カテゴリ」で引く。
      * 立体戦では相手によって危険度がまるで違うのでここを取り違えると、
      * 戦車が高射砲を恐れて動けない・戦闘機が対空砲に突っ込む、といった挙動になる。 */
@@ -645,6 +791,8 @@ static void act_unit(Game *g, AiState *s, int ui)
     for (int y = 0; y < g->h; y++) {
         for (int x = 0; x < g->w; x++) {
             if (s_mr.cost[y][x] < 0 || !s_mr.stop[y][x]) continue;
+            /* 索敵中は今見えている範囲の中でだけ動く（見えない所へ踏み込まない） */
+            if (scouting && !g->visible[me][y][x]) continue;
             /* 自レイヤーの占有は避ける。ただし搭乗できる味方輸送の上は候補にする */
             int board_t = -1, join_t = -1;
             {
@@ -709,6 +857,31 @@ static void act_unit(Game *g, AiState *s, int ui)
             /* 共通項: 地形防御 − 脅威 */
             int base = tdef * 2 - threat[y][x] / THREAT_DIV;
 
+            /* 燃料の安全圏の外か。外なら「ただ動くだけ」の手を強く減点する
+             * （前進評価で引く）。**攻撃には掛けない**——帰れなくても撃つ価値が
+             * あるなら撃たせる。攻撃にも掛けた版は墜落が 605→220 まで減ったが、
+             * 旧AIとの直接対戦で 13勝26敗と大きく負け越した。片道の攻撃で与える
+             * 打撃が、落ちる機体の損より大きい。攻撃を除いた今の形で 19勝20敗、
+             * 墜落は 605→518。帰り道に近いほど減点を軽くして、どこも安全で
+             * ないときは少しでも家に近い所を選ばせる。 */
+            int unsafe_pen = 0;
+            if (fuel_guard) {
+                int dh = 9999;
+                for (int k = 0; k < n_home; k++) {
+                    int dd = hex_distance(x, y, home_x[k], home_y[k]);
+                    if (dd < dh) dh = dd;
+                }
+                if (dh > 0) {
+                    int umove = ut->move > 0 ? ut->move : 1;
+                    int f = u->fuel - (s_mr.cost[y][x] + 1) / 2;
+                    int turns = (dh + umove - 1) / umove;
+                    /* +1手番ぶんの維持燃料は、着いた空港に先客がいて1手番
+                     * 待たされる分の余裕 */
+                    if (f < (turns + 1) * ut->upkeep + dh * fuel_per_hex + 1)
+                        unsafe_pen = 100000 + dh * 100;
+                }
+            }
+
             /* --- 合流評価: 傷むほど魅力的。ただし良い攻撃手には負ける値にする --- */
             if (join_t >= 0) {
                 int sc = base + 40 + (10 - u->hp) * 20;
@@ -722,7 +895,7 @@ static void act_unit(Game *g, AiState *s, int ui)
             }
 
             if (retreat) {
-                int d = nearest_supply(g, me, mc, x, y);
+                int d = nearest_free_supply(g, me, ui, mc, x, y);
                 int sc = base - d * 60;
                 if (sc > best.score) {
                     best.score = sc; best.mx = x; best.my = y;
@@ -916,7 +1089,8 @@ static void act_unit(Game *g, AiState *s, int ui)
                 int d = ut->can_capture
                           ? nearest_capture_goal(g, me, x, y)
                           : advance_goal(g, me, u, x, y);
-                int sc = base - d * 40 - 200; /* 攻撃・占領より弱い基本値 */
+                if (scouting && d >= 9999) d = scout_goal(g, me, mc, x, y);
+                int sc = base - d * 40 - 200 - unsafe_pen; /* 攻撃・占領より弱い基本値 */
                 if (sc > best.score) {
                     best.score = sc; best.mx = x; best.my = y;
                     best.action = 0; best.target = -1;
@@ -1040,6 +1214,7 @@ static int pick_production(Game *g, AiState *s, int x, int y)
 
     bool want_capture = (n_cap < 3 && open_bldgs > 0);
 
+
     /* 装甲カテゴリごとの「需要」。
      * **4カテゴリの攻撃力を単純に足してはいけない**。足すと
      * 何にでも当たる万能機ばかりが高得点になり、戦闘機や対空車のような
@@ -1054,7 +1229,13 @@ static int pick_production(Game *g, AiState *s, int x, int y)
         dem[c] = share * mult;
     }
 
-    int best = -1, best_sc = -1;
+    /* **点が 0 以下のものは買わない**（best_sc を 0 から始める）。
+     * 各分岐は「今は要らない」を 0 で表している（乗せる部隊の無い輸送艦、
+     * 足りている補給車など）。以前は -1 から始めていたので、資金が細って
+     * 高いものが買えないターンに、その「要らない」ものが唯一の候補として
+     * 選ばれていた。群狼の海では陸兵が1体もいないのに輸送艦を3隻買っていた。
+     * 買わなかったお金は次の手番に持ち越され、役に立つものを買う足しになる。 */
+    int best = -1, best_sc = 0;
     for (int t = 0; t < g->n_types; t++) {
         const UnitType *ut = &g->types[t];
         if (!game_type_buildable_at(g, x, y, t)) continue;
@@ -1089,7 +1270,11 @@ static int pick_production(Game *g, AiState *s, int x, int y)
             int power = 0;
             for (int c = 0; c < ARMOR_COUNT; c++) power += ut->atk[c] * dem[c];
             power /= 100;
-            sc = power * 3 + (g->turn >= 6 ? ut->cost / 8 : -ut->cost / 8);
+            /* 今いる敵のどれにも有効打が無い（丸腰、または撃てない相手ばかり）なら
+             * 戦闘部隊としては買う価値が無い。値段の項だけで正の点が付いて
+             * 選ばれてしまうので、ここで 0 にしておく。 */
+            if (power <= 0) sc = 0;
+            else sc = power * 3 + (g->turn >= 6 ? ut->cost / 8 : -ut->cost / 8);
         }
         if (sc > best_sc) { best_sc = sc; best = t; }
     }
