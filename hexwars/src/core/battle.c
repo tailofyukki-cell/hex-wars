@@ -23,7 +23,7 @@ static int base_damage_x10(const Game *g, const Unit *atk, const Unit *def)
 {
     const UnitType *at = unit_type(g, atk);
     const UnitType *dt = unit_type(g, def);
-    int a = at->atk[dt->armor];
+    int a = unit_atk_vs(at, dt);
     if (a <= 0) return 0;
     /* 夜は領域をまたぐ攻撃が成立しない。雨と同じくここでも0を返す。
      * 見ないと、実際には撃てない組み合わせに予想ダメージが出てしまう。 */

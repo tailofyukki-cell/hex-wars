@@ -150,6 +150,8 @@ int  unit_rank(const Unit *u);                          /* 経験ランク 0..5 
 const char *unit_name_of(const UnitType *ut, int owner);
 bool unit_can_attack_target(const Game *g, const Unit *atk, const Unit *def);
 bool game_unit_visible_to(const Game *g, int viewer, const Unit *u);
+/* 潜水艦を見つけられる距離（units.def の sonar、無ければ視界の半分） */
+int  game_sonar_range(const Game *g, const Unit *u);
 
 /* --- 状態変更コマンド（UI / AI 共用） --- */
 int  game_spawn_unit(Game *g, int owner, int type, int x, int y, int hp);

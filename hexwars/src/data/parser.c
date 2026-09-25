@@ -241,6 +241,7 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
             /* 未指定を表す値。あとで class に応じた既定値に置き換える */
             cur->upkeep  = UPKEEP_AUTO;
             cur->no_fuel = NOFUEL_AUTO;
+            cur->atk_sub = ATK_SUB_AUTO;
             cur->move_se = -1;
             snprintf(cur->id, sizeof cur->id, "%s", trim(key + 5));
             continue;
@@ -294,6 +295,8 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "can_capture"))   cur->can_capture = (uint8_t)atoi(val);
         else if (!strcmp(key, "move_and_fire")) cur->move_and_fire = (uint8_t)atoi(val);
         else if (!strcmp(key, "anti_sub"))      cur->anti_sub = (uint8_t)atoi(val);
+        else if (!strcmp(key, "atk_sub"))       cur->atk_sub = (int16_t)atoi(val);
+        else if (!strcmp(key, "sonar"))         cur->sonar = (uint8_t)atoi(val);
         else if (!strcmp(key, "is_sub"))        cur->is_sub = (uint8_t)atoi(val);
         else if (!strcmp(key, "capacity"))      cur->capacity = (uint8_t)atoi(val);
         else if (!strcmp(key, "resupply_cargo")) cur->resupply_cargo = (uint8_t)atoi(val);
@@ -356,6 +359,8 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
         UnitType *t = &g->types[i];
         if (t->upkeep == UPKEEP_AUTO)
             t->upkeep = (t->mclass == MC_AIR) ? 4 : 0;   /* 航空機だけ空中維持コスト */
+        if (t->atk_sub == ATK_SUB_AUTO)
+            t->atk_sub = t->atk[ARMOR_SEA];               /* 既定は対艦と同じ */
         if (t->no_fuel == NOFUEL_AUTO) {
             if (t->mclass == MC_AIR)                     t->no_fuel = NOFUEL_DIE;
             else if (t->mclass == MC_SEA || t->mclass == MC_SUB)

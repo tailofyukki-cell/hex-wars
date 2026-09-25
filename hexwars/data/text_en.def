@@ -239,6 +239,7 @@ PANEL_HP_FMT     = HP %d/10   Fuel %d/%d   Ammo %d/%d
 PANEL_HP_SUP_FMT = HP %d/10   Fuel %d/%d   Supplies %d/%d
 PANEL_EXP_FMT    = EXP %d (Rank %d)   Move %d
 PANEL_ATK_FMT    = ATK: Soft %d Armor %d Air %d Sea %d   Range %d-%d
+PANEL_ATK_SUB_FMT = ATK: Soft %d Armor %d Air %d Sea %d Sub %d (sonar %d)  Range %d-%d
 PANEL_CARGO_FMT  = Cargo: %s
 CARGO_TITLE      = Cargo Status
 CARGO_ROW_FMT    = %s   HP %d/10   Fuel %d/%d   Ammo %d/%d

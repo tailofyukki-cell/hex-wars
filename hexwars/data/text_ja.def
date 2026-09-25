@@ -235,6 +235,7 @@ PANEL_HP_FMT     = HP %d/10   燃料 %d/%d   弾薬 %d/%d
 PANEL_HP_SUP_FMT = HP %d/10   燃料 %d/%d   物資 %d/%d
 PANEL_EXP_FMT    = 経験 %d (ランク%d)   移動 %d
 PANEL_ATK_FMT    = 攻: 軟%d 装%d 空%d 海%d   射程 %d-%d
+PANEL_ATK_SUB_FMT = 攻: 軟%d 装%d 空%d 海%d 潜%d（探知%d）  射程 %d-%d
 PANEL_CARGO_FMT  = 搭載: %s
 CARGO_TITLE      = 搭載ユニットの状態
 CARGO_ROW_FMT    = %s   HP %d/10   燃料 %d/%d   弾薬 %d/%d

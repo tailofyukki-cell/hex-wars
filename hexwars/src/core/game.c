@@ -87,7 +87,7 @@ bool unit_can_attack_target(const Game *g, const Unit *atk, const Unit *def)
     /* 味方・援軍は撃てない。**ここで弾くことで対象一覧・AI・実攻撃・反撃の
      * すべてに一括で効く**（以前は対象一覧側だけに書いてあった）。 */
     if (!game_is_enemy(g, atk->owner, def->owner)) return false;
-    if (at->atk[dt->armor] <= 0) return false;
+    if (unit_atk_vs(at, dt) <= 0) return false;
     if (atk->ammo <= 0) return false;
     if (dt->is_sub && !at->anti_sub) return false;
     /* 夜: 陸VS陸・海VS海・空VS空だけ。領域をまたぐ攻撃は成立しない */
@@ -175,6 +175,14 @@ int game_hidden_sight(const Game *g, const Unit *u)
     return d < 1 ? 1 : d;                 /* 隣接だけは必ず見つけられる */
 }
 
+/* 潜水艦を見つけられる距離。units.def の sonar があればそれ、無ければ視界の半分。
+ * ソナーは夜や指揮官の視界補正を受けない（水の中の音で探すので）。 */
+int game_sonar_range(const Game *g, const Unit *u)
+{
+    const UnitType *t = unit_type(g, u);
+    return t->sonar ? t->sonar : game_hidden_sight(g, u);
+}
+
 /* viewer から見てユニット u が見えるか（森・都市の隠蔽と潜水艦を考慮） */
 bool game_unit_visible_to(const Game *g, int viewer, const Unit *u)
 {
@@ -201,8 +209,9 @@ bool game_unit_visible_to(const Game *g, int viewer, const Unit *u)
         if (!(v->flags & UF_ALIVE) || (v->flags & UF_LOADED)) continue;
         if (!game_same_team(g, v->owner, viewer)) continue;
         if (ut->is_sub && !unit_type(g, v)->anti_sub) continue;
-        if (hex_distance(v->pos.x, v->pos.y, u->pos.x, u->pos.y)
-            > game_hidden_sight(g, v)) continue;
+        /* 潜水艦はソナーの距離で探す（未指定なら視界の半分） */
+        int reach = ut->is_sub ? game_sonar_range(g, v) : game_hidden_sight(g, v);
+        if (hex_distance(v->pos.x, v->pos.y, u->pos.x, u->pos.y) > reach) continue;
         return true;
     }
     return false;

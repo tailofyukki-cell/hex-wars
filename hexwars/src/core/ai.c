@@ -138,7 +138,7 @@ static int nearest_target_goal(const Game *g, int me, const Unit *self,
         if (!(d->flags & UF_ALIVE) || (d->flags & UF_LOADED)) continue;
         if (!game_is_enemy(g, me, d->owner)) continue;
         if (!game_unit_visible_to(g, me, d)) continue;
-        if (st->atk[g->types[d->type].armor] <= 0) continue;
+        if (unit_atk_vs(st, &g->types[d->type]) <= 0) continue;
         if (!unit_can_attack_target(g, self, d)) continue;
         int dd = hex_distance(fx, fy, d->pos.x, d->pos.y);
         if (best < 0 || dd < best) best = dd;
@@ -863,7 +863,7 @@ static void act_unit(Game *g, AiState *s, int ui)
             if (!g->types[e->type].anti_sub) continue;
             if (!game_unit_visible_to(g, me, e)) continue;
             det_x[n_det] = e->pos.x; det_y[n_det] = e->pos.y;
-            det_r[n_det] = game_hidden_sight(g, e);
+            det_r[n_det] = game_sonar_range(g, e);
             n_det++;
         }
     }
@@ -1230,7 +1230,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                     int dist = hex_distance(x, y, d->pos.x, d->pos.y);
                     if (ut->range_min < 2 && exp < cap &&
                         dist >= dt->range_min && dist <= game_range_max(g, dt) &&
-                        d->ammo > 0 && dt->atk[ut->armor] > 0 &&
+                        d->ammo > 0 && unit_atk_vs(dt, ut) > 0 &&
                         !game_night_blocks(g, d, u)) {   /* 夜は反撃されない組み合わせがある */
                         int cx10 = battle_expect_damage_x10(g, d, u);
                         loss = ut->cost * cx10 / 100;
@@ -1364,7 +1364,7 @@ static int pick_production(Game *g, AiState *s, int x, int y)
         }
         const UnitType *t = &g->types[u->type];
         for (int c = 0; c < ARMOR_COUNT; c++) mine[c] += t->atk[c];
-        if (t->anti_sub) { mine_sub += t->atk[ARMOR_SEA]; n_antisub++; }
+        if (t->anti_sub) { mine_sub += t->atk_sub; n_antisub++; }
         if (domain_from_mclass(t->mclass) == 2 && !type_unarmed(t) && !t->supply) n_warship++;
         if (t->supply) n_supplier++;
         else if (t->can_capture) n_cap++;
@@ -1472,7 +1472,7 @@ static int pick_production(Game *g, AiState *s, int x, int y)
              * 高いユニットを選ぶだけの挙動に戻ってしまう。 */
             int power = 0;
             for (int c = 0; c < ARMOR_COUNT; c++) power += ut->atk[c] * dem[c];
-            if (ut->anti_sub) power += ut->atk[ARMOR_SEA] * dem_sub;
+            if (ut->anti_sub) power += ut->atk_sub * dem_sub;
             power /= 100;
             /* 今いる敵のどれにも有効打が無い（丸腰、または撃てない相手ばかり）なら
              * 戦闘部隊としては買う価値が無い。値段の項だけで正の点が付いて

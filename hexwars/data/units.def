@@ -21,6 +21,10 @@
 #         未指定なら攻撃側の指揮官の cutin にフォールバックし、それも無ければ出ない。
 #         仮絵は tools/gen_cutin_art.py（要Pillow）で生成したもの。
 # atk_* はダメージ×10 スケール（55 = 満HP時 5.5ダメージ期待）
+# atk_sub … 潜水艦への攻撃力（任意）。書かなければ atk_sea と同じ。潜水艦は水上艦と同じ
+#           SEA 区分なので、「潜水艦にだけ強い艦」はこれで表す。撃てるかは anti_sub で決まる。
+# sonar   … 潜水艦を見つけられる距離（任意。対潜ユニットだけ意味がある）。書かなければ
+#           視界の半分（切り捨て）。視界を1増やしても探知距離はほとんど延びないので別に持つ。
 # 架空WW2風の独自名称
 #
 # 戦闘アニメ動画（任意）: 各ユニットに `anim = gfx/anim/xxx.gif` を書くと、
@@ -2208,3 +2212,73 @@ move_and_fire = 1
 night         = 1
 upkeep        = 2
 no_produce    = 1
+
+# ---- 追加ユニット（**必ず末尾に足すこと**。セーブはユニット種別を番号で持つので、
+#      途中に挟むと既存のセーブの部隊が別の種別に化ける） ----
+
+# 駆潜艇: 潜水艦狩りの特務艦。潜水艦を遠くから見つけて（sonar）強く撃つ（atk_sub）が、
+# 水上艦・陸・空にはほとんど歯が立たない。潜水艦＞水上艦＞駆潜艇＞潜水艦 の三すくみの一角。
+# 霧の中では「潜水艦がもういない」ことを確かめる手段が無いので、見張りとして持つだけでも意味がある。
+[unit SUBCHASER]
+image     = gfx/units/common/subchaser.png
+cutin     = gfx/cutin/ship.png
+name      = 駆潜艇「Uj-2型」
+name1     = 小型対潜艦「計画52号」
+name2     = 海豹
+name3     = 三十六式駆潜艇
+name4     = 潜り狩り
+name@en   = Uj-2 Subchaser
+name1@en  = Project 52 Small ASW Ship
+name2@en  = Seal
+name3@en  = Type 36 Subchaser
+name4@en  = Sub Hunter
+evolve_to    = SUBCHASER_V
+icon      = 哨
+icon@en   = SC
+class     = SEA
+armor     = SEA
+cost      = 300
+move      = 7
+fuel      = 80
+ammo      = 6
+vision    = 4
+atk_soft  = 10
+atk_hard  = 5
+atk_air   = 20
+atk_sea   = 20
+atk_sub   = 85
+def       = 30
+anti_sub  = 1
+sonar     = 4
+
+[unit SUBCHASER_V]
+name         = 大型駆潜艇「Uj-7型」
+name1     = 大型対潜艦「計画56号」
+name2     = 大海豹
+name3     = 三十六式改駆潜艇
+name4     = 地獄耳
+name@en   = Uj-7 Large Subchaser
+name1@en  = Project 56 Large ASW Ship
+name2@en  = Great Seal
+name3@en  = Type 36 Kai Subchaser
+name4@en  = Devil's Ear
+icon         = 大
+icon@en   = SC+
+cost         = 450
+image        = gfx/units/common/subchaser.png
+cutin        = gfx/cutin/ship.png
+class        = SEA
+armor        = SEA
+move         = 7
+fuel         = 85
+ammo         = 7
+vision       = 5
+atk_soft     = 15
+atk_hard     = 8
+atk_air      = 25
+atk_sea      = 30
+atk_sub      = 100
+def          = 36
+anti_sub     = 1
+sonar        = 5
+no_produce   = 1

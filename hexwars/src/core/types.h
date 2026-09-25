@@ -102,6 +102,8 @@ typedef enum {
 
 /* upkeep 未指定を表す値（0 は「消費しない」という有効な指定なので分ける） */
 #define UPKEEP_AUTO 255
+/* atk_sub 未指定を表す値。読み込み後に atk_sea で埋める */
+#define ATK_SUB_AUTO (-1)
 
 /* 施設の生産カテゴリ */
 typedef enum {
@@ -134,6 +136,15 @@ typedef struct {
     uint8_t  ammo;
     uint8_t  vision;
     int16_t  atk[ARMOR_COUNT]; /* 対 SOFT/HARD/AIR/SEA 攻撃力 */
+    /* 潜水艦への攻撃力（units.def の atk_sub）。未指定なら atk_sea と同じ。
+     * 潜水艦の装甲区分は水上艦と同じ SEA なので、これが無いと「潜水艦にだけ
+     * 強くて水上艦には弱い艦」（駆潜艇）が表せない。撃てるかどうかは従来どおり
+     * anti_sub で決まる。攻撃力を引くときは unit_atk_vs を使うこと。 */
+    int16_t  atk_sub;
+    /* 潜水艦を見つけられる距離（units.def の sonar。対潜ユニットだけ意味がある）。
+     * 0 = 既定（視界の半分。game_hidden_sight）。視界は「÷2 切り捨て」なので、
+     * 視界を1増やしても潜水艦の探知距離はほとんど延びない。そのための別の値。 */
+    uint8_t  sonar;
     int16_t  def_;
     uint8_t  range_min;
     uint8_t  range_max;
@@ -179,6 +190,14 @@ typedef struct {
     char     evolve_to[24];
     uint8_t  no_produce;
 } UnitType;
+
+/* 攻撃側 at が防御側 dt に使う攻撃力。潜水艦には atk_sub を使う。
+ * **攻撃力は必ずここを通して引くこと**（atk[dt->armor] を直接見ると、
+ * 駆潜艇のような潜水艦専用の攻撃力が効かない）。 */
+static inline int unit_atk_vs(const UnitType *at, const UnitType *dt)
+{
+    return dt->is_sub ? at->atk_sub : at->atk[dt->armor];
+}
 
 /* 地形定義（terrain.def の1エントリ） */
 typedef struct {

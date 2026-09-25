@@ -84,16 +84,16 @@ static void test_data_and_battle(void)
             CHECK(g->terrains[as_].capturable && g->terrains[an_].capturable);
         }
     }
-    /* 生産できる35種 + 進化先35種。進化先は no_produce なので生産に出ない。
-     * 生産側の35には夜間ユニットの3種を含み、それらも進化先を持つ。 */
-    CHECK(g->n_types == 70);
+    /* 生産できる36種 + 進化先36種。進化先は no_produce なので生産に出ない。
+     * 生産側の36には夜間ユニットの3種と駆潜艇を含み、それらも進化先を持つ。 */
+    CHECK(g->n_types == 72);
     {
         int producible = 0, evo = 0;
         for (int i = 0; i < g->n_types; i++) {
             if (g->types[i].no_produce) evo++;
             else producible++;
         }
-        CHECK(producible == 35 && evo == 35);
+        CHECK(producible == 36 && evo == 36);
         /* 進化先を持つ種は、その進化先が実在し、生産不可であること */
         for (int i = 0; i < g->n_types; i++) {
             if (!g->types[i].evolve_to[0]) continue;
@@ -124,8 +124,8 @@ static void test_data_and_battle(void)
             }
         }
         /* 進化先も同じ内訳で増えるので倍になる。
-         * 夜間ユニットは陸・空・海に1つずつ。 */
-        CHECK(land == 32 && air == 18 && sea == 20);
+         * 夜間ユニットは陸・空・海に1つずつ。駆潜艇は海。 */
+        CHECK(land == 32 && air == 18 && sea == 22);
     }
     /* 画像指定（image=）が全陣営分に読めていること。
      * 陣営2〜4 が抜けると、乱戦マップでその陣営だけ
@@ -537,6 +537,82 @@ static void test_hidden_sight(void)
         (void)cu;
     }
     printf("test_hidden_sight OK\n");
+}
+
+/* 駆潜艇: 潜水艦にだけ強く（atk_sub）、潜水艦を遠くから見つける（sonar） */
+static void test_subchaser(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    game_start(g, 4321u);
+    g->fog = true;
+    g->co_id[0] = g->co_id[1] = -1;
+    g->weather_on = 0; g->night_on = 0;
+
+    int sc  = data_find_unit_type(g, "SUBCHASER");
+    int scv = data_find_unit_type(g, "SUBCHASER_V");
+    int sub = data_find_unit_type(g, "SUBMARINE");
+    int dd  = data_find_unit_type(g, "DESTROYER");
+    int bb  = data_find_unit_type(g, "BATTLESHIP");
+    CHECK(sc >= 0 && scv >= 0 && sub >= 0 && dd >= 0 && bb >= 0);
+
+    /* セーブはユニット種別を番号で持つ。途中に挟むと既存のセーブが化けるので、
+     * 追加分は units.def の末尾にあること */
+    CHECK(sc == g->n_types - 2 && scv == g->n_types - 1);
+    CHECK(g->types[sc].anti_sub && g->types[scv].no_produce);
+
+    /* atk_sub: 書いたものはその値、書かないものは atk_sea と同じ */
+    CHECK(g->types[sc].atk_sub > g->types[sc].atk[ARMOR_SEA]);
+    CHECK(g->types[dd].atk_sub == g->types[dd].atk[ARMOR_SEA]);
+    CHECK(g->types[bb].atk_sub == g->types[bb].atk[ARMOR_SEA]);
+    CHECK(unit_atk_vs(&g->types[sc], &g->types[sub]) == g->types[sc].atk_sub);
+    CHECK(unit_atk_vs(&g->types[sc], &g->types[dd]) == g->types[sc].atk[ARMOR_SEA]);
+
+    int sea = -1;
+    for (int i = 0; i < g->n_terrains; i++)
+        if (!strcmp(g->terrains[i].id, "SEA")) sea = i;
+    CHECK(sea >= 0);
+    for (int y = 6; y <= 10; y++)
+        for (int x = 1; x <= 15; x++) g->tiles[y][x].terrain = (uint8_t)sea;
+
+    /* 探知: 駆潜艇はソナーの距離まで、駆逐艦は視界の半分まで */
+    int son = g->types[sc].sonar;
+    int dd_reach = g->types[dd].vision / 2;
+    CHECK(son > dd_reach);
+    g->n_units = 0;
+    int su = game_spawn_unit(g, 1, sub, 12, 8, 10);
+    CHECK(su >= 0);
+    int ob = game_spawn_unit(g, 0, sc, 12 - son, 8, 10);
+    CHECK(game_sonar_range(g, &g->units[ob]) == son);
+    game_update_vision(g);
+    CHECK(game_unit_visible_to(g, 0, &g->units[su]));        /* ソナーの端で見える */
+    g->units[ob].flags = 0;
+    ob = game_spawn_unit(g, 0, sc, 12 - son - 1, 8, 10);
+    game_update_vision(g);
+    CHECK(!game_unit_visible_to(g, 0, &g->units[su]));       /* 1マス外は見えない */
+    g->units[ob].flags = 0;
+    ob = game_spawn_unit(g, 0, dd, 12 - son, 8, 10);
+    game_update_vision(g);
+    CHECK(!game_unit_visible_to(g, 0, &g->units[su]));       /* 駆逐艦には遠すぎる */
+    g->units[ob].flags = 0;
+
+    /* 撃ち合い: 潜水艦には駆逐艦より強く、水上艦には駆逐艦より弱い */
+    g->n_units = 0;
+    int esub = game_spawn_unit(g, 1, sub, 8, 8, 10);
+    int edd  = game_spawn_unit(g, 1, dd, 8, 9, 10);
+    int msc  = game_spawn_unit(g, 0, sc, 7, 8, 10);
+    int mdd  = game_spawn_unit(g, 0, dd, 7, 9, 10);
+    CHECK(esub >= 0 && edd >= 0 && msc >= 0 && mdd >= 0);
+    const Unit *U = g->units;
+    CHECK(battle_expect_damage_x10(g, &U[msc], &U[esub]) >
+          battle_expect_damage_x10(g, &U[mdd], &U[esub]));
+    CHECK(battle_expect_damage_x10(g, &U[msc], &U[edd]) <
+          battle_expect_damage_x10(g, &U[mdd], &U[edd]));
+    printf("test_subchaser OK\n");
 }
 
 static void test_unit_names(void)
@@ -4191,6 +4267,7 @@ int main(void)
     test_transport();
     test_unit_names();
     test_hidden_sight();
+    test_subchaser();
     test_language();
     test_paradrop();
     test_produce_layers();

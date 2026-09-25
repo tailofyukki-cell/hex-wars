@@ -68,6 +68,9 @@ NAMES = {
     "NIGHT_INF":     ("夜襲兵",                "蝙蝠兵",   "三十三式夜戦兵",  "闇討ち"),
     "NIGHT_BOAT":    ("夜襲艇「計画44号」",     "烏賊",     "三十四式夜戦艇",  "闇舟"),
     "NIGHT_FIGHTER": ("夜間迎撃機「YA-24」",    "梟",       "三十五式夜戦機",  "夜鷹"),
+    # 駆潜艇。東方は実在の命名（小型対潜艦→大型対潜艦）に寄せ、南方は水中の気配を
+    # ひげで探る海豹、自由軍は「潜り屋」を狩る者、進化形は耳の良さから「地獄耳」。
+    "SUBCHASER":     ("小型対潜艦「計画52号」", "海豹",     "三十六式駆潜艇",  "潜り狩り"),
 
     # ---- 進化専用 ----
     "INFANTRY_V":      ("親衛歩兵",                "猟犬兵",   "一式改歩兵",        "古参兵"),
@@ -105,6 +108,7 @@ NAMES = {
     "NIGHT_INF_V":     ("親衛夜襲兵",              "大蝙蝠兵", "三十三式改夜戦兵",  "闇の手練"),
     "NIGHT_BOAT_V":    ("夜襲強襲艇「計画64号」",  "大烏賊",   "三十四式改夜戦艇",  "黒舟"),
     "NIGHT_FIGHTER_V": ("高高度夜戦機「YA-36」",   "大梟",     "三十五式改夜戦機",  "夜の主"),
+    "SUBCHASER_V":     ("大型対潜艦「計画56号」",  "大海豹",   "三十六式改駆潜艇",  "地獄耳"),
 }
 
 MAXLEN = 47   # name[48] の終端ぶんを引いた上限（parser がこれを超えると読込エラー）
@@ -244,6 +248,7 @@ NAMES_EN = {
     "NIGHT_INF":     ("Night Stalkers", "Night Assault Troops", "Bat Troops", "Type 33 Night Infantry", "Night Blades"),
     "NIGHT_BOAT":    ("Night Assault Boat", "Project 44 Night Boat", "Squid", "Type 34 Night Boat", "Dark Boat"),
     "NIGHT_FIGHTER": ("Night Interceptor", "YA-24 Night Interceptor", "Owl", "Type 35 Night Fighter", "Nighthawk"),
+    "SUBCHASER":     ("Uj-2 Subchaser", "Project 52 Small ASW Ship", "Seal", "Type 36 Subchaser", "Sub Hunter"),
 
     "INFANTRY_V":      ("Elite Jaegers", "Guards Infantry", "Hound Troops", "Type 1 Kai Infantry", "Veterans"),
     "AT_INFANTRY_V":   ("Tank Hunters", "Guards Armor Breakers", "Great Scorpion Troops", "Type 2 Kai AT Infantry", "Tank Killers"),
@@ -280,6 +285,7 @@ NAMES_EN = {
     "NIGHT_INF_V":     ("Shadow Operatives", "Guards Night Assault Troops", "Great Bat Troops", "Type 33 Kai Night Infantry", "Masters of the Dark"),
     "NIGHT_BOAT_V":    ("Black Tide Raider", "Project 64 Night Assault Boat", "Great Squid", "Type 34 Kai Night Boat", "Black Boat"),
     "NIGHT_FIGHTER_V": ("Night Sky Interceptor", "YA-36 High-Altitude Night Fighter", "Great Owl", "Type 35 Kai Night Fighter", "Lord of the Night"),
+    "SUBCHASER_V":     ("Uj-7 Large Subchaser", "Project 56 Large ASW Ship", "Great Seal", "Type 36 Kai Subchaser", "Devil's Ear"),
 }
 
 

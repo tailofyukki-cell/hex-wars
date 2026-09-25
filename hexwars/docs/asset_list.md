@@ -6,8 +6,8 @@
 
 | | 数 |
 |---|---|
-| 参照されているパス | 100 |
-| うち実体あり | 77 |
+| 参照されているパス | 101 |
+| うち実体あり | 78 |
 | うち**未用意** | **23** |
 
 
@@ -36,7 +36,7 @@
 | `gfx/terrain/rubble.png` | RUBBLE（Rubble） | **未** | - |
 | `gfx/terrain/rubble_port.png` | RUBBLE_PORT（Ruined Port） | **未** | - |
 
-## ユニット（41本）
+## ユニット（42本）
 
 定義場所: `data/units.def` の `image = / image0 =` 〜 `image4 =`
 
@@ -61,7 +61,7 @@
 | `gfx/units/common/bomber.png` | BOMBER ほか1件 | ○ | 96x96 |
 | `gfx/units/common/heli.png` | HELI ほか1件 | ○ | 96x96 |
 | `gfx/units/common/destroyer.png` | DESTROYER ほか1件 | ○ | 96x96 |
-| `gfx/cutin/ship.png` | DESTROYER ほか7件 | ○ | 520x900 |
+| `gfx/cutin/ship.png` | DESTROYER ほか9件 | ○ | 520x900 |
 | `gfx/units/common/cruiser.png` | CRUISER ほか1件 | ○ | 96x96 |
 | `gfx/units/common/submarine.png` | SUBMARINE ほか1件 | ○ | 96x96 |
 | `gfx/units/common/t_ship.png` | T_SHIP ほか1件 | ○ | 96x96 |
@@ -85,6 +85,7 @@
 | `gfx/units/common/night_inf.png` | NIGHT_INF（Night Blades） ほか1件 | **未** | - |
 | `gfx/units/common/night_boat.png` | NIGHT_BOAT（Dark Boat） ほか1件 | **未** | - |
 | `gfx/units/common/night_fighter.png` | NIGHT_FIGHTER（Nighthawk） ほか1件 | **未** | - |
+| `gfx/units/common/subchaser.png` | SUBCHASER ほか1件 | ○ | 96x96 |
 
 ## 指揮官（11本）
 
@@ -182,7 +183,7 @@
 | 種別 | よくある実寸 |
 |---|---|
 | 地形タイル | 192x192 (12本) |
-| ユニット/カットイン | 96x96 (31本)、520x900 (4本)、640x360 (1本) |
+| ユニット/カットイン | 96x96 (32本)、520x900 (4本)、640x360 (1本) |
 | 指揮官の顔絵/カットイン | 480x640 (6本)、520x900 (2本) |
 | ブリーフィング/ご褒美 | 800x220 (10本)、640x480 (10本) |
 

@@ -261,6 +261,20 @@ def missile_boat():
     d.line([(120, 88), (150, 80)], fill=(210, 90, 60, 255), width=6)
     save(img, "missile_boat")
 
+def subchaser():
+    # 駆潜艇: 小さく低い船体に、艦首下のソナー、艦尾の爆雷架、探信の波紋
+    img, d = canvas()
+    ell(d, (34, 124, 70, 146), NAVY_D)                                  # 艦首下のソナードーム
+    poly(d, [(22, 106), (172, 102), (152, 132), (40, 132)], NAVY)       # 細身の船体
+    rect(d, (58, 76, 98, 106), NAVY_L, 6)                               # 艦橋
+    d.line([(78, 44), (78, 78)], fill=GUN, width=5)                     # マスト
+    for x in (122, 140, 158):                                           # 爆雷（ドラム缶）
+        d.ellipse((x - 8, 88, x + 8, 104), fill=OLIVE_D, outline=OUTLINE, width=3)
+    for r in (14, 26):                                                  # 探信の波紋（下向き）
+        d.arc((52 - r, 150 - r, 52 + r, 150 + r), 30, 150,
+              fill=(90, 170, 210, 255), width=4)
+    save(img, "subchaser")
+
 # ---- 拡充ユニット ----
 GRAY_U  = (150, 148, 138, 255)   # 民兵の服
 
@@ -363,11 +377,18 @@ def t_plane():
     d.ellipse((134, 158, 150, 174), fill=OLIVE, outline=OUTLINE, width=3)
     save(img, "t_plane")
 
-for fn in (infantry, at_infantry, recon, tank, htank, artillery, aa_tank,
-           truck, supply, fighter, bomber, heli, t_copter,
-           destroyer, cruiser, submarine, t_ship,
-           militia, mech_inf, ltank, rocket, aa_gun, dive_bomber, scout_plane,
-           supply_air, battleship, carrier, gunboat, missile_boat,
-           supply_ship, t_plane):
-    fn()
+ALL = (infantry, at_infantry, recon, tank, htank, artillery, aa_tank,
+       truck, supply, fighter, bomber, heli, t_copter,
+       destroyer, cruiser, submarine, t_ship,
+       militia, mech_inf, ltank, rocket, aa_gun, dive_bomber, scout_plane,
+       supply_air, battleship, carrier, gunboat, missile_boat,
+       supply_ship, t_plane, subchaser)
+
+# 引数で名前を渡すとそれだけ描く（例: python tools/gen_units_gfx.py subchaser）。
+# 描き足したユニットのためだけに、差し替え済みの絵まで上書きしないように。
+import sys
+want = set(sys.argv[1:])
+for fn in ALL:
+    if not want or fn.__name__ in want:
+        fn()
 print("OK")
