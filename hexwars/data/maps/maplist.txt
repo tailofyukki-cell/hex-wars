@@ -27,3 +27,4 @@ maps/f09_drylines.map|涸れた戦線（拠点なし・補給なし）|Dried-Up 
 maps/f10_twocontinents.map|二大陸と内海（陸海空の決戦・大規模）|Two Continents and an Inland Sea (large)
 maps/f11_fiveisles.map|五海諸島（5陣営の海洋決戦・陸海空）|Five Seas Archipelago (5-faction naval)
 maps/f12_grandbattle.map|【試作】大決戦MAX（自軍72対敵144・待ち時間の確認用）|[Prototype] Grand Battle MAX (72 vs 144)
+maps/f13_gunline.map|砲列の海（戦艦の撃ち合い・生産なしの艦隊決戦）|Sea of Gunlines (battleship duel, no production)

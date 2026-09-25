@@ -314,6 +314,10 @@ int main(void)
     for (uint32_t s9 = 0; s9 < (uint32_t)sim_seeds(3); s9++)
         if (run_match("data/maps/f09_drylines.map", 208 + s9 * 31,
                       CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
+    /* 戦艦どうしの艦隊決戦。生産なしなので全滅で決着がつくかを見る。 */
+    for (uint32_t s13 = 0; s13 < (uint32_t)sim_seeds(3); s13++)
+        if (run_match("data/maps/f13_gunline.map", 217 + s13 * 29,
+                      CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
     /* 大型マップ。部隊数が多いので遅いが、止まらないことを見る。 */
     if (run_match("data/maps/f10_twocontinents.map", 209,
                   CTRL_CPU_NORMAL, CTRL_CPU_NORMAL) == -100) fail++;
