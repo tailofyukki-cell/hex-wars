@@ -432,6 +432,138 @@ static void pick_invasion_goal(Game *g, AiState *s)
     s->amphib = (s->inv_x >= 0);
 }
 
+/* 集中攻撃の計画。
+ *
+ * 攻撃は1体ずつ「その場で一番得な攻撃」を選んでいたので、1体では沈められない
+ * 敵に傷だけ付けて散ることが多かった。港の上の艦は毎手番HPが2戻るので、散った
+ * 傷は翌手番には消える。群狼の海では17隻で囲んでも最後の2隻を30手番沈められず、
+ * 時間切れになっていた。
+ *
+ * 手番の頭に「この手番に誰がどの敵を撃てるか」を全部数え、味方の見込み
+ * ダメージの合計で沈められる敵から順に攻撃役を割り当てる。沈めきれない敵には
+ * 割り当てない（傷を散らすだけになるため）。見込みには2割5分の余裕を見て、
+ * 直接攻撃は相手の隣に空いているマスの数までしか割り当てない。
+ * 実際に撃つかは act_unit が決める（割り当てた敵を撃つ手に少し加点するだけ）。
+ *
+ * 旧AIとの直接対戦 276 試合で 64勝57敗、損失は同じ（41033 対 41072）。
+ * CPU同士では大差にならないが、傷ついた部隊を前に出したままにすると
+ * 確実に狩られるので、人間相手には陣形を崩せない圧になる。 */
+static MoveRange s_plan_mr;
+static struct {
+    int n;
+    int16_t t[32];
+    int16_t e[32];    /* 見込みダメージ×10 */
+} s_can[MAX_UNITS];
+
+static void plan_focus(const Game *g, AiState *s)
+{
+    int me = g->current;
+    for (int i = 0; i < MAX_UNITS; i++) { s->focus[i] = -1; s->focused[i] = 0; }
+    if (g->ctrl[me] == CTRL_CPU_EASY) return;          /* EASY は撃ち方を揃えない */
+
+    /* 1) 味方ごとに、この手番に撃てる敵と見込みダメージ */
+    for (int a = 0; a < g->n_units; a++) {
+        s_can[a].n = 0;
+        const Unit *u = &g->units[a];
+        if (!(u->flags & UF_ALIVE) || u->owner != me) continue;
+        if (u->flags & (UF_DONE | UF_LOADED)) continue;
+        const UnitType *ut = &g->types[u->type];
+        if (type_unarmed(ut)) continue;
+        path_move_range(g, a, &s_plan_mr);
+        Layer L = unit_layer(ut->mclass);
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++) {
+                if (s_plan_mr.cost[y][x] < 0 || !s_plan_mr.stop[y][x]) continue;
+                int occ = game_unit_at_layer(g, x, y, L);
+                if (occ >= 0 && occ != a) continue;
+                bool moved = !(x == u->pos.x && y == u->pos.y);
+                if (!rules_can_attack_now(g, a, moved)) continue;
+                int tg[32];
+                int nt = rules_list_targets(g, a, x, y, tg, 32);
+                for (int k = 0; k < nt; k++) {
+                    int e = battle_expect_damage_x10(g, u, &g->units[tg[k]]);
+                    int j = 0;
+                    while (j < s_can[a].n && s_can[a].t[j] != tg[k]) j++;
+                    if (j == s_can[a].n) {
+                        if (j >= 32) continue;
+                        s_can[a].t[j] = (int16_t)tg[k]; s_can[a].e[j] = 0; s_can[a].n++;
+                    }
+                    if (e > s_can[a].e[j]) s_can[a].e[j] = (int16_t)e;
+                }
+            }
+    }
+
+    /* 2) 沈められる敵を「HP1あたりの値打ち」の高い順に並べる */
+    static int cand[MAX_UNITS];
+    static int prio[MAX_UNITS];
+    int nc = 0;
+    for (int t = 0; t < g->n_units; t++) {
+        const Unit *d = &g->units[t];
+        if (!(d->flags & UF_ALIVE) || !game_is_enemy(g, me, d->owner)) continue;
+        int sum = 0;
+        for (int a = 0; a < g->n_units; a++)
+            for (int j = 0; j < s_can[a].n; j++)
+                if (s_can[a].t[j] == t) sum += s_can[a].e[j];
+        if (sum * 4 < d->hp * 10 * 5) continue;         /* 全員で撃っても沈まない（2割5分の余裕） */
+        cand[nc] = t;
+        prio[nc] = g->types[d->type].cost * 10 / d->hp;
+        nc++;
+    }
+    for (int i = 1; i < nc; i++) {                       /* 値打ちの高い順（挿入ソート） */
+        int c = cand[i], p = prio[i], j = i - 1;
+        while (j >= 0 && prio[j] < p) { cand[j + 1] = cand[j]; prio[j + 1] = prio[j]; j--; }
+        cand[j + 1] = c; prio[j + 1] = p;
+    }
+
+    /* 3) 敵ごとに、まだ役の無い味方を見込みダメージの大きい順に足していく */
+    static uint8_t used[MAX_UNITS];
+    memset(used, 0, sizeof used);
+    for (int i = 0; i < nc; i++) {
+        int t = cand[i];
+        const Unit *tu = &g->units[t];
+        int need = tu->hp * 10 * 5 / 4;
+        /* 直接攻撃で隣に付けるのは、そのレイヤーで空いている（か味方のいる）隣接マスの数まで */
+        int free_adj[LAYER_COUNT];
+        for (int L = 0; L < LAYER_COUNT; L++) {
+            free_adj[L] = 0;
+            for (int dd = 0; dd < HEX_DIRS; dd++) {
+                int nx, ny;
+                hex_neighbor(tu->pos.x, tu->pos.y, dd, &nx, &ny);
+                if (!game_in_bounds(g, nx, ny)) continue;
+                int occ = game_unit_at_layer(g, nx, ny, (Layer)L);
+                if (occ < 0 || g->units[occ].owner == me) free_adj[L]++;
+            }
+        }
+        int direct_n[LAYER_COUNT] = { 0 };
+        int pick[MAX_UNITS], np = 0, acc = 0;
+        while (acc < need) {
+            int best_a = -1, best_e = 0;
+            for (int a = 0; a < g->n_units; a++) {
+                if (used[a]) continue;
+                bool already = false;
+                for (int q = 0; q < np; q++) if (pick[q] == a) already = true;
+                if (already) continue;
+                const UnitType *at = &g->types[g->units[a].type];
+                if (at->range_min < 2 &&
+                    direct_n[unit_layer(at->mclass)] >= free_adj[unit_layer(at->mclass)])
+                    continue;
+                for (int j = 0; j < s_can[a].n; j++)
+                    if (s_can[a].t[j] == t && s_can[a].e[j] > best_e) {
+                        best_e = s_can[a].e[j]; best_a = a;
+                    }
+            }
+            if (best_a < 0) break;
+            pick[np++] = best_a;
+            acc += best_e;
+            const UnitType *bt = &g->types[g->units[best_a].type];
+            if (bt->range_min < 2) direct_n[unit_layer(bt->mclass)]++;
+        }
+        if (acc < need) continue;                        /* 残りの味方では足りない */
+        for (int q = 0; q < np; q++) { used[pick[q]] = 1; s->focus[pick[q]] = (int16_t)t; }
+        s->focused[t] = 1;
+    }
+}
+
 /* 行動順を組み直す: 間接 → 直接戦闘 → 占領系（間接が先に撃ってから前進） */
 static void build_order(const Game *g, AiState *s)
 {
@@ -441,11 +573,16 @@ static void build_order(const Game *g, AiState *s)
     /* 3 = 燃料が帰り道ぎりぎりの部隊。**最後に動かす**。先に動く部隊（補給を
      * 終えた機体や、前の手番に生産した機体）が空港を空けてから降りるため。
      * 先に動かすと埋まった空港の隣で着陸待ちになり、そのまま墜落する。 */
+    plan_focus(g, s);
     int pass_order[4] = {0, 1, 2, 3};
     int n_front = 0;   /* 燃料の苦しい部隊（最後に回す）より前の数 */
     for (int pass = 0; pass < 4; pass++) {
         if (pass_order[pass] == 3) n_front = s->n_order;
+        /* 同じ組の中では、集中攻撃を割り当てた部隊を先に動かす
+         * （あとの部隊に攻撃位置を取られる前に、決めた相手を撃たせる） */
+        for (int sub = 0; sub < 2; sub++)
         for (int i = 0; i < g->n_units; i++) {
+            if ((s->focus[i] >= 0) != (sub == 0)) continue;
             const Unit *u = &g->units[i];
             if (!(u->flags & UF_ALIVE) || u->owner != me) continue;
             if (u->flags & UF_DONE) continue;
@@ -714,6 +851,23 @@ static void act_unit(Game *g, AiState *s, int ui)
      *
      * 航空機の生産に「空港1つにつき3機まで」の上限を掛ける案も試したが、
      * 旧AIとの直接対戦で 13勝23敗と負け越したので採っていない。 */
+    /* 潜水艦の待ち伏せ。潜水艦は対潜ユニットにしか見つからない（視界の半分の
+     * 距離まで）。見えている敵の対潜ユニットの探知範囲へ「ただ動いて」入るのは
+     * 避け、見つからないまま獲物が射程に来るのを待つ。攻撃はこれに縛られない。 */
+    int det_x[64], det_y[64], det_r[64], n_det = 0;
+    if (ut->is_sub) {
+        for (int i = 0; i < g->n_units && n_det < 64; i++) {
+            const Unit *e = &g->units[i];
+            if (!(e->flags & UF_ALIVE) || (e->flags & UF_LOADED)) continue;
+            if (!game_is_enemy(g, me, e->owner)) continue;
+            if (!g->types[e->type].anti_sub) continue;
+            if (!game_unit_visible_to(g, me, e)) continue;
+            det_x[n_det] = e->pos.x; det_y[n_det] = e->pos.y;
+            det_r[n_det] = game_hidden_sight(g, e);
+            n_det++;
+        }
+    }
+
     int home_x[64], home_y[64], n_home = 0;
     int fuel_per_hex = 1;
     bool fuel_guard = ut->upkeep > 0 &&
@@ -865,6 +1019,11 @@ static void act_unit(Game *g, AiState *s, int ui)
              * 墜落は 605→518。帰り道に近いほど減点を軽くして、どこも安全で
              * ないときは少しでも家に近い所を選ばせる。 */
             int unsafe_pen = 0;
+            for (int k = 0; k < n_det; k++)
+                if (hex_distance(x, y, det_x[k], det_y[k]) <= det_r[k]) {
+                    unsafe_pen += 600;   /* 見つかる所へは出ない */
+                    break;
+                }
             if (fuel_guard) {
                 int dh = 9999;
                 for (int k = 0; k < n_home; k++) {
@@ -878,7 +1037,7 @@ static void act_unit(Game *g, AiState *s, int ui)
                     /* +1手番ぶんの維持燃料は、着いた空港に先客がいて1手番
                      * 待たされる分の余裕 */
                     if (f < (turns + 1) * ut->upkeep + dh * fuel_per_hex + 1)
-                        unsafe_pen = 100000 + dh * 100;
+                        unsafe_pen += 100000 + dh * 100;
                 }
             }
 
@@ -1077,6 +1236,10 @@ static void act_unit(Game *g, AiState *s, int ui)
                         loss = ut->cost * cx10 / 100;
                     }
                     int sc = base + gain - loss * 2 / 3;
+                    /* 集中攻撃: 割り当てた相手を撃つ手を少し推す。大きく推すと、危険な
+                     * 位置からでも撃ちに行って返り討ちに遭う（最初に試した +300+値段/2 と
+                     * 他の味方の割り当て先にも +150 の版は、旧AIに 16勝22敗だった） */
+                    if (s->focus[ui] == targets[k]) sc += 200;
                     if (sc > best.score) {
                         best.score = sc; best.mx = x; best.my = y;
                         best.action = 1; best.target = targets[k];
@@ -1174,6 +1337,15 @@ static int pick_production(Game *g, AiState *s, int x, int y)
     /* 自軍構成を数えると同時に、敵の装甲構成と
      * 「そのカテゴリにこちらが出せる火力」も集める。 */
     int foe[ARMOR_COUNT] = { 0 }, mine[ARMOR_COUNT] = { 0 }, foe_total = 0;
+    /* 潜水艦は別勘定。装甲区分は水上艦と同じ「海」だが、撃てるのは対潜装備の
+     * ある部隊（駆逐艦・攻撃ヘリなど）だけ。同じ「海」で数えていたので、潜水艦を
+     * 見つけても対艦攻撃力の高い戦艦や巡洋艦——潜水艦を撃てない艦——を買って
+     * 応えていた。 */
+    int foe_sub = 0, mine_sub = 0;
+    /* 対潜の護衛（1b）に使う: 自軍の武装した艦、対潜ユニット、敵に艦があり得るか */
+    int n_warship = 0, n_antisub = 0;
+    bool enemy_navy = false;
+
     int n_cap = 0, n_combat = 0, n_supplier = 0;
     int n_transport = 0, n_riders = 0, n_truck = 0, n_slow = 0;
     for (int i = 0; i < g->n_units; i++) {
@@ -1184,12 +1356,16 @@ static int pick_production(Game *g, AiState *s, int x, int y)
             /* 見えていない敵は数えない（脅威マップと揃える） */
             if (!game_is_enemy(g, me, u->owner)) continue;
             if (!game_unit_visible_to(g, me, u)) continue;
-            foe[et->armor] += et->cost;
+            if (domain_from_mclass(et->mclass) == 2) enemy_navy = true;
+            if (et->is_sub) foe_sub += et->cost;
+            else foe[et->armor] += et->cost;
             foe_total += et->cost;
             continue;
         }
         const UnitType *t = &g->types[u->type];
         for (int c = 0; c < ARMOR_COUNT; c++) mine[c] += t->atk[c];
+        if (t->anti_sub) { mine_sub += t->atk[ARMOR_SEA]; n_antisub++; }
+        if (domain_from_mclass(t->mclass) == 2 && !type_unarmed(t) && !t->supply) n_warship++;
         if (t->supply) n_supplier++;
         else if (t->can_capture) n_cap++;
         else n_combat++;
@@ -1214,6 +1390,26 @@ static int pick_production(Game *g, AiState *s, int x, int y)
 
     bool want_capture = (n_cap < 3 && open_bldgs > 0);
 
+    /* 対潜の護衛。艦隊には常に対潜ユニットを4隻に1隻は混ぜておく。
+     * 潜水艦は対潜ユニットにしか見えないので、「見えたら駆逐艦を作る」では
+     * 間に合わない——駆逐艦を失った側は潜水艦が一生見えず、作る理由も生まれない。
+     * 群狼の海では片方が対潜0隻のまま、見えない潜水艦4隻に沈められ続けていた。
+     * 敵が艦を出せる（港を持っている／艦が見えている）ときだけ効かせる。
+     *
+     * 潜水艦しか作らない相手と群狼の海で16戦させると、沈めた潜水艦が 153→229
+     * （+50%）に増えた。ただしそれでも潜水艦1隻に3隻を失う。潜水艦が駆逐艦より
+     * 安くて強いという性能の差で、比率を2隻に1隻に上げても 0.32→0.33 と
+     * 変わらなかった（4隻に1隻のままにしている）。 */
+    for (int yy = 0; yy < g->h && !enemy_navy; yy++)
+        for (int xx = 0; xx < g->w && !enemy_navy; xx++) {
+            const Tile *tl = &g->tiles[yy][xx];
+            if (tl->owner >= 0 && game_is_enemy(g, me, tl->owner) &&
+                g->terrains[tl->terrain].produces == PROD_SEA)
+                enemy_navy = true;
+        }
+    bool want_escort = enemy_navy && n_warship >= 2 &&
+                       n_antisub < (n_warship + 3) / 4;
+
 
     /* 装甲カテゴリごとの「需要」。
      * **4カテゴリの攻撃力を単純に足してはいけない**。足すと
@@ -1227,6 +1423,11 @@ static int pick_production(Game *g, AiState *s, int x, int y)
          * 「敵に航空が居るのにこちらは対空手段ゼロ」を拾うのが目的。 */
         int mult = (mine[c] < 60) ? 4 : (mine[c] < 150) ? 2 : 1;
         dem[c] = share * mult;
+    }
+    int dem_sub = 0;
+    if (foe_total > 0 && foe_sub > 0) {
+        int mult = (mine_sub < 60) ? 4 : (mine_sub < 150) ? 2 : 1;
+        dem_sub = foe_sub * 100 / foe_total * mult;
     }
 
     /* **点が 0 以下のものは買わない**（best_sc を 0 から始める）。
@@ -1263,12 +1464,15 @@ static int pick_production(Game *g, AiState *s, int x, int y)
             sc = (n_truck < 1 && n_slow >= 3) ? 4000 - ut->cost : 0;
         } else if (ut->can_capture) {
             sc = 100; /* 占領枠は足りている */
+        } else if (want_escort && ut->anti_sub && !ut_unarmed) {
+            sc = 8500 - ut->cost;  /* 対潜の護衛が足りない（安いものから） */
         } else {
             /* 敵の構成に対する有効打で選ぶ（序盤=ターン数少は安め優先）。
              * 価格項は控えめにすること。大きくすると、有効打を見ずに
              * 高いユニットを選ぶだけの挙動に戻ってしまう。 */
             int power = 0;
             for (int c = 0; c < ARMOR_COUNT; c++) power += ut->atk[c] * dem[c];
+            if (ut->anti_sub) power += ut->atk[ARMOR_SEA] * dem_sub;
             power /= 100;
             /* 今いる敵のどれにも有効打が無い（丸腰、または撃てない相手ばかり）なら
              * 戦闘部隊としては買う価値が無い。値段の項だけで正の点が付いて

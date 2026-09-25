@@ -25,6 +25,11 @@ typedef struct {
      * バナーを出した側が false に戻す。 */
     bool co_used;
     bool co_fired;
+    /* 集中攻撃の割り当て（手番の頭に plan_focus が決める）。
+     * focus[味方] = 狙わせる敵の unit index（-1=割り当てなし）、
+     * focused[敵] = 誰かに割り当てた敵か。 */
+    int16_t focus[MAX_UNITS];
+    uint8_t focused[MAX_UNITS];
     /* 直近の行動（UI表示用） */
     int  last_unit;    /* -1=なし */
     int  last_target;  /* 攻撃対象 unit index / -1 */
