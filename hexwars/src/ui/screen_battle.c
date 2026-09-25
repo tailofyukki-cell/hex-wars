@@ -2316,9 +2316,17 @@ static void draw_panels(App *a)
             if (u->owner == viewer)
                 draw_cargo_detail(a, ui, py);
         } else {
-            snprintf(buf, sizeof buf, tx("PANEL_ATK_FMT"),
-                     ut->atk[0], ut->atk[1], ut->atk[2], ut->atk[3],
-                     ut->range_min, game_range_max(g, ut));
+            /* 対潜ユニットは潜水艦への攻撃力と探知距離も出す（駆潜艇は対艦が
+             * 低く対潜が高いので、「海」の値だけでは強さが分からない） */
+            if (ut->anti_sub)
+                snprintf(buf, sizeof buf, tx("PANEL_ATK_SUB_FMT"),
+                         ut->atk[0], ut->atk[1], ut->atk[2], ut->atk[3],
+                         ut->atk_sub, game_sonar_range(g, u),
+                         ut->range_min, game_range_max(g, ut));
+            else
+                snprintf(buf, sizeof buf, tx("PANEL_ATK_FMT"),
+                         ut->atk[0], ut->atk[1], ut->atk[2], ut->atk[3],
+                         ut->range_min, game_range_max(g, ut));
             draw_text(a, a->font_s, ux + 14, py + 88, COL_GRAY, buf);
         }
     } else {
@@ -2344,8 +2352,32 @@ static void draw_panels(App *a)
     case BS_BATTLE_ANIM:   hint = tx("HINT_ANIM"); break;
     default: break;
     }
-    if (*hint)
-        draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 24, COL_GRAY, hint);
+    if (!*hint) return;
+    /* 左右のパネルの間（x=300〜WIN_W-420）に収める。画面の中央に置いていたときは、
+     * 説明が長いと右下のユニットパネルの攻撃力の行に重なっていた。
+     * 入りきらなければ、項目の区切り（空白2つ）のうち真ん中に近い所で2行に割る。 */
+    int gx0 = 300, gx1 = WIN_W - 420, cx = (gx0 + gx1) / 2;
+    if (text_width(a, a->font_s, hint) <= gx1 - gx0 - 16) {
+        draw_text_center(a, a->font_s, cx, WIN_H - 24, COL_GRAY, hint);
+        return;
+    }
+    char hb[256];
+    snprintf(hb, sizeof hb, "%s", hint);
+    int n = (int)strlen(hb), cut = -1, best = 1 << 30;
+    for (int i = 1; i + 1 < n; i++)
+        if (hb[i] == ' ' && hb[i + 1] == ' ') {
+            int d = i - n / 2; if (d < 0) d = -d;
+            if (d < best) { best = d; cut = i; }
+        }
+    if (cut < 0) {
+        draw_text_center(a, a->font_s, cx, WIN_H - 24, COL_GRAY, hint);
+        return;
+    }
+    hb[cut] = 0;
+    const char *second = hb + cut + 1;
+    while (*second == ' ') second++;
+    draw_text_center(a, a->font_s, cx, WIN_H - 44, COL_GRAY, hb);
+    draw_text_center(a, a->font_s, cx, WIN_H - 24, COL_GRAY, second);
 }
 
 static void draw_menus(App *a)
