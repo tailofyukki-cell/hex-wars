@@ -206,6 +206,14 @@ FUEL_WARN_HELP      = 自軍の空港・港・空母などの補給できる場�
 FUEL_WARN_YES       = このまま終える
 FUEL_WARN_NO        = 移動をやり直す
 HINT_FUEL           = ←→:選択  Z:決定  X:移動をやり直す
+ACT_DISBAND     = 解隊
+DISBAND_TITLE_FMT = %s を解隊しますか？
+DISBAND_REFUND_FMT = 払い戻し %dG（生産価格 %dG の半額 × HP %d/10）
+DISBAND_WARN      = 部隊は盤上から消えます。取り消せません
+DISBAND_YES       = 解隊する
+DISBAND_NO        = やめる
+POP_DISBAND_FMT   = 解隊 +%dG
+HINT_DISBAND      = ←→:選択  Z:決定  X:やめる
 
 TMENU_UNITLIST  = 未行動ユニット
 TMENU_END       = ターン終了

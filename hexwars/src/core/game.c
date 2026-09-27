@@ -378,6 +378,36 @@ static void kill_unit(Game *g, int ui)
     clear_capture_by(g, ui);
 }
 
+/* 解隊（部隊を解散して資金に戻す）。増えすぎた部隊を整理するための操作。
+ * 払い戻しは生産価格の半額 × 残りHPの割合。高く戻すと「作ってすぐ売る」
+ * 抜け道になるので半額にしている。積荷のある輸送は解隊できない（積んでいる
+ * 部隊ごと消えてしまうため）。撃破ではないので損失（lost_units）には数えない。 */
+int game_disband_refund(const Game *g, int ui)
+{
+    const Unit *u = &g->units[ui];
+    return g->types[u->type].cost / 2 * u->hp / 10;
+}
+
+bool game_can_disband(const Game *g, int ui)
+{
+    const Unit *u = &g->units[ui];
+    if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) return false;
+    return game_first_cargo(g, ui) < 0;
+}
+
+int game_disband_unit(Game *g, int ui)
+{
+    if (!game_can_disband(g, ui)) return -1;
+    Unit *u = &g->units[ui];
+    int refund = game_disband_refund(g, ui);
+    g->funds[u->owner] += refund;
+    u->flags = 0;
+    u->hp = 0;
+    clear_capture_by(g, ui);
+    game_update_vision(g);
+    return refund;
+}
+
 /* ------------------------------------------------------------------ */
 /* 天候                                                                */
 /* ------------------------------------------------------------------ */

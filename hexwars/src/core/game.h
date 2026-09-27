@@ -193,6 +193,11 @@ bool game_can_board(const Game *g, int passenger, int transport);
  * 進化先は生産できず（no_produce）、元には戻せない。経験値は0に戻る。
  * 自軍の「補給できる拠点」の上でのみ行える（陸=街/工場/首都、空=飛行場、海=港）。 */
 bool game_can_evolve(const Game *g, int ui);
+/* 解隊: 部隊を解散して生産価格の半額×HP割合を資金に戻す。
+ * 積荷のある輸送は不可。損失には数えない。戻り値=払い戻し額 / 不可なら -1 */
+bool game_can_disband(const Game *g, int ui);
+int  game_disband_refund(const Game *g, int ui);
+int  game_disband_unit(Game *g, int ui);
 /* 進化先のユニット型 index / -1（条件を満たさない・進化先が無い） */
 int  game_evolve_target(const Game *g, int ui);
 /* 進化に必要な資金（元ユニットの価格×EVOLVE_COST_MUL）。進化先が無ければ0 */

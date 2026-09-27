@@ -539,6 +539,47 @@ static void test_hidden_sight(void)
     printf("test_hidden_sight OK\n");
 }
 
+/* 解隊: 生産価格の半額×HP割合を資金に戻し、損失には数えない。積荷のある輸送は不可 */
+static void test_disband(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    game_start(g, 99u);
+    g->n_units = 0;
+    int tank = data_find_unit_type(g, "TANK");
+    int inf  = data_find_unit_type(g, "INFANTRY");
+    int apc  = data_find_unit_type(g, "TRUCK");
+    CHECK(tank >= 0 && inf >= 0 && apc >= 0);
+    for (int x = 2; x <= 8; x++) g->tiles[5][x].terrain = 0;   /* PLAIN */
+
+    int u = game_spawn_unit(g, 0, tank, 3, 5, 10);
+    g->funds[0] = 0;
+    int lost = g->lost_units[0];
+    CHECK(game_disband_refund(g, u) == g->types[tank].cost / 2);
+    g->units[u].hp = 5;
+    int want = g->types[tank].cost / 2 * 5 / 10;
+    CHECK(game_disband_unit(g, u) == want);
+    CHECK(g->funds[0] == want);
+    CHECK(!(g->units[u].flags & UF_ALIVE));
+    CHECK(g->lost_units[0] == lost);                 /* 撃破ではない */
+    CHECK(game_disband_unit(g, u) == -1);            /* 二度はできない */
+
+    /* 積荷のある輸送は解隊できない（積んでいる部隊ごと消えるため） */
+    int tr = game_spawn_unit(g, 0, apc, 5, 5, 10);
+    int rider = game_spawn_unit(g, 0, inf, 6, 5, 10);
+    CHECK(tr >= 0 && rider >= 0);
+    if (game_can_board(g, rider, tr)) {
+        game_load_unit(g, rider, tr);
+        CHECK(!game_can_disband(g, tr));
+        CHECK(!game_can_disband(g, rider));          /* 積まれている側も不可 */
+    }
+    printf("test_disband OK\n");
+}
+
 /* 駆潜艇: 潜水艦にだけ強く（atk_sub）、潜水艦を遠くから見つける（sonar） */
 static void test_subchaser(void)
 {
@@ -4268,6 +4309,7 @@ int main(void)
     test_unit_names();
     test_hidden_sight();
     test_subchaser();
+    test_disband();
     test_language();
     test_paradrop();
     test_produce_layers();

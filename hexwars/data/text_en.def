@@ -210,6 +210,14 @@ FUEL_WARN_HELP      = Safe if it ends inside a friendly airport, port, or carrie
 FUEL_WARN_YES       = End anyway
 FUEL_WARN_NO        = Undo move
 HINT_FUEL           = Left/Right: Select  Z: Confirm  X: Undo move
+ACT_DISBAND     = Disband
+DISBAND_TITLE_FMT = Disband %s?
+DISBAND_REFUND_FMT = Refund %dG (half of %dG cost x HP %d/10)
+DISBAND_WARN      = The unit leaves the board. This cannot be undone
+DISBAND_YES       = Disband
+DISBAND_NO        = Cancel
+POP_DISBAND_FMT   = Disbanded +%dG
+HINT_DISBAND      = Left/Right: Select  Z: Confirm  X: Cancel
 
 TMENU_UNITLIST  = Units Ready
 TMENU_END       = End Turn

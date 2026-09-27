@@ -13,11 +13,11 @@
 #include <math.h>
 
 enum { ACT_ATTACK = 0, ACT_CAPTURE, ACT_WAIT, ACT_CANCEL, ACT_UNLOAD,
-       ACT_SUPPLY, ACT_HEAL, ACT_EVOLVE, ACT_WORK };
+       ACT_SUPPLY, ACT_HEAL, ACT_EVOLVE, ACT_WORK, ACT_DISBAND };
 enum { LP_SELECT = 0, LP_ATTACK };   /* レイヤー選択ポップアップの用途 */
 static const char *ACT_KEYS[] = {
     "ACT_ATTACK", "ACT_CAPTURE", "ACT_WAIT", "ACT_CANCEL", "ACT_UNLOAD",
-    "ACT_SUPPLY", "ACT_HEAL", "ACT_EVOLVE", "ACT_WORK"
+    "ACT_SUPPLY", "ACT_HEAL", "ACT_EVOLVE", "ACT_WORK", "ACT_DISBAND"
 };
 
 /* ターンメニューの項目（順番を変えたらここだけ直せば済むように名前を付ける） */
@@ -588,6 +588,9 @@ static void build_action_menu(App *a)
     if (game_can_evolve(g, a->sel_unit))
         a->amenu_items[a->amenu_n++] = ACT_EVOLVE;
     a->amenu_items[a->amenu_n++] = ACT_WAIT;
+    /* 解隊（資金に戻す）。増えすぎた部隊の整理用。誤操作しにくいよう待機の後ろに置く */
+    if (game_can_disband(g, a->sel_unit))
+        a->amenu_items[a->amenu_n++] = ACT_DISBAND;
     a->amenu_items[a->amenu_n++] = ACT_CANCEL;
     a->amenu_idx = 0;
     a->bs = BS_ACTION_MENU;
@@ -712,6 +715,24 @@ static bool act_ends_on_board(int act)
     return act == ACT_WAIT || act == ACT_ATTACK || act == ACT_CAPTURE ||
            act == ACT_UNLOAD || act == ACT_SUPPLY || act == ACT_HEAL;
 }
+/* 解隊を実行する（確認で「解隊する」を選んだとき） */
+static void do_disband(App *a)
+{
+    Game *g = &a->game;
+    int ui = a->sel_unit;
+    if (ui < 0) return;
+    int x = g->units[ui].pos.x, y = g->units[ui].pos.y;
+    int refund = game_disband_unit(g, ui);
+    if (refund >= 0) {
+        char buf[48];
+        snprintf(buf, sizeof buf, tx("POP_DISBAND_FMT"), refund);
+        battle_add_popup(a, x, y, buf, COL_YELLOW);
+        snd_se(SE_CAPTURE);
+    }
+    a->sel_unit = -1;
+    a->bs = BS_IDLE;
+}
+
 
 static void select_action(App *a, int act)
 {
@@ -774,6 +795,11 @@ static void select_action(App *a, int act)
         a->bs = BS_IDLE;
         break;
     }
+    case ACT_DISBAND:
+        /* 部隊が消えるので必ず確認を挟む。既定は「やめる」 */
+        a->amenu_idx = 1;
+        a->bs = BS_DISBAND_CONFIRM;
+        return;
     case ACT_EVOLVE:
         /* 不可逆なので必ず確認を挟む。ここではまだ何も変えない */
         a->amenu_idx = 1;              /* 既定は「いいえ」に置く */
@@ -1318,6 +1344,7 @@ static void cancel_action(App *a)
         else { a->sel_unit = -1; a->bs = BS_IDLE; }
         break;
     case BS_EVOLVE_CONFIRM:
+    case BS_DISBAND_CONFIRM:
         build_action_menu(a);        /* 行動メニューへ戻す（何も変えない） */
         break;
     case BS_FUEL_CONFIRM:
@@ -1503,7 +1530,7 @@ void battle_event(App *a, const SDL_Event *e)
             /* メニューのホバー */
             SDL_Point p = { e->motion.x, e->motion.y };
             if (a->bs == BS_EVOLVE_CONFIRM || a->bs == BS_JOIN_CONFIRM ||
-                a->bs == BS_FUEL_CONFIRM) {
+                a->bs == BS_FUEL_CONFIRM || a->bs == BS_DISBAND_CONFIRM) {
                 for (int i = 0; i < 2; i++) {
                     SDL_Rect r = evo_rect(i);
                     if (SDL_PointInRect(&p, &r)) a->amenu_idx = i;
@@ -1617,6 +1644,17 @@ void battle_event(App *a, const SDL_Event *e)
             cancel_action(a);   /* 一覧の外をクリックしたら閉じる */
             return;
         }
+        if (a->bs == BS_DISBAND_CONFIRM) {
+            for (int i = 0; i < 2; i++) {
+                SDL_Rect r = evo_rect(i);
+                if (SDL_PointInRect(&p, &r)) {
+                    if (i == 0) do_disband(a);
+                    else build_action_menu(a);
+                    return;
+                }
+            }
+            return;
+        }
         if (a->bs == BS_FUEL_CONFIRM) {
             for (int i = 0; i < 2; i++) {
                 SDL_Rect r = evo_rect(i);
@@ -1701,6 +1739,16 @@ void battle_event(App *a, const SDL_Event *e)
                 else cancel_action(a);
             }
             if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
+            return;
+        }
+        if (a->bs == BS_DISBAND_CONFIRM) {
+            if (k == SDLK_LEFT)  a->amenu_idx = 0;
+            if (k == SDLK_RIGHT) a->amenu_idx = 1;
+            if (k == SDLK_z || k == SDLK_RETURN) {
+                if (a->amenu_idx == 0) do_disband(a);
+                else build_action_menu(a);
+            }
+            if (k == SDLK_x || k == SDLK_ESCAPE) build_action_menu(a);
             return;
         }
         if (a->bs == BS_FUEL_CONFIRM) {
@@ -2346,6 +2394,7 @@ static void draw_panels(App *a)
     case BS_EVOLVE_CONFIRM: hint = tx("HINT_EVOLVE"); break;
     case BS_JOIN_CONFIRM:  hint = tx("HINT_JOIN"); break;
     case BS_FUEL_CONFIRM:  hint = tx("HINT_FUEL"); break;
+    case BS_DISBAND_CONFIRM: hint = tx("HINT_DISBAND"); break;
     case BS_UNITLIST:      hint = tx("HINT_UNITLIST"); break;
     case BS_PRODUCTION:    hint = tx("HINT_PROD"); break;
     case BS_SAVE_MENU:     hint = tx("HINT_SAVE"); break;
@@ -2655,6 +2704,34 @@ static void draw_menus(App *a)
             draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
                              sel ? COL_WHITE : COL_GRAY,
                              tx(i == 0 ? "EVOLVE_YES" : "EVOLVE_NO"));
+        }
+    }
+    /* 解隊の確認。戻ってくる資金を先に見せる */
+    if (a->bs == BS_DISBAND_CONFIRM && a->sel_unit >= 0) {
+        const Unit *u = &g->units[a->sel_unit];
+        const UnitType *ut = &g->types[u->type];
+        int bw = 640, bh = 190;
+        int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 108;
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 130 });
+        fill_rect(a, bx, by, bw, bh, (SDL_Color){ 30, 34, 42, 248 });
+        outline_rect(a, bx, by, bw, bh, COL_YELLOW);
+        char buf[192];
+        snprintf(buf, sizeof buf, tx("DISBAND_TITLE_FMT"), unit_name_of(ut, u->owner));
+        draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
+        snprintf(buf, sizeof buf, tx("DISBAND_REFUND_FMT"),
+                 game_disband_refund(g, a->sel_unit), ut->cost, u->hp);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 52, COL_YELLOW, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 76, COL_GRAY, tx("DISBAND_WARN"));
+        for (int i = 0; i < 2; i++) {
+            SDL_Rect r = evo_rect(i);
+            bool sel = (a->amenu_idx == i);
+            fill_rect(a, r.x, r.y, r.w, r.h,
+                      sel ? (SDL_Color){ 80, 110, 160, 255 }
+                          : (SDL_Color){ 40, 48, 60, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
+                             sel ? COL_WHITE : COL_GRAY,
+                             tx(i == 0 ? "DISBAND_YES" : "DISBAND_NO"));
         }
     }
     /* 燃料切れの確認。何が起きるか（墜落か漂流か）と、今の燃料・1手番の消費を見せる */
