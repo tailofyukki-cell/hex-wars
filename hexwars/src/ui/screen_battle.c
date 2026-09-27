@@ -427,6 +427,28 @@ static SDL_Rect prod_sort_rect(void)
     return r;
 }
 
+/* 倉庫の部隊を解隊するボタン（並び替えボタンの反対側）。倉庫の部隊を
+ * 選んでいるときだけ押せる。キーボードでは D */
+static SDL_Rect prod_disband_rect(void)
+{
+    SDL_Rect r = { WIN_W / 2 - 336, 104, 136, 28 };
+    return r;
+}
+
+static bool prod_cur_is_store(const App *a)
+{
+    return a->bs == BS_PRODUCTION && a->prod_n > 0 &&
+           a->prod_store[a->prod_idx] >= 0;
+}
+
+/* 倉庫の部隊の払い戻し。倉庫の部隊はいつも満タンなので生産価格の半額
+ * （盤上の解隊と同じ決まり） */
+static int store_refund(const App *a, int slot)
+{
+    int t = a->cps.store[slot].type;
+    return t < a->game.n_types ? a->game.types[t].cost / 2 : 0;
+}
+
 /* 選択中の項目 prod_idx が表示範囲に入るよう prod_scroll を調整 */
 static void prod_keep_visible(App *a)
 {
@@ -934,6 +956,28 @@ static void open_production(App *a, int x, int y)
     a->bs = BS_PRODUCTION;
 }
 
+/* 倉庫の部隊を解隊して資金に戻し、生産メニューを作り直す */
+static void store_disband_do(App *a)
+{
+    Game *g = &a->game;
+    int slot = a->prod_store[a->prod_idx];
+    if (slot < 0 || slot >= a->cps.n_store) { a->bs = BS_PRODUCTION; return; }
+    int refund = store_refund(a, slot);
+    g->funds[g->current] += refund;
+    campaign_store_remove(&a->cps, slot);
+    char buf[64];
+    snprintf(buf, sizeof buf, tx("POP_DISBAND_FMT"), refund);
+    set_banner(a, buf, 90);
+    snd_se(SE_CAPTURE);
+    int keep = a->prod_idx;
+    a->bs = BS_IDLE;
+    open_production(a, a->prod_x, a->prod_y);     /* 並びを作り直す（空なら閉じたまま） */
+    if (a->bs == BS_PRODUCTION) {
+        a->prod_idx = keep < a->prod_n ? keep : a->prod_n - 1;
+        prod_keep_visible(a);
+    }
+}
+
 static void prod_select(App *a)
 {
     Game *g = &a->game;
@@ -1347,6 +1391,9 @@ static void cancel_action(App *a)
     case BS_DISBAND_CONFIRM:
         build_action_menu(a);        /* 行動メニューへ戻す（何も変えない） */
         break;
+    case BS_STORE_DISBAND:
+        a->bs = BS_PRODUCTION;       /* 生産メニューへ戻す */
+        break;
     case BS_FUEL_CONFIRM:
         /* やめる＝移動を巻き戻して選び直させる（補給できる場所へ動かし直せる） */
         a->fuel_ack = false;
@@ -1530,7 +1577,8 @@ void battle_event(App *a, const SDL_Event *e)
             /* メニューのホバー */
             SDL_Point p = { e->motion.x, e->motion.y };
             if (a->bs == BS_EVOLVE_CONFIRM || a->bs == BS_JOIN_CONFIRM ||
-                a->bs == BS_FUEL_CONFIRM || a->bs == BS_DISBAND_CONFIRM) {
+                a->bs == BS_FUEL_CONFIRM || a->bs == BS_DISBAND_CONFIRM ||
+                a->bs == BS_STORE_DISBAND) {
                 for (int i = 0; i < 2; i++) {
                     SDL_Rect r = evo_rect(i);
                     if (SDL_PointInRect(&p, &r)) a->amenu_idx = i;
@@ -1594,6 +1642,12 @@ void battle_event(App *a, const SDL_Event *e)
              * 押した瞬間に生産してしまうのを確実に避けるため） */
             SDL_Rect sr = prod_sort_rect();
             if (SDL_PointInRect(&p, &sr)) { prod_cycle_sort(a); return; }
+            SDL_Rect dr = prod_disband_rect();
+            if (a->campaign_mode && SDL_PointInRect(&p, &dr)) {
+                if (prod_cur_is_store(a)) { a->amenu_idx = 1; a->bs = BS_STORE_DISBAND; }
+                else snd_se(SE_CANCEL);
+                return;
+            }
             SDL_Rect bar = prod_bar_rect();
             if (a->prod_n > PROD_VISIBLE && SDL_PointInRect(&p, &bar)) {
                 a->prod_bar_drag = true;
@@ -1642,6 +1696,17 @@ void battle_event(App *a, const SDL_Event *e)
                 if (SDL_PointInRect(&p, &r)) { a->ulist_idx = i; ulist_confirm(a); return; }
             }
             cancel_action(a);   /* 一覧の外をクリックしたら閉じる */
+            return;
+        }
+        if (a->bs == BS_STORE_DISBAND) {
+            for (int i = 0; i < 2; i++) {
+                SDL_Rect r = evo_rect(i);
+                if (SDL_PointInRect(&p, &r)) {
+                    if (i == 0) store_disband_do(a);
+                    else a->bs = BS_PRODUCTION;
+                    return;
+                }
+            }
             return;
         }
         if (a->bs == BS_DISBAND_CONFIRM) {
@@ -1741,6 +1806,16 @@ void battle_event(App *a, const SDL_Event *e)
             if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
             return;
         }
+        if (a->bs == BS_STORE_DISBAND) {
+            if (k == SDLK_LEFT)  a->amenu_idx = 0;
+            if (k == SDLK_RIGHT) a->amenu_idx = 1;
+            if (k == SDLK_z || k == SDLK_RETURN) {
+                if (a->amenu_idx == 0) store_disband_do(a);
+                else a->bs = BS_PRODUCTION;
+            }
+            if (k == SDLK_x || k == SDLK_ESCAPE) a->bs = BS_PRODUCTION;
+            return;
+        }
         if (a->bs == BS_DISBAND_CONFIRM) {
             if (k == SDLK_LEFT)  a->amenu_idx = 0;
             if (k == SDLK_RIGHT) a->amenu_idx = 1;
@@ -1799,6 +1874,11 @@ void battle_event(App *a, const SDL_Event *e)
             menu_key_nav(k, &a->prod_idx, a->prod_n);
             prod_keep_visible(a);
             if (k == SDLK_s) prod_cycle_sort(a);
+            if (k == SDLK_d && prod_cur_is_store(a)) {
+                a->amenu_idx = 1;          /* 既定は「やめる」 */
+                a->bs = BS_STORE_DISBAND;
+                return;
+            }
             if (k == SDLK_z || k == SDLK_RETURN) prod_select(a);
             if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
             return;
@@ -2395,6 +2475,7 @@ static void draw_panels(App *a)
     case BS_JOIN_CONFIRM:  hint = tx("HINT_JOIN"); break;
     case BS_FUEL_CONFIRM:  hint = tx("HINT_FUEL"); break;
     case BS_DISBAND_CONFIRM: hint = tx("HINT_DISBAND"); break;
+    case BS_STORE_DISBAND: hint = tx("HINT_DISBAND"); break;
     case BS_UNITLIST:      hint = tx("HINT_UNITLIST"); break;
     case BS_PRODUCTION:    hint = tx("HINT_PROD"); break;
     case BS_SAVE_MENU:     hint = tx("HINT_SAVE"); break;
@@ -2554,6 +2635,15 @@ static void draw_menus(App *a)
             draw_text_center(a, a->font_s, sr.x + sr.w / 2, sr.y + 8,
                              COL_YELLOW, sb);
         }
+        /* 倉庫の部隊の解隊ボタン。倉庫の部隊を選んでいるときだけ明るくする */
+        if (a->campaign_mode) {
+            SDL_Rect dr = prod_disband_rect();
+            bool on = (a->prod_n > 0 && a->prod_store[a->prod_idx] >= 0);
+            fill_rect(a, dr.x, dr.y, dr.w, dr.h, (SDL_Color){ 44, 52, 66, 255 });
+            outline_rect(a, dr.x, dr.y, dr.w, dr.h, COL_DIM);
+            draw_text_center(a, a->font_s, dr.x + dr.w / 2, dr.y + 8,
+                             on ? COL_YELLOW : COL_DIM, tx("PROD_DISBAND_BTN"));
+        }
         /* スクロールバー。倉庫が増えると ▲▼ だけでは今どのあたりを
          * 見ているのか分からないので、位置と量が出る溝とつまみにした */
         if (scrollable) {
@@ -2704,6 +2794,34 @@ static void draw_menus(App *a)
             draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
                              sel ? COL_WHITE : COL_GRAY,
                              tx(i == 0 ? "EVOLVE_YES" : "EVOLVE_NO"));
+        }
+    }
+    /* 倉庫の部隊の解隊の確認 */
+    if (a->bs == BS_STORE_DISBAND && a->prod_n > 0 && a->prod_store[a->prod_idx] >= 0) {
+        int slot = a->prod_store[a->prod_idx];
+        const UnitType *ut = &g->types[a->cps.store[slot].type];
+        int bw = 640, bh = 190;
+        int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 108;
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 130 });
+        fill_rect(a, bx, by, bw, bh, (SDL_Color){ 30, 34, 42, 248 });
+        outline_rect(a, bx, by, bw, bh, COL_YELLOW);
+        char buf[192];
+        snprintf(buf, sizeof buf, tx("DISBAND_STORE_TITLE_FMT"), unit_name_of(ut, g->current));
+        draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
+        snprintf(buf, sizeof buf, tx("DISBAND_REFUND_FMT"),
+                 store_refund(a, slot), ut->cost, 10);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 52, COL_YELLOW, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 76, COL_GRAY, tx("DISBAND_STORE_WARN"));
+        for (int i = 0; i < 2; i++) {
+            SDL_Rect r = evo_rect(i);
+            bool sel = (a->amenu_idx == i);
+            fill_rect(a, r.x, r.y, r.w, r.h,
+                      sel ? (SDL_Color){ 80, 110, 160, 255 }
+                          : (SDL_Color){ 40, 48, 60, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
+                             sel ? COL_WHITE : COL_GRAY,
+                             tx(i == 0 ? "DISBAND_YES" : "DISBAND_NO"));
         }
     }
     /* 解隊の確認。戻ってくる資金を先に見せる */

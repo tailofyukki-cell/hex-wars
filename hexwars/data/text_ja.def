@@ -214,6 +214,9 @@ DISBAND_YES       = 解隊する
 DISBAND_NO        = やめる
 POP_DISBAND_FMT   = 解隊 +%dG
 HINT_DISBAND      = ←→:選択  Z:決定  X:やめる
+PROD_DISBAND_BTN  = 倉庫から解隊
+DISBAND_STORE_TITLE_FMT = 倉庫の %s を解隊しますか？
+DISBAND_STORE_WARN = 倉庫から消えます。取り消せません
 
 TMENU_UNITLIST  = 未行動ユニット
 TMENU_END       = ターン終了
@@ -269,7 +272,7 @@ HINT_UNITLIST   = ↑↓/ホイール:選択  Z:そのユニットへ移動  X:�
 LAYER_AIR       = 空
 LAYER_SURFACE   = 地上
 LAYER_UNDER     = 海中
-HINT_PROD       = ↑↓/ホイール:選択  S:並び替え  Z:生産/引出  X:閉じる
+HINT_PROD       = ↑↓/ホイール:選択  S:並び替え  D:倉庫の部隊を解隊  Z:生産/引出  X:閉じる
 HINT_SAVE       = ↑↓:選択  Z:セーブ  X:戻る
 HINT_ANIM       = Z:スキップ
 

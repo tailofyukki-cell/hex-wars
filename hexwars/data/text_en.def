@@ -218,6 +218,9 @@ DISBAND_YES       = Disband
 DISBAND_NO        = Cancel
 POP_DISBAND_FMT   = Disbanded +%dG
 HINT_DISBAND      = Left/Right: Select  Z: Confirm  X: Cancel
+PROD_DISBAND_BTN  = Disband reserve
+DISBAND_STORE_TITLE_FMT = Disband %s from the reserve?
+DISBAND_STORE_WARN = It leaves the reserve. This cannot be undone
 
 TMENU_UNITLIST  = Units Ready
 TMENU_END       = End Turn
@@ -273,7 +276,7 @@ HINT_UNITLIST   = Up/Down/Wheel: Select  Z: Go to unit  X: Back
 LAYER_AIR       = Air
 LAYER_SURFACE   = Surface
 LAYER_UNDER     = Undersea
-HINT_PROD       = Up/Down/Wheel: Select  S: Sort  Z: Build/Deploy  X: Close
+HINT_PROD       = Up/Down/Wheel: Select  S: Sort  D: Disband reserve  Z: Build/Deploy  X: Close
 HINT_SAVE       = Up/Down: Select  Z: Save  X: Back
 HINT_ANIM       = Z: Skip
 
