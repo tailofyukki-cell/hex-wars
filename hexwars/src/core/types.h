@@ -145,6 +145,15 @@ typedef struct {
      * 0 = 既定（視界の半分。game_hidden_sight）。視界は「÷2 切り捨て」なので、
      * 視界を1増やしても潜水艦の探知距離はほとんど延びない。そのための別の値。 */
     uint8_t  sonar;
+    /* 超兵器まわり（units.def）。どれも書かなければ 0 で従来どおり。
+     *   no_falloff  … 1=射程による威力の減衰を受けない（超重戦車）
+     *   fuel_rate   … 移動1マスに使う燃料の倍率。0/1=通常、2=倍（飛行要塞）
+     *   splash      … 1=範囲攻撃。狙ったマスに100%、周りの6マスの敵に50%（飛行要塞）
+     *   superweapon … 超兵器の領域。1=陸 2=空 3=海。研究ポイントと資金で建造する */
+    uint8_t  no_falloff;
+    uint8_t  fuel_rate;
+    uint8_t  splash;
+    uint8_t  superweapon;
     int16_t  def_;
     uint8_t  range_min;
     uint8_t  range_max;

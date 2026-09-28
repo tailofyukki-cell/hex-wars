@@ -464,10 +464,15 @@ static void prod_keep_visible(App *a)
 
 /* 並び順の比較。生産（有料）と倉庫は混ぜず、節の中だけで並べ替える。
  * 混ぜると「買う」と「戻す」が入り乱れて、かえって読みにくくなる。 */
+/* prod_store の特別な値。-1=普通の生産 / -2=超兵器の建造 / 0以上=倉庫の番号 */
+#define PROD_SW (-2)
+
 static int prod_cmp(App *a, int ti, int si, int tj, int sj)
 {
     const Game *g = &a->game;
-    if ((si < 0) != (sj < 0)) return (si < 0) ? -1 : 1;   /* 生産が先、倉庫が後 */
+    /* 超兵器（-2）が一番上、次に生産（-1）、倉庫（0以上）が後 */
+    if ((si == PROD_SW) != (sj == PROD_SW)) return (si == PROD_SW) ? -1 : 1;
+    if ((si < 0) != (sj < 0)) return (si < 0) ? -1 : 1;
     /* 経験値は倉庫の部隊しか持たない。生産側は -1 として扱う */
     int ei = (si >= 0) ? a->cps.store[si].exp : -1;
     int ej = (sj >= 0) ? a->cps.store[sj].exp : -1;
@@ -946,6 +951,15 @@ static void open_production(App *a, int x, int y)
             a->prod_store[a->prod_n] = -1;
             a->prod_items[a->prod_n++] = t;
         }
+    /* 超兵器の建造。この拠点で作れる領域のものを、条件が足りなくても並べる
+     * （何が足りないかを選んだときに伝える）。すでに持っている／建造中なら出さない */
+    for (int t = 0; t < g->n_types; t++) {
+        int c = game_sw_check(g, g->current, x, y, t);
+        if (g->types[t].superweapon && c != 1 && c != 2) {
+            a->prod_store[a->prod_n] = PROD_SW;
+            a->prod_items[a->prod_n++] = t;
+        }
+    }
     /* 倉庫からの引き出し（無料。キャンペーンのみ。この拠点で生産可能な種別のみ） */
     if (a->campaign_mode) {
         for (int k = 0; k < a->cps.n_store; k++) {
@@ -964,6 +978,24 @@ static void open_production(App *a, int x, int y)
     a->prod_scroll = 0;
     a->prod_bar_drag = false;
     a->bs = BS_PRODUCTION;
+}
+
+/* 超兵器の建造を始める（確認で「建造する」を選んだとき） */
+static void sw_order_do(App *a)
+{
+    Game *g = &a->game;
+    int t = a->prod_items[a->prod_idx];
+    if (game_sw_order(g, g->current, a->prod_x, a->prod_y, t)) {
+        char buf[128];
+        snprintf(buf, sizeof buf, tx("SW_STARTED_FMT"),
+                 unit_name_of(&g->types[t], g->current), SW_BUILD_TURNS);
+        set_banner(a, buf, 150);
+        snd_se(SE_CAPTURE);
+        a->bs = BS_IDLE;
+    } else {
+        snd_se(SE_CANCEL);
+        a->bs = BS_PRODUCTION;
+    }
 }
 
 /* 倉庫の部隊を解隊して資金に戻し、生産メニューを作り直す */
@@ -997,6 +1029,13 @@ static void prod_select(App *a)
     /* **理由はバナーで出すこと**。ポップアップはマップ座標に描かれるうえ、
      * draw_popups は draw_menus より先なので、生産拠点がパネルの裏だと
      * 何も見えず「押しても反応しない」ようにしか見えない。 */
+    if (slot == PROD_SW) {
+        int c = game_sw_check(g, g->current, a->prod_x, a->prod_y, t);
+        if (c == 0) { a->amenu_idx = 1; a->bs = BS_SW_CONFIRM; return; }
+        snd_se(SE_CANCEL);
+        set_banner(a, tx(c == 3 ? "SW_NEED_POINTS" : c == 4 ? "POP_NOFUNDS" : "SW_CANNOT"), 110);
+        return;
+    }
     if (slot >= 0) {
         /* 倉庫から無料で引き出し（経験値保持）。成功したら倉庫から除去 */
         int exp = a->cps.store[slot].exp;
@@ -1419,6 +1458,7 @@ static void cancel_action(App *a)
         build_action_menu(a);        /* 行動メニューへ戻す（何も変えない） */
         break;
     case BS_STORE_DISBAND:
+    case BS_SW_CONFIRM:
         a->bs = BS_PRODUCTION;       /* 生産メニューへ戻す */
         break;
     case BS_FUEL_CONFIRM:
@@ -1605,7 +1645,7 @@ void battle_event(App *a, const SDL_Event *e)
             SDL_Point p = { e->motion.x, e->motion.y };
             if (a->bs == BS_EVOLVE_CONFIRM || a->bs == BS_JOIN_CONFIRM ||
                 a->bs == BS_FUEL_CONFIRM || a->bs == BS_DISBAND_CONFIRM ||
-                a->bs == BS_STORE_DISBAND) {
+                a->bs == BS_STORE_DISBAND || a->bs == BS_SW_CONFIRM) {
                 for (int i = 0; i < 2; i++) {
                     SDL_Rect r = evo_rect(i);
                     if (SDL_PointInRect(&p, &r)) a->amenu_idx = i;
@@ -1725,6 +1765,17 @@ void battle_event(App *a, const SDL_Event *e)
             cancel_action(a);   /* 一覧の外をクリックしたら閉じる */
             return;
         }
+        if (a->bs == BS_SW_CONFIRM) {
+            for (int i = 0; i < 2; i++) {
+                SDL_Rect r = evo_rect(i);
+                if (SDL_PointInRect(&p, &r)) {
+                    if (i == 0) sw_order_do(a);
+                    else a->bs = BS_PRODUCTION;
+                    return;
+                }
+            }
+            return;
+        }
         if (a->bs == BS_STORE_DISBAND) {
             for (int i = 0; i < 2; i++) {
                 SDL_Rect r = evo_rect(i);
@@ -1831,6 +1882,16 @@ void battle_event(App *a, const SDL_Event *e)
                 else cancel_action(a);
             }
             if (k == SDLK_x || k == SDLK_ESCAPE) cancel_action(a);
+            return;
+        }
+        if (a->bs == BS_SW_CONFIRM) {
+            if (k == SDLK_LEFT)  a->amenu_idx = 0;
+            if (k == SDLK_RIGHT) a->amenu_idx = 1;
+            if (k == SDLK_z || k == SDLK_RETURN) {
+                if (a->amenu_idx == 0) sw_order_do(a);
+                else a->bs = BS_PRODUCTION;
+            }
+            if (k == SDLK_x || k == SDLK_ESCAPE) a->bs = BS_PRODUCTION;
             return;
         }
         if (a->bs == BS_STORE_DISBAND) {
@@ -2374,13 +2435,26 @@ static void draw_panels(App *a)
     draw_text(a, a->font_l, 14, py + 8, COL_WHITE, t->name);
     snprintf(buf, sizeof buf, tx("PANEL_DEF_FMT"), t->def_bonus);
     draw_text(a, a->font_s, 14, py + 48, COL_GRAY, buf);
-    if (t->income > 0) {
+    /* 超兵器の建造中なら収入の行の代わりに出す（敵味方どちらにも見せる） */
+    bool sw_here = false;
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        for (int k = 0; k < 3; k++)
+            if (g->sw_build[p][k].active && g->sw_build[p][k].x == a->cur_x &&
+                g->sw_build[p][k].y == a->cur_y) {
+                snprintf(buf, sizeof buf, tx("PANEL_SW_BUILD_FMT"),
+                         unit_name_of(&g->types[g->sw_build[p][k].type], p),
+                         g->sw_build[p][k].left);
+                draw_text(a, a->font_s, 14, py + 68, (SDL_Color){ 200, 160, 255, 255 }, buf);
+                sw_here = true;
+            }
+    if (t->income > 0 && !sw_here) {
         snprintf(buf, sizeof buf, tx("PANEL_INCOME_FMT"),
                  t->income * g->income_scale / 100);
         draw_text(a, a->font_s, 14, py + 68, COL_GRAY, buf);
     }
     /* CPU手番中も人間側の視点で表示する。地形・ユニットの両方で使う。 */
     int viewer = battle_viewer(g);
+
 
     if (t->capturable) {
         char ownbuf[64];
@@ -2516,6 +2590,7 @@ static void draw_panels(App *a)
     case BS_FUEL_CONFIRM:  hint = tx("HINT_FUEL"); break;
     case BS_DISBAND_CONFIRM: hint = tx("HINT_DISBAND"); break;
     case BS_STORE_DISBAND: hint = tx("HINT_DISBAND"); break;
+    case BS_SW_CONFIRM:    hint = tx("HINT_DISBAND"); break;
     case BS_UNITLIST:      hint = tx("HINT_UNITLIST"); break;
     case BS_PRODUCTION:    hint = tx("HINT_PROD"); break;
     case BS_SAVE_MENU:     hint = tx("HINT_SAVE"); break;
@@ -2703,6 +2778,25 @@ static void draw_menus(App *a)
             int slot = a->prod_store[i];
             bool from_store = slot >= 0;
             bool afford = from_store || g->funds[g->current] >= g->types[t].cost;
+            if (slot == PROD_SW) {
+                bool sel = a->prod_idx == i;
+                bool ok = game_sw_check(g, g->current, a->prod_x, a->prod_y, t) == 0;
+                fill_rect(a, r.x, r.y, r.w, r.h,
+                          sel ? (SDL_Color){ 110, 80, 150, 255 }
+                              : (SDL_Color){ 52, 40, 66, 255 });
+                outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : (SDL_Color){ 150, 110, 200, 255 });
+                char sb[128];
+                snprintf(sb, sizeof sb, "[%s] %s", tx("PROD_SW_TAG"),
+                         unit_name_of(&g->types[t], g->current));
+                draw_text(a, a->font_m, r.x + 14, r.y + 7, ok ? COL_WHITE : COL_DIM, sb);
+                snprintf(sb, sizeof sb, tx("PROD_SW_COST_FMT"),
+                         g->lab_points[g->current], g->types[t].cost,
+                         g->types[t].cost, SW_BUILD_TURNS);
+                int sw_w = text_width(a, a->font_s, sb);
+                draw_text(a, a->font_s, r.x + r.w - 14 - sw_w, r.y + 12,
+                          ok ? COL_YELLOW : COL_DIM, sb);
+                continue;
+            }
             bool sel = a->prod_idx == i;
             fill_rect(a, r.x, r.y, r.w, r.h,
                       sel ? (SDL_Color){ 80, 110, 160, 255 }
@@ -2835,6 +2929,33 @@ static void draw_menus(App *a)
             draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
                              sel ? COL_WHITE : COL_GRAY,
                              tx(i == 0 ? "EVOLVE_YES" : "EVOLVE_NO"));
+        }
+    }
+    /* 超兵器の建造の確認 */
+    if (a->bs == BS_SW_CONFIRM && a->prod_n > 0) {
+        int t = a->prod_items[a->prod_idx];
+        const UnitType *ut = &g->types[t];
+        int bw = 680, bh = 190;
+        int bx = WIN_W / 2 - bw / 2, by = WIN_H / 2 - 108;
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 130 });
+        fill_rect(a, bx, by, bw, bh, (SDL_Color){ 36, 28, 46, 248 });
+        outline_rect(a, bx, by, bw, bh, (SDL_Color){ 190, 150, 240, 255 });
+        char buf[192];
+        snprintf(buf, sizeof buf, tx("SW_CONFIRM_FMT"), unit_name_of(ut, g->current));
+        draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
+        snprintf(buf, sizeof buf, tx("SW_CONFIRM_COST_FMT"), ut->cost, ut->cost, SW_BUILD_TURNS);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 52, COL_YELLOW, buf);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + 76, COL_GRAY, tx("SW_CONFIRM_WARN"));
+        for (int i = 0; i < 2; i++) {
+            SDL_Rect r = evo_rect(i);
+            bool sel = (a->amenu_idx == i);
+            fill_rect(a, r.x, r.y, r.w, r.h,
+                      sel ? (SDL_Color){ 80, 110, 160, 255 }
+                          : (SDL_Color){ 40, 48, 60, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 8,
+                             sel ? COL_WHITE : COL_GRAY,
+                             tx(i == 0 ? "SW_YES" : "DISBAND_NO"));
         }
     }
     /* 倉庫の部隊の解隊の確認 */

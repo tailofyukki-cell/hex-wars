@@ -216,6 +216,16 @@ bool game_can_disband(const Game *g, int ui);
 int  game_disband_refund(const Game *g, int ui);
 int  game_disband_unit(Game *g, int ui);   /* 自軍の研究所の上なら研究ポイントへ */
 bool game_on_own_lab(const Game *g, int ui);
+
+/* 超兵器の建造（units.def の superweapon: 1=陸 2=空 3=海）。
+ * 陸=自軍の工場、空=自軍の空港、海=自軍の港で、研究ポイントと資金を
+ * 生産価格ぶんずつ使って始め、SW_BUILD_TURNS 手番後に完成する。1陣営に各領域1体まで。
+ * 建造場所を奪われる／壊されると取りやめ（ポイントと資金は戻る）。 */
+#define SW_BUILD_TURNS 3
+bool game_sw_building_at(const Game *g, int x, int y);
+bool game_sw_taken(const Game *g, int p, int sw);
+int  game_sw_check(const Game *g, int p, int x, int y, int type);
+bool game_sw_order(Game *g, int p, int x, int y, int type);
 /* 進化先のユニット型 index / -1（条件を満たさない・進化先が無い） */
 int  game_evolve_target(const Game *g, int ui);
 /* 進化に必要な資金（元ユニットの価格×EVOLVE_COST_MUL）。進化先が無ければ0 */

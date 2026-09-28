@@ -418,6 +418,100 @@ int game_disband_unit(Game *g, int ui)
 }
 
 /* ------------------------------------------------------------------ */
+/* 超兵器の建造                                                        */
+/* ------------------------------------------------------------------ */
+/* 領域（1=陸 2=空 3=海）ごとの建造場所: 陸=自軍の工場、空=自軍の空港、海=自軍の港。
+ * 首都は陸を生産できるが、建造場所にはしない（研究所と同じく守る場所なので）。 */
+static bool sw_site_ok(const Game *g, int p, int sw, int x, int y)
+{
+    const Tile *t = &g->tiles[y][x];
+    const TerrainType *tt = &g->terrains[t->terrain];
+    if (t->owner != p) return false;
+    switch (sw) {
+    case 1: return tt->produces == PROD_LAND && !tt->is_hq;
+    case 2: return tt->produces == PROD_AIR;
+    case 3: return tt->produces == PROD_SEA;
+    default: return false;
+    }
+}
+
+bool game_sw_building_at(const Game *g, int x, int y)
+{
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        for (int k = 0; k < 3; k++)
+            if (g->sw_build[p][k].active &&
+                g->sw_build[p][k].x == x && g->sw_build[p][k].y == y) return true;
+    return false;
+}
+
+/* その陣営が、その領域の超兵器をすでに持っているか建造中か（1陣営につき各領域1体） */
+bool game_sw_taken(const Game *g, int p, int sw)
+{
+    if (sw < 1 || sw > 3) return true;
+    if (g->sw_build[p][sw - 1].active) return true;
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *u = &g->units[i];
+        if ((u->flags & UF_ALIVE) && u->owner == p &&
+            g->types[u->type].superweapon == sw) return true;
+    }
+    return false;
+}
+
+/* 建造を始められるか。0=可 / 1=場所が違う / 2=すでにある / 3=ポイント不足 / 4=資金不足 */
+int game_sw_check(const Game *g, int p, int x, int y, int type)
+{
+    const UnitType *ut = &g->types[type];
+    int sw = ut->superweapon;
+    if (!sw || !sw_site_ok(g, p, sw, x, y) || game_sw_building_at(g, x, y)) return 1;
+    if (game_sw_taken(g, p, sw)) return 2;
+    if (g->lab_points[p] < ut->cost) return 3;
+    if (g->funds[p] < ut->cost) return 4;
+    return 0;
+}
+
+/* 建造を始める。研究ポイントと資金を同じ額ずつ使い、3手番後に完成する */
+bool game_sw_order(Game *g, int p, int x, int y, int type)
+{
+    if (game_sw_check(g, p, x, y, type) != 0) return false;
+    const UnitType *ut = &g->types[type];
+    g->lab_points[p] -= ut->cost;
+    g->funds[p] -= ut->cost;
+    int k = ut->superweapon - 1;
+    g->sw_build[p][k].active = 1;
+    g->sw_build[p][k].x = (uint8_t)x;
+    g->sw_build[p][k].y = (uint8_t)y;
+    g->sw_build[p][k].left = SW_BUILD_TURNS;
+    g->sw_build[p][k].type = (int16_t)type;
+    return true;
+}
+
+/* 手番の頭に呼ぶ。建造場所を奪われた・壊された建造は取りやめて、
+ * 使った研究ポイントと資金を返す（ポイントは無くならない。建造は最初から）。
+ * 続いているものは残り手番を減らし、0 になったら完成させる。
+ * 完成した場所がふさがっていれば、空くまで待つ。 */
+static void sw_advance(Game *g, int p)
+{
+    for (int k = 0; k < 3; k++) {
+        if (!g->sw_build[p][k].active) continue;
+        int x = g->sw_build[p][k].x, y = g->sw_build[p][k].y;
+        int type = g->sw_build[p][k].type;
+        if (type < 0 || type >= g->n_types) { g->sw_build[p][k].active = 0; continue; }
+        const UnitType *ut = &g->types[type];
+        if (!sw_site_ok(g, p, k + 1, x, y)) {
+            g->lab_points[p] += ut->cost;
+            g->funds[p] += ut->cost;
+            g->sw_build[p][k].active = 0;
+            continue;
+        }
+        if (g->sw_build[p][k].left > 0) g->sw_build[p][k].left--;
+        if (g->sw_build[p][k].left == 0 &&
+            game_unit_at_layer(g, x, y, unit_layer(ut->mclass)) < 0 &&
+            game_spawn_unit(g, p, type, x, y, 10) >= 0)
+            g->sw_build[p][k].active = 0;
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* 天候                                                                */
 /* ------------------------------------------------------------------ */
 Weather game_weather(const Game *g)
@@ -787,6 +881,31 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
         }
     }
 
+    /* 範囲攻撃（飛行要塞）: 狙ったマスの周り6マスにいる敵へ50%。
+     * 味方は巻き込まない。反撃は狙った相手からだけ。撃てない組み合わせ
+     * （対空の無い爆撃で航空機など）は unit_can_attack_target で外す。 */
+    if (at->splash && (a->flags & UF_ALIVE)) {
+        int cx = d->pos.x, cy = d->pos.y;
+        for (int dir = 0; dir < HEX_DIRS; dir++) {
+            int nx, ny;
+            hex_neighbor(cx, cy, dir, &nx, &ny);
+            if (!game_in_bounds(g, nx, ny)) continue;
+            for (int k = 0; k < g->n_units; k++) {
+                Unit *v = &g->units[k];
+                if (!(v->flags & UF_ALIVE) || (v->flags & UF_LOADED)) continue;
+                if (v->pos.x != nx || v->pos.y != ny) continue;
+                if (!game_is_enemy(g, a->owner, v->owner)) continue;
+                if (unit_atk_vs(at, unit_type(g, v)) <= 0) continue;
+                if (unit_type(g, v)->is_sub && !at->anti_sub) continue;
+                int sd = (battle_roll_damage(g, a, v) + 1) / 2;
+                if (sd < 1) sd = 1;
+                v->hp = (int8_t)(v->hp - sd);
+                gain_exp(a, sd);
+                if (v->hp <= 0) { gain_exp(a, 10); kill_unit(g, k); }
+            }
+        }
+    }
+
     if (a->flags & UF_ALIVE) a->flags |= UF_DONE;
     game_update_vision(g);
     game_check_victory(g);
@@ -858,6 +977,7 @@ bool game_type_buildable_at(const Game *g, int x, int y, int type)
 
 bool game_can_produce_at(const Game *g, int player, int x, int y)
 {
+    if (game_sw_building_at(g, x, y)) return false;   /* 超兵器の建造中 */
     const Tile *tile = &g->tiles[y][x];
     const TerrainType *t = &g->terrains[tile->terrain];
     if (t->produces == PROD_NONE) return false;
@@ -1398,6 +1518,9 @@ bool game_can_board(const Game *g, int passenger, int transport)
     for (int i = 0; i < pt->n_transport_by; i++) {
         if (!strcmp(pt->transport_by[i], tt->id)) return true;
         if (base && !strcmp(pt->transport_by[i], base)) return true;
+        /* 艦載機を補給できる艦（resupply_cargo）は空母と同じ扱い。
+         * 決戦航空戦艦を transport_by に書き足さずに済むように */
+        if (tt->resupply_cargo && !strcmp(pt->transport_by[i], "CARRIER")) return true;
     }
     return false;
 }
@@ -1482,6 +1605,7 @@ static void begin_player_turn(Game *g)
     if (g->current >= 0 && g->current < MAX_PLAYERS) g->co_used_turn[g->current] = 0;
     int p = g->current;
     g->funds[p] += income_for(g, p);
+    sw_advance(g, p);
 
     for (int i = 0; i < g->n_units; i++) {
         Unit *u = &g->units[i];

@@ -1,6 +1,7 @@
 /* render.c - フラットベクタ風のマップ・ユニット描画 */
 #include "app.h"
 #include "sprites.h"
+#include "text.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -663,6 +664,21 @@ void render_map(App *a)
                 SDL_Color tc = darken(rgb(t->color), 45);
                 if (t->is_hq) tc = (SDL_Color){ 120, 60, 20, 255 };
                 draw_text_center(a, f, (int)cx, (int)(cy - s * 0.32f), tc, icon);
+                /* 超兵器の建造中は敵味方どちらにも見せる（止めに行く理由になる） */
+                for (int p = 0; p < MAX_PLAYERS; p++)
+                    for (int k = 0; k < 3; k++)
+                        if (g->sw_build[p][k].active && g->sw_build[p][k].x == x &&
+                            g->sw_build[p][k].y == y) {
+                            /* 建物の上側に出す。下側は次の段のマスに隠れるため */
+                            char sb[32];
+                            snprintf(sb, sizeof sb, tx("MAP_SW_BUILD_FMT"), g->sw_build[p][k].left);
+                            int tw = text_width(a, a->font_s, sb);
+                            int ty = (int)(cy - s * 1.25f);
+                            fill_rect(a, (int)cx - tw / 2 - 4, ty - 1, tw + 8, 20,
+                                      (SDL_Color){ 30, 20, 45, 220 });
+                            draw_text_center(a, a->font_s, (int)cx, ty,
+                                             (SDL_Color){ 220, 170, 255, 255 }, sb);
+                        }
                 /* 占領進行中 */
                 if (vis && tile->capturer >= 0 && tile->cap_hp < CAPTURE_HP) {
                     char pr[16];

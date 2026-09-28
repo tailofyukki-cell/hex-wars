@@ -299,7 +299,7 @@ static bool needs_fuel_return(const Game *g, int me, const Unit *u)
     int max_cost = 2;
     for (int t = 0; t < g->n_terrains; t++)
         if (g->terrains[t].mcost[mc] > max_cost) max_cost = g->terrains[t].mcost[mc];
-    int per_hex = (max_cost + 1) / 2;         /* path_walk と同じく コスト÷2 が燃料 */
+    int per_hex = (max_cost + 1) / 2 * (ut->fuel_rate > 1 ? ut->fuel_rate : 1);
     int move = ut->move > 0 ? ut->move : 1;
     int turns = (d + move - 1) / move;
     int need = d * per_hex + (turns + 1) * ut->upkeep;
@@ -892,7 +892,7 @@ static void act_unit(Game *g, AiState *s, int ui)
         int max_cost = 2;
         for (int t = 0; t < g->n_terrains; t++)
             if (g->terrains[t].mcost[mc] > max_cost) max_cost = g->terrains[t].mcost[mc];
-        fuel_per_hex = (max_cost + 1) / 2;
+        fuel_per_hex = (max_cost + 1) / 2 * (ut->fuel_rate > 1 ? ut->fuel_rate : 1);
         /* 空きのある自軍の空母も帰る先になる（着艦すれば次の手番に補給される） */
         for (int i = 0; i < g->n_units && n_home < 64; i++) {
             const Unit *c = &g->units[i];

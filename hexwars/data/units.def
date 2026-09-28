@@ -2282,3 +2282,115 @@ def          = 36
 anti_sub     = 1
 sonar        = 5
 no_produce   = 1
+
+# ---- 超兵器（研究所で解隊して貯めた研究ポイントと、同じ額の資金で建造する）----
+# superweapon = 1 陸（自軍の工場で建造）/ 2 空（自軍の空港）/ 3 海（自軍の港）。
+# cost が必要な研究ポイントと資金の両方。建造は3手番。1陣営に各領域1体まで。
+# 生産メニューからは買えない（no_produce）。進化もしない。
+
+# 超重戦車: 動きは遅いが、射程1〜4を減衰なしで撃てる。2マス以上離れて撃てば
+# 直接攻撃の相手からは反撃されない。攻撃は重戦車の約1.3倍、防御は大きく上げた。
+[unit SW_TANK]
+image     = gfx/units/common/htank.png
+cutin     = gfx/cutin/tank.png
+name      = 超重戦車「Gx-1型」
+name1     = 超重戦車「ZK-100」
+name2     = 猛獁
+name3     = 三十七式超重戦車
+name4     = 鉄の山
+name@en   = Gx-1 Super-Heavy Tank
+name1@en  = ZK-100 Super-Heavy Tank
+name2@en  = Mammoth
+name3@en  = Type 37 Super-Heavy Tank
+name4@en  = Iron Mountain
+icon      = 巨
+icon@en   = ST
+class     = LAND_TRACK
+armor     = HARD
+cost      = 3000
+move      = 2
+fuel      = 60
+ammo      = 8
+vision    = 2
+atk_soft  = 98
+atk_hard  = 91
+atk_air   = 15
+atk_sea   = 20
+def       = 90
+range_min = 1
+range_max = 4
+no_falloff = 1
+superweapon = 1
+no_produce = 1
+
+# 飛行要塞: 狙ったマスに100%、周りの6マスの敵に50%の範囲爆撃。弾は2発。
+# 移動1マスに燃料2、空中で待つだけでも毎手番8を使う（すぐ燃料が尽きる）。
+[unit SW_FORTRESS]
+image     = gfx/units/common/bomber.png
+cutin     = gfx/cutin/air.png
+name      = 飛行要塞「Bx-50型」
+name1     = 戦略爆撃機「IB-50」
+name2     = 鳳
+name3     = 三十八式飛行要塞
+name4     = 空飛ぶ城
+name@en   = Bx-50 Flying Fortress
+name1@en  = IB-50 Strategic Bomber
+name2@en  = Phoenix
+name3@en  = Type 38 Flying Fortress
+name4@en  = Castle in the Sky
+icon      = 要
+icon@en   = FF
+class     = AIR
+armor     = AIR
+cost      = 4000
+move      = 7
+fuel      = 55
+ammo      = 2
+vision    = 3
+atk_soft  = 85
+atk_hard  = 80
+atk_air   = 0
+atk_sea   = 85
+def       = 50
+upkeep    = 8
+fuel_rate = 2
+splash    = 1
+superweapon = 2
+no_produce = 1
+
+# 決戦航空戦艦: 戦艦と同じ足で、射程2〜10。空母と同じく艦載機を2機載せて補給できる。
+# 視界は3のままなので、長い射程を活かすには味方の目が要る。
+[unit SW_BATTLESHIP]
+image     = gfx/units/common/battleship.png
+cutin     = gfx/cutin/ship.png
+name      = 決戦航空戦艦「Rz-30型」
+name1     = 航空戦艦「計画100号」
+name2     = 白鯨
+name3     = 三十九式航空戦艦
+name4     = 浮かぶ要塞
+name@en   = Rz-30 Aviation Battleship
+name1@en  = Project 100 Aviation Battleship
+name2@en  = White Whale
+name3@en  = Type 39 Aviation Battleship
+name4@en  = Floating Fortress
+icon      = 決
+icon@en   = AB
+class     = SEA
+armor     = SEA
+cost      = 5000
+move      = 4
+fuel      = 99
+ammo      = 8
+vision    = 3
+atk_soft  = 85
+atk_hard  = 80
+atk_air   = 25
+atk_sea   = 75
+def       = 80
+range_min = 2
+range_max = 10
+move_and_fire = 0
+capacity  = 2
+resupply_cargo = 1
+superweapon = 3
+no_produce = 1

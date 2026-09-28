@@ -61,6 +61,7 @@ static int base_damage_x10(const Game *g, const Unit *atk, const Unit *def)
     if (over < 0) over = 0;
     int rng = 100 - RANGE_FALLOFF_PCT * over;
     if (rng < RANGE_FALLOFF_MIN) rng = RANGE_FALLOFF_MIN;
+    if (at->no_falloff) rng = 100;          /* 超重戦車: 射程4まで減衰しない */
 
     return base * atkmod / defmod * wx / 100 * rng / 100 * nt / 100;
 }

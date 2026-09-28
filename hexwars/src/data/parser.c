@@ -298,6 +298,10 @@ int data_load_units(Game *g, const char *path, char *err, int errlen)
         else if (!strcmp(key, "anti_sub"))      cur->anti_sub = (uint8_t)atoi(val);
         else if (!strcmp(key, "atk_sub"))       cur->atk_sub = (int16_t)atoi(val);
         else if (!strcmp(key, "sonar"))         cur->sonar = (uint8_t)atoi(val);
+        else if (!strcmp(key, "no_falloff"))    cur->no_falloff = (uint8_t)atoi(val);
+        else if (!strcmp(key, "fuel_rate"))     cur->fuel_rate = (uint8_t)atoi(val);
+        else if (!strcmp(key, "splash"))        cur->splash = (uint8_t)atoi(val);
+        else if (!strcmp(key, "superweapon"))   cur->superweapon = (uint8_t)atoi(val);
         else if (!strcmp(key, "is_sub"))        cur->is_sub = (uint8_t)atoi(val);
         else if (!strcmp(key, "capacity"))      cur->capacity = (uint8_t)atoi(val);
         else if (!strcmp(key, "resupply_cargo")) cur->resupply_cargo = (uint8_t)atoi(val);

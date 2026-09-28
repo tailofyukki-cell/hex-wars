@@ -86,14 +86,15 @@ static void test_data_and_battle(void)
     }
     /* 生産できる36種 + 進化先36種。進化先は no_produce なので生産に出ない。
      * 生産側の36には夜間ユニットの3種と駆潜艇を含み、それらも進化先を持つ。 */
-    CHECK(g->n_types == 72);
+    CHECK(g->n_types == 75);   /* + 超兵器3種（生産不可・進化しない） */
     {
-        int producible = 0, evo = 0;
+        int producible = 0, evo = 0, sw = 0;
         for (int i = 0; i < g->n_types; i++) {
-            if (g->types[i].no_produce) evo++;
+            if (g->types[i].superweapon) { sw++; CHECK(g->types[i].no_produce); }
+            else if (g->types[i].no_produce) evo++;
             else producible++;
         }
-        CHECK(producible == 36 && evo == 36);
+        CHECK(producible == 36 && evo == 36 && sw == 3);
         /* 進化先を持つ種は、その進化先が実在し、生産不可であること */
         for (int i = 0; i < g->n_types; i++) {
             if (!g->types[i].evolve_to[0]) continue;
@@ -125,7 +126,7 @@ static void test_data_and_battle(void)
         }
         /* 進化先も同じ内訳で増えるので倍になる。
          * 夜間ユニットは陸・空・海に1つずつ。駆潜艇は海。 */
-        CHECK(land == 32 && air == 18 && sea == 22);
+        CHECK(land == 33 && air == 19 && sea == 23);   /* 超兵器が陸・空・海に1つずつ */
     }
     /* 画像指定（image=）が全陣営分に読めていること。
      * 陣営2〜4 が抜けると、乱戦マップでその陣営だけ
@@ -539,6 +540,109 @@ static void test_hidden_sight(void)
     printf("test_hidden_sight OK\n");
 }
 
+/* 超兵器: 建造（場所・1体まで・費用・3手番・取りやめ）と、3種それぞれの性能 */
+static void test_superweapon(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    game_start(g, 11u);
+    g->n_units = 0;
+    g->co_id[0] = g->co_id[1] = -1;
+    g->weather_on = 0; g->night_on = 0;
+    int plain = 0, factory = -1, sea = -1, rubble = -1;
+    for (int i = 0; i < g->n_terrains; i++) {
+        if (!strcmp(g->terrains[i].id, "FACTORY")) factory = i;
+        if (!strcmp(g->terrains[i].id, "SEA")) sea = i;
+        if (!strcmp(g->terrains[i].id, "RUBBLE")) rubble = i;
+    }
+    int st = data_find_unit_type(g, "SW_TANK");
+    int ff = data_find_unit_type(g, "SW_FORTRESS");
+    int ab = data_find_unit_type(g, "SW_BATTLESHIP");
+    int inf = data_find_unit_type(g, "INFANTRY");
+    int fi = data_find_unit_type(g, "FIGHTER");
+    CHECK(st >= 0 && ff >= 0 && ab >= 0 && factory >= 0 && sea >= 0 && rubble >= 0);
+    /* 首都（2,11）は塗らない（消すと陣営0の負けで手番が進まない） */
+    for (int y = 2; y <= 9; y++)
+        for (int x = 1; x <= 15; x++) { g->tiles[y][x].terrain = (uint8_t)plain; g->tiles[y][x].owner = -1; }
+    g->tiles[5][5].terrain = (uint8_t)factory; g->tiles[5][5].owner = 0;
+    CHECK(game_spawn_unit(g, 1, inf, 14, 12, 10) >= 0);   /* 両軍に部隊が居ないと全滅扱いで決着してしまう */
+    CHECK(game_spawn_unit(g, 0, inf, 12, 9, 10) >= 0);
+
+    /* 建造: 場所・ポイント・資金 */
+    g->lab_points[0] = 2999; g->funds[0] = 5000;
+    CHECK(game_sw_check(g, 0, 5, 5, st) == 3);           /* ポイント不足 */
+    g->lab_points[0] = 3000; g->funds[0] = 2999;
+    CHECK(game_sw_check(g, 0, 5, 5, st) == 4);           /* 資金不足 */
+    g->funds[0] = 3500;
+    CHECK(game_sw_check(g, 0, 6, 5, st) == 1);           /* 工場ではない */
+    CHECK(game_sw_order(g, 0, 5, 5, st));
+    CHECK(g->lab_points[0] == 0 && g->funds[0] == 500);
+    CHECK(!game_can_produce_at(g, 0, 5, 5));             /* 建造中は生産できない */
+    CHECK(game_sw_taken(g, 0, 1));                       /* 同じ領域は1体まで */
+    /* 3手番で完成 */
+    g->current = 0;
+    int turns = 0;
+    while (g->sw_build[0][0].active && turns < 10) {
+        game_end_turn(g);
+        while (g->current != 0) game_end_turn(g);
+        turns++;
+    }
+    CHECK(turns == SW_BUILD_TURNS);
+    int tank = game_unit_at_layer(g, 5, 5, LAYER_SURFACE);
+    CHECK(tank >= 0 && g->units[tank].type == st);
+
+    /* 取りやめ: 建造場所を壊されたら、ポイントと資金は戻る */
+    g->units[tank].flags = 0;                          /* 盤から外して作り直す */
+    g->lab_points[0] = 3000; g->funds[0] = 3000;
+    CHECK(game_sw_order(g, 0, 5, 5, st));
+    g->tiles[5][5].terrain = (uint8_t)rubble;
+    game_end_turn(g);
+    while (g->current != 0) game_end_turn(g);
+    CHECK(!g->sw_build[0][0].active);
+    CHECK(g->lab_points[0] == 3000 && g->funds[0] >= 3000);
+
+    /* 超重戦車: 射程4まで減衰しない */
+    g->n_units = 0;
+    int a = game_spawn_unit(g, 0, st, 3, 8, 10);
+    int d1 = game_spawn_unit(g, 1, inf, 4, 8, 10);
+    int d4 = game_spawn_unit(g, 1, inf, 7, 8, 10);
+    CHECK(battle_expect_damage_x10(g, &g->units[a], &g->units[d1]) ==
+          battle_expect_damage_x10(g, &g->units[a], &g->units[d4]));
+
+    /* 飛行要塞: 移動1マスに燃料2 / 範囲攻撃は周りの敵だけに当たり、味方は巻き込まない */
+    g->n_units = 0;
+    int f = game_spawn_unit(g, 0, ff, 3, 4, 10);
+    int t0 = game_spawn_unit(g, 1, inf, 8, 4, 10);
+    int t1 = game_spawn_unit(g, 1, inf, 9, 4, 10);      /* 隣の敵 */
+    int m1 = game_spawn_unit(g, 0, inf, 7, 4, 10);      /* 隣の味方 */
+    CHECK(game_spawn_unit(g, 1, inf, 14, 12, 10) >= 0);
+    int fx, fy, fuel;
+    MoveRange mr;
+    path_move_range(g, f, &mr);
+    CHECK(mr.cost[4][7] < 0 || mr.cost[4][6] >= 0);      /* 移動範囲は出る */
+    path_walk(g, f, &mr, 6, 4, &fx, &fy, &fuel);
+    CHECK(fuel == 3 * 2);                                /* 3マスで燃料6 */
+    game_move_unit(g, f, fx, fy, fuel);
+    g->units[f].pos.x = 8; g->units[f].pos.y = 4;        /* 真上から撃つ */
+    game_attack(g, f, t0, NULL, NULL, NULL);
+    CHECK(g->units[t1].hp < 10);                         /* 周りの敵にも当たる */
+    CHECK(g->units[m1].hp == 10);                        /* 味方は巻き込まない */
+
+    /* 決戦航空戦艦: 射程10、艦載機を載せられる（空母と同じ扱い） */
+    for (int y = 2; y <= 9; y++)
+        for (int x = 1; x <= 15; x++) g->tiles[y][x].terrain = (uint8_t)sea;
+    g->n_units = 0;
+    int b = game_spawn_unit(g, 0, ab, 2, 8, 10);
+    int pl = game_spawn_unit(g, 0, fi, 3, 8, 10);
+    CHECK(game_range_max(g, &g->types[ab]) == 10);
+    CHECK(game_can_board(g, pl, b));
+    printf("test_superweapon OK\n");
+}
+
 /* 空母の艦載機: 着艦した次の手番に、空母のマスから普通に出撃できる */
 static void test_carrier_launch(void)
 {
@@ -679,7 +783,7 @@ static void test_subchaser(void)
 
     /* セーブはユニット種別を番号で持つ。途中に挟むと既存のセーブが化けるので、
      * 追加分は units.def の末尾にあること */
-    CHECK(sc == g->n_types - 2 && scv == g->n_types - 1);
+    CHECK(scv == sc + 1 && sc > data_find_unit_type(g, "NIGHT_FIGHTER_V"));
     CHECK(g->types[sc].anti_sub && g->types[scv].no_produce);
 
     /* atk_sub: 書いたものはその値、書かないものは atk_sea と同じ */
@@ -4396,6 +4500,7 @@ int main(void)
     test_subchaser();
     test_disband();
     test_carrier_launch();
+    test_superweapon();
     test_language();
     test_paradrop();
     test_produce_layers();

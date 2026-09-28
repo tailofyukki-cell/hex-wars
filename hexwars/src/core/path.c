@@ -68,7 +68,10 @@ void path_move_range(const Game *g, int ui, MoveRange *out)
         base_move += game_weather_move_mod(g, u);
         if (base_move < 1) base_move = 1;
     }
-    int mv = base_move < u->fuel ? base_move : u->fuel;
+    /* 燃費倍率: 移動1マスに fuel_rate 倍の燃料を使う（飛行要塞は2） */
+    int frate = ut->fuel_rate > 1 ? ut->fuel_rate : 1;
+    int fmv = u->fuel / frate;
+    int mv = base_move < fmv ? base_move : fmv;
     int budget = mv * 2;
 
     int sx = u->pos.x, sy = u->pos.y;
@@ -200,6 +203,10 @@ int path_walk(const Game *g, int ui, const MoveRange *mr, int tx, int ty,
 
     *ox = cx; *oy = cy;
     int c = mr->cost[cy][cx];
-    *ofuel = (c + 1) / 2;
+    {
+        const UnitType *wt = &g->types[g->units[ui].type];
+        int frate = wt->fuel_rate > 1 ? wt->fuel_rate : 1;
+        *ofuel = (c + 1) / 2 * frate;
+    }
     return ambush;
 }

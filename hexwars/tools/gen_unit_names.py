@@ -109,6 +109,11 @@ NAMES = {
     "NIGHT_BOAT_V":    ("夜襲強襲艇「計画64号」",  "大烏賊",   "三十四式改夜戦艇",  "黒舟"),
     "NIGHT_FIGHTER_V": ("高高度夜戦機「YA-36」",   "大梟",     "三十五式改夜戦機",  "夜の主"),
     "SUBCHASER_V":     ("大型対潜艦「計画56号」",  "大海豹",   "三十六式改駆潜艇",  "地獄耳"),
+
+    # ---- 超兵器（研究所の研究ポイントで建造。進化しない）----
+    "SW_TANK":         ("超重戦車「ZK-100」",      "猛獁",     "三十七式超重戦車",  "鉄の山"),
+    "SW_FORTRESS":     ("戦略爆撃機「IB-50」",     "鳳",       "三十八式飛行要塞",  "空飛ぶ城"),
+    "SW_BATTLESHIP":   ("航空戦艦「計画100号」",   "白鯨",     "三十九式航空戦艦",  "浮かぶ要塞"),
 }
 
 MAXLEN = 47   # name[48] の終端ぶんを引いた上限（parser がこれを超えると読込エラー）
@@ -286,6 +291,9 @@ NAMES_EN = {
     "NIGHT_BOAT_V":    ("Black Tide Raider", "Project 64 Night Assault Boat", "Great Squid", "Type 34 Kai Night Boat", "Black Boat"),
     "NIGHT_FIGHTER_V": ("Night Sky Interceptor", "YA-36 High-Altitude Night Fighter", "Great Owl", "Type 35 Kai Night Fighter", "Lord of the Night"),
     "SUBCHASER_V":     ("Uj-7 Large Subchaser", "Project 56 Large ASW Ship", "Great Seal", "Type 36 Kai Subchaser", "Devil's Ear"),
+    "SW_TANK":         ("Gx-1 Super-Heavy Tank", "ZK-100 Super-Heavy Tank", "Mammoth", "Type 37 Super-Heavy Tank", "Iron Mountain"),
+    "SW_FORTRESS":     ("Bx-50 Flying Fortress", "IB-50 Strategic Bomber", "Phoenix", "Type 38 Flying Fortress", "Castle in the Sky"),
+    "SW_BATTLESHIP":   ("Rz-30 Aviation Battleship", "Project 100 Aviation Battleship", "White Whale", "Type 39 Aviation Battleship", "Floating Fortress"),
 }
 
 

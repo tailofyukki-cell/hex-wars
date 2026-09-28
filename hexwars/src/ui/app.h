@@ -49,6 +49,7 @@ typedef enum {
     BS_FUEL_CONFIRM,   /* 燃料切れで次の手番に失う位置で行動を終えようとしたときの確認 */
     BS_DISBAND_CONFIRM,/* 解隊の確認（部隊が消えるので必ず一度止める） */
     BS_STORE_DISBAND,  /* 倉庫の部隊の解隊の確認（生産メニューから開く） */
+    BS_SW_CONFIRM,     /* 超兵器の建造の確認（生産メニューから開く） */
     BS_BATTLE_ANIM,    /* 戦闘アニメ（仕様書 8.2） */
     BS_CPU_TURN,
     BS_HANDOVER,       /* ホットシート交代画面 */
