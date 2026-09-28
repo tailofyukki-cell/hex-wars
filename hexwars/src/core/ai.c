@@ -50,7 +50,10 @@ static void build_threat(Game *g, AiState *s)
 static int building_value(const Game *g, int x, int y)
 {
     const TerrainType *t = game_terrain_at(g, x, y);
+    /* 敵が超兵器を建造中の拠点は最優先。奪えば建造は最初からやり直しになる */
+    if (game_sw_building_at(g, x, y) && g->tiles[y][x].owner != g->current) return 5000;
     if (t->is_hq) return 2000;
+    if (t->is_lab) return 1500;                 /* 研究所（相手のポイント源） */
     if (t->produces == PROD_LAND) return 900;   /* 工場 */
     if (t->produces != PROD_NONE) return 700;   /* 空港・港 */
     return 500;                                  /* 都市 */
@@ -773,6 +776,116 @@ static bool ai_try_co_power(Game *g, AiState *s, int phase)
     return true;
 }
 
+/* 超兵器の計画: どの超兵器を目指すか、研究所で誰を解隊するか、資金を貯めるか。
+ *
+ * 解隊は戦力で勝っているときだけ。陸・空それぞれで、自軍の戦力（値段×HP）が
+ * 見えている敵の1.5倍を超える分だけを「余り」とし、安い・傷ついた部隊から
+ * 研究所へ向かわせる。敵が1体も見えていない領域では解隊しない（霧の中で戦力を
+ * 捨てないため）。余りを全部解隊しても目標のポイントに届かないなら、始めない
+ * （遠い目標のために戦力を削らない）。海の部隊は研究所へ行けないので対象外。 */
+static int sw_goal_type(const Game *g, int me)
+{
+    int best = -1;
+    for (int t = 0; t < g->n_types; t++) {
+        int sw = g->types[t].superweapon;
+        if (!sw || game_sw_taken(g, me, sw)) continue;
+        bool site = false;                         /* 建造できる拠点を持っているか */
+        for (int y = 0; y < g->h && !site; y++)
+            for (int x = 0; x < g->w && !site; x++) {
+                int c = game_sw_check(g, me, x, y, t);
+                if (c != 1) site = true;
+            }
+        if (!site) continue;
+        if (best < 0 || g->types[t].cost < g->types[best].cost) best = t;
+    }
+    return best;
+}
+
+static void plan_lab(Game *g, AiState *s)
+{
+    int me = g->current;
+    memset(s->to_lab, 0, sizeof s->to_lab);
+    s->lab_x = s->lab_y = -1;
+    s->sw_saving = false;
+    int goal = sw_goal_type(g, me);
+    if (goal < 0) return;
+    int need = g->types[goal].cost;
+
+    /* ポイントは足りている: 資金が3手番以内に貯まるなら普通の生産を控える */
+    if (g->lab_points[me] >= need) {
+        int inc = 0;
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++)
+                if (g->tiles[y][x].owner == me) inc += g->terrains[g->tiles[y][x].terrain].income;
+        if (g->funds[me] < need && g->funds[me] + inc * 3 >= need) s->sw_saving = true;
+        return;
+    }
+    /* 自軍の研究所（自分の首都に近いものを1つ） */
+    int best = 1 << 30;
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++) {
+            const Tile *t = &g->tiles[y][x];
+            if (t->owner != me || !g->terrains[t->terrain].is_lab) continue;
+            int d = 0;
+            for (int yy = 0; yy < g->h; yy++)
+                for (int xx = 0; xx < g->w; xx++)
+                    if (g->tiles[yy][xx].owner == me && g->terrains[g->tiles[yy][xx].terrain].is_hq)
+                        d = hex_distance(x, y, xx, yy);
+            if (d < best) { best = d; s->lab_x = x; s->lab_y = y; }
+        }
+    if (s->lab_x < 0) return;
+
+    /* 領域ごとの戦力（0=陸 1=空） */
+    long mine[2] = { 0, 0 }, foe[2] = { 0, 0 };
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *u = &g->units[i];
+        if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
+        const UnitType *t = &g->types[u->type];
+        int dom = domain_from_mclass(t->mclass);
+        if (dom > 1) continue;
+        long v = (long)t->cost * u->hp / 10;
+        if (u->owner == me) mine[dom] += v;
+        else if (game_is_enemy(g, me, u->owner) && game_unit_visible_to(g, me, u)) foe[dom] += v;
+    }
+    /* 候補: 余りのある領域の、安い（値段×HP の小さい）部隊から。
+     * 超兵器・占領役・補給・輸送は残す。研究所から遠すぎる部隊は外す */
+    int cand[MAX_UNITS], nc = 0;
+    long surplus[2];
+    for (int d = 0; d < 2; d++)
+        surplus[d] = (foe[d] > 0) ? mine[d] - foe[d] * 3 / 2 : 0;
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *u = &g->units[i];
+        if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED) || u->owner != me) continue;
+        const UnitType *t = &g->types[u->type];
+        int dom = domain_from_mclass(t->mclass);
+        if (dom > 1 || surplus[dom] <= 0) continue;
+        if (t->superweapon || t->can_capture || t->supply || type_unarmed(t)) continue;
+        if (hex_distance(u->pos.x, u->pos.y, s->lab_x, s->lab_y) > t->move * 3) continue;
+        cand[nc++] = i;
+    }
+    for (int i = 1; i < nc; i++) {                 /* 値打ちの小さい順 */
+        int c = cand[i], j = i - 1;
+        long vc = (long)g->types[g->units[c].type].cost * g->units[c].hp;
+        while (j >= 0 && (long)g->types[g->units[cand[j]].type].cost * g->units[cand[j]].hp > vc) {
+            cand[j + 1] = cand[j]; j--;
+        }
+        cand[j + 1] = c;
+    }
+    long pts = g->lab_points[me];
+    int pick[MAX_UNITS], np = 0;
+    for (int i = 0; i < nc && pts < need; i++) {
+        const Unit *u = &g->units[cand[i]];
+        int dom = domain_from_mclass(g->types[u->type].mclass);
+        long v = (long)g->types[u->type].cost * u->hp / 10;
+        if (v > surplus[dom]) continue;
+        surplus[dom] -= v;
+        pts += game_disband_refund(g, cand[i]);
+        pick[np++] = cand[i];
+    }
+    if (pts < need) return;                        /* 余りを全部使っても届かない */
+    for (int i = 0; i < np; i++) s->to_lab[pick[i]] = 1;
+}
+
 void ai_begin_turn(Game *g, AiState *s)
 {
     memset(s, 0, sizeof *s);
@@ -782,6 +895,7 @@ void ai_begin_turn(Game *g, AiState *s)
     build_threat(g, s);
     build_land_reach(g, s);
     pick_invasion_goal(g, s);
+    plan_lab(g, s);
     build_order(g, s);
 }
 
@@ -806,6 +920,32 @@ static void act_unit(Game *g, AiState *s, int ui)
     int me = g->current;
     bool easy = g->ctrl[me] == CTRL_CPU_EASY;
     bool hard = g->ctrl[me] == CTRL_CPU_HARD;
+
+    /* 研究所へ向かう部隊: 研究所に一番近い所まで動き、着いたら解隊する */
+    if (s->to_lab[ui] && s->lab_x >= 0) {
+        s->last_unit = ui;
+        s->last_target = -1;
+        if (!(u->pos.x == s->lab_x && u->pos.y == s->lab_y)) {
+            path_move_range(g, ui, &s_mr);
+            Layer L = unit_layer(mc);
+            int bx = u->pos.x, by = u->pos.y;
+            int bd = hex_distance(bx, by, s->lab_x, s->lab_y);
+            for (int y = 0; y < g->h; y++)
+                for (int x = 0; x < g->w; x++) {
+                    if (s_mr.cost[y][x] < 0 || !s_mr.stop[y][x]) continue;
+                    int occ = game_unit_at_layer(g, x, y, L);
+                    if (occ >= 0 && occ != ui) continue;
+                    int d = hex_distance(x, y, s->lab_x, s->lab_y);
+                    if (d < bd) { bd = d; bx = x; by = y; }
+                }
+            int fx, fy, fuel;
+            path_walk(g, ui, &s_mr, bx, by, &fx, &fy, &fuel);
+            game_move_unit(g, ui, fx, fy, fuel);
+        }
+        if (game_on_own_lab(g, ui)) game_disband_unit(g, ui);
+        else if (g->units[ui].flags & UF_ALIVE) game_wait_unit(g, ui);
+        return;
+    }
 
     /* 進化: できるなら進化する（rank5 は上限で、貯め続けても無駄になるため）。
      * ただし HP が高いときだけ。瀕死のまま進化すると熟練度を失って即撃破される。
@@ -1497,6 +1637,15 @@ static int pick_production(Game *g, AiState *s, int x, int y)
 
 static void do_production(Game *g, AiState *s)
 {
+    /* 超兵器: 建造できるならする（領域ごとに1体。安いものから決めてある） */
+    int me = g->current;
+    for (int t = 0; t < g->n_types; t++) {
+        if (!g->types[t].superweapon) continue;
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++)
+                if (game_sw_check(g, me, x, y, t) == 0) game_sw_order(g, me, x, y, t);
+    }
+    if (s->sw_saving) return;                   /* 超兵器のために資金を貯める */
     for (int y = 0; y < g->h; y++) {
         for (int x = 0; x < g->w; x++) {
             if (!game_can_produce_at(g, g->current, x, y)) continue;
