@@ -67,7 +67,7 @@ static void test_data_and_battle(void)
     if (s_fail) { printf("  %s\n", err); return; }
     CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
-    CHECK(g->n_terrains == 17);   /* 地形12種 + 圏外 + 生産できない飛行場/泊地 + 瓦眦2種 */
+    CHECK(g->n_terrains == 18);   /* 地形12種 + 圏外 + 生産できない飛行場/泊地 + 瓦礫2種 + 研究所 */
     {   /* 野戦飛行場・泊地は「都市の空・海版」。
          * 補給（回復・進化）はできるが生産はできないことを固める。 */
         int as_ = -1, an_ = -1;
@@ -630,6 +630,28 @@ static void test_disband(void)
         game_load_unit(g, rider, tr);
         CHECK(!game_can_disband(g, tr));
         CHECK(!game_can_disband(g, rider));          /* 積まれている側も不可 */
+    }
+    /* 自軍の研究所の上で解隊すると、資金ではなく研究ポイントに入る。
+     * 敵の研究所の上では普通に資金で戻る */
+    {
+        int lab = -1;
+        for (int i = 0; i < g->n_terrains; i++)
+            if (g->terrains[i].is_lab) lab = i;
+        CHECK(lab >= 0);
+        CHECK(!strcmp(g->terrains[lab].id, "LAB") && g->terrains[lab].capturable);
+        g->tiles[5][8].terrain = (uint8_t)lab;
+        g->tiles[5][8].owner = 0;
+        int t2 = game_spawn_unit(g, 0, tank, 8, 5, 10);
+        g->funds[0] = 0; g->lab_points[0] = 0;
+        CHECK(game_on_own_lab(g, t2));
+        int r = game_disband_unit(g, t2);
+        CHECK(r == g->types[tank].cost / 2);
+        CHECK(g->lab_points[0] == r && g->funds[0] == 0);
+        g->tiles[5][8].owner = 1;                        /* 敵の研究所 */
+        int t3 = game_spawn_unit(g, 0, tank, 8, 5, 10);
+        CHECK(!game_on_own_lab(g, t3));
+        r = game_disband_unit(g, t3);
+        CHECK(g->funds[0] == r && g->lab_points[0] == g->types[tank].cost / 2);
     }
     printf("test_disband OK\n");
 }
@@ -1476,6 +1498,10 @@ static void test_save_load(void)
      * 残らないと、ロード後にオプションを戻しても天候が復活しない */
     g->map_weather_on = 1; g->weather_on = 0;
     g->map_night_on = 1;   g->night_on = 0;
+    /* v18: 研究ポイントと超兵器の建造状況 */
+    g->lab_points[0] = 3210; g->lab_points[1] = 77;
+    g->sw_build[1][2].active = 1; g->sw_build[1][2].x = 5; g->sw_build[1][2].y = 6;
+    g->sw_build[1][2].left = 2;   g->sw_build[1][2].type = 42;
 
     CHECK(save_game(g, &cs, "tests/tmp_test.sav", err, sizeof err) == 0);
 
@@ -1488,6 +1514,11 @@ static void test_save_load(void)
 
     CHECK(g2.w == g->w && g2.h == g->h);
     CHECK(g2.funds[0] == 4321);
+    CHECK(g2.lab_points[0] == 3210 && g2.lab_points[1] == 77);
+    CHECK(g2.sw_build[1][2].active == 1 && g2.sw_build[1][2].x == 5 &&
+          g2.sw_build[1][2].y == 6 && g2.sw_build[1][2].left == 2 &&
+          g2.sw_build[1][2].type == 42);
+    CHECK(g2.sw_build[0][0].active == 0);
     CHECK(g2.turn == g->turn);
     CHECK(g2.units[0].hp == 7 && g2.units[0].exp == 44);
     CHECK(g2.tiles[2][9].owner == 0);

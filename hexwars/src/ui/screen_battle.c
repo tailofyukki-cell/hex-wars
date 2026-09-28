@@ -744,10 +744,11 @@ static void do_disband(App *a)
     int ui = a->sel_unit;
     if (ui < 0) return;
     int x = g->units[ui].pos.x, y = g->units[ui].pos.y;
+    bool lab = game_on_own_lab(g, ui);
     int refund = game_disband_unit(g, ui);
     if (refund >= 0) {
         char buf[48];
-        snprintf(buf, sizeof buf, tx("POP_DISBAND_FMT"), refund);
+        snprintf(buf, sizeof buf, tx(lab ? "POP_DISBAND_LAB_FMT" : "POP_DISBAND_FMT"), refund);
         battle_add_popup(a, x, y, buf, COL_YELLOW);
         snd_se(SE_CAPTURE);
     }
@@ -2224,6 +2225,19 @@ static void draw_topbar(App *a)
     draw_text(a, a->font_m, tx_, 6, COL_YELLOW, buf);
     tx_ += text_width(a, a->font_m, buf) + 24;
 
+    /* 研究ポイント（研究所のあるマップか、ポイントを持っているときだけ） */
+    {
+        bool has_lab = g->lab_points[g->current] > 0;
+        for (int y = 0; y < g->h && !has_lab; y++)
+            for (int x = 0; x < g->w && !has_lab; x++)
+                if (g->terrains[g->tiles[y][x].terrain].is_lab) has_lab = true;
+        if (has_lab) {
+            snprintf(buf, sizeof buf, tx("TOP_LAB_FMT"), g->lab_points[g->current]);
+            draw_text(a, a->font_m, tx_, 6, (SDL_Color){ 150, 210, 255, 255 }, buf);
+            tx_ += text_width(a, a->font_m, buf) + 24;
+        }
+    }
+
     /* 天候と予報（悪天候は色を変えて気づけるように） */
     if (g->weather_on) {
         static const char *WXK[WX_COUNT] = { "WX_CLEAR", "WX_CLOUDY", "WX_RAIN" };
@@ -2863,7 +2877,8 @@ static void draw_menus(App *a)
         char buf[192];
         snprintf(buf, sizeof buf, tx("DISBAND_TITLE_FMT"), unit_name_of(ut, u->owner));
         draw_text_center(a, a->font_m, WIN_W / 2, by + 16, COL_WHITE, buf);
-        snprintf(buf, sizeof buf, tx("DISBAND_REFUND_FMT"),
+        snprintf(buf, sizeof buf,
+                 tx(game_on_own_lab(g, a->sel_unit) ? "DISBAND_LAB_FMT" : "DISBAND_REFUND_FMT"),
                  game_disband_refund(g, a->sel_unit), ut->cost, u->hp);
         draw_text_center(a, a->font_s, WIN_W / 2, by + 52, COL_YELLOW, buf);
         draw_text_center(a, a->font_s, WIN_W / 2, by + 76, COL_GRAY, tx("DISBAND_WARN"));

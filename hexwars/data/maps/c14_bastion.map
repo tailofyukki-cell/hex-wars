@@ -33,10 +33,10 @@ row = x....=======c======c=======c============~~~~~~~~~~~~~~~~
 row = xx....=.w..........r......^^^...www....=.~~~~~~~~~~~~~~x
 row = xx....=........w...r......^^^...www....=.p.~~~~~~~~~~~~x
 row = xx..H.=......wwwww.r......^^^..wwcww...=....~~~~~~~~~~~x
-row = xx....=..c..wwwwwwwr......^^^...www...c=...hp..........x
+row = xxL...=..c..wwwwwwwr......^^^...www...c=...hp..........x
 row = xxx...=......wwwww.c.....^^^^^..www....=.hhhhh........xx
 row = xxxx.f=...w....w...r......^^^....w.....=hhhchhha.....xxx
-row = xxxxx.=.awwww......r......^^^..........=hfhhhHhh.c..xxxx
+row = xxxxx.=.awwww......r......^^^..........=hfhhhHhhLc..xxxx
 row = xxxxxxcwwwwwww.....r......^^^....c.....=hhhhhhh....xxxxx
 row = xxxxxxxwwwwwwww...........^^^..........=.hahhhf...xxxxxx
 row = xxxxxxxx===================c====================.xxxxxxx
@@ -46,6 +46,8 @@ row = xxxxxxxxxxxxxxx............^....wwwwwwwww.xxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxx........^........w.xxxxxxxxxxxxxxxxxx
 
 [owners]
+own = 2,21,0
+own = 48,24,1
 own = 4,20,0
 own = 12,7,0
 own = 13,10,0

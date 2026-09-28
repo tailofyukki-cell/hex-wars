@@ -395,12 +395,21 @@ bool game_can_disband(const Game *g, int ui)
     return game_first_cargo(g, ui) < 0;
 }
 
+/* 自軍の研究所の上にいるか（そこで解隊すると研究ポイントになる） */
+bool game_on_own_lab(const Game *g, int ui)
+{
+    const Unit *u = &g->units[ui];
+    const Tile *t = &g->tiles[u->pos.y][u->pos.x];
+    return t->owner == u->owner && g->terrains[t->terrain].is_lab;
+}
+
 int game_disband_unit(Game *g, int ui)
 {
     if (!game_can_disband(g, ui)) return -1;
     Unit *u = &g->units[ui];
     int refund = game_disband_refund(g, ui);
-    g->funds[u->owner] += refund;
+    if (game_on_own_lab(g, ui)) g->lab_points[u->owner] += refund;
+    else                        g->funds[u->owner] += refund;
     u->flags = 0;
     u->hp = 0;
     clear_capture_by(g, ui);

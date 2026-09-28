@@ -21,8 +21,8 @@ row = xxxxxxx................c..ww.........w....xxxxxxx
 row = xxxxxx......www....w.....w.................xxxxxx
 row = xxxxxx......www....w.....w.................xxxxxx
 row = xxxx................w........hhhh...........xxxxx
-row = xxxc......w.........w........hhhh...........f.xxx
-row = xx...c...a.....w............hh.............c...xx
+row = xxxc.L....w.........w........hhhh...........f.xxx
+row = xx...c...a.....w............hh.............c..Lxx
 row = xx..acH...f....w............hh..c..........cH..xx
 row = xx........w..ww.............hh...............c.xx
 row = xx..==========================================.xx
@@ -41,6 +41,8 @@ row = xxxxxxxxxxxxxxxxx..............xxxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [owners]
+own = 5,11,0
+own = 46,12,1
 own = 6,13,0
 own = 5,16,0
 own = 10,13,0

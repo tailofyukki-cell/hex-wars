@@ -23,9 +23,9 @@ row = xxxxxxxxxxxxxxwwwwwwwwwwwxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxx.wwwwww..w.xxxxxxxxxxxxx
 row = ..w.....www.....wwwww...w...wwwwwwww..
 row = ..w.....www.....wwwww...w...wwwwwwww..
-row = ..ww....www....www...www....wwww......
+row = ..ww....www....www...www....wwww..L...
 row = ww.w....c.w.....ww..c........www.c.a..
-row = .....H.a========================.Haf.w
+row = ...L.H.a========================.Haf.w
 row = ...fcc.a========================.c...w
 row = ..w..f.....wwwwwww.....w.www...f.....w
 row = ...........www.www.....ww....ww......w
@@ -40,6 +40,8 @@ row = xxxxxxxxxxxxxx.wwwwwwwww.xxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxw.....wwww.xxxxxxxxxxxxx
 
 [owners]
+own = 3,12,0
+own = 34,10,1
 own = 5,12,0
 own = 5,14,0
 own = 3,13,0

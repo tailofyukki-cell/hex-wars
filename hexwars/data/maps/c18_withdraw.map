@@ -30,8 +30,8 @@ row = x.........w...h....................x
 row = x.......wwwww....^^................x
 row = x......wwwwwww...^^................x
 row = x.......wwwww....^^....w...........x
-row = x.........w..h...^^..wwwww.........x
-row = x.=H==f==c=hhhhh.^^.wwwwwww...c.H..x
+row = xL........w..h...^^..wwwww.........x
+row = x.=H==f==c=hhhhh.^^.wwwwwww...c.H.Lx
 row = x............h...^^..wwwww.........x
 row = x.........w......^^....w...........x
 row = x.......wwwww....^^................x
@@ -47,6 +47,8 @@ row = xxxx.............^^.............xxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [owners]
+own = 1,11,0
+own = 34,12,1
 own = 3,12,0
 own = 6,12,0
 own = 5,6,0

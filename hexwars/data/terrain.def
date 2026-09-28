@@ -117,6 +117,28 @@ height     = 3
 breaks_to   = RUBBLE
 repair_cost = 500
 
+# 研究所: 超兵器のための研究ポイントを貯める施設。自軍の研究所の上で解隊すると、
+# 資金ではなく研究ポイントが入る（払い戻しと同じ額）。奪える。首都のあるマップに
+# 陣営ごとに1つ、首都の近くに置く。生産も補給もしない。
+[terrain LAB]
+name       = 研究所
+name@en    = Laboratory
+link_road  = 2
+char       = L
+def        = 30
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+income     = 50
+capturable = 1
+lab        = 1
+hide       = 1
+color      = B8C8D8
+height     = 3
+breaks_to   = RUBBLE
+repair_cost = 600
+
 [terrain FACTORY]
 name       = 工場
 name@en    = Factory

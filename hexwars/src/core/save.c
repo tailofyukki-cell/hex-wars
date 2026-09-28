@@ -196,6 +196,17 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
     w_u8(w, g->map_night_on);
     /* v17: この手番に必殺技を使ったか（手番の途中で保存しても制限が続くように） */
     for (int p = 0; p < MAX_PLAYERS; p++) w_u8(w, g->co_used_turn[p]);
+    /* v18: 研究ポイントと超兵器の建造状況 */
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        w_u32(w, (uint32_t)g->lab_points[p]);
+        for (int k = 0; k < 3; k++) {
+            w_u8(w, g->sw_build[p][k].active);
+            w_u8(w, g->sw_build[p][k].x);
+            w_u8(w, g->sw_build[p][k].y);
+            w_u8(w, g->sw_build[p][k].left);
+            w_u16(w, (uint16_t)g->sw_build[p][k].type);
+        }
+    }
 }
 
 static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
@@ -372,6 +383,19 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
     memset(g->co_used_turn, 0, sizeof g->co_used_turn);
     if (ver >= 17)
         for (int p = 0; p < MAX_PLAYERS; p++) g->co_used_turn[p] = r_u8(r);
+    memset(g->lab_points, 0, sizeof g->lab_points);
+    memset(g->sw_build, 0, sizeof g->sw_build);
+    if (ver >= 18)
+        for (int p = 0; p < MAX_PLAYERS; p++) {
+            g->lab_points[p] = (int32_t)r_u32(r);
+            for (int k = 0; k < 3; k++) {
+                g->sw_build[p][k].active = r_u8(r);
+                g->sw_build[p][k].x = r_u8(r);
+                g->sw_build[p][k].y = r_u8(r);
+                g->sw_build[p][k].left = r_u8(r);
+                g->sw_build[p][k].type = (int16_t)r_u16(r);
+            }
+        }
 
     return r->underflow ? -1 : 0;
 }

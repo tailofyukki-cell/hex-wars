@@ -16,7 +16,7 @@ night            = 0
 row = ww.w..........xxxxxxxxxxxxxxxxxxxx
 row = ww.w..........xxxxxxxxxxxxxxxxxxxx
 row = ..............xxxxxxxxxxxxxxxxxxxx
-row = ....c.wwww....xxxxxxxxxxxxxxxxxxxx
+row = ....cLwwww....xxxxxxxxxxxxxxxxxxxx
 row = ....ww=H.a....xxxxxxxxxxxxxxxxxxxx
 row = ....ww=c.f....xxxxxxxxxxxxxxxxxxxx
 row = ......=.......xxxxxxxxxxxxxxxxxxxx
@@ -35,11 +35,13 @@ row = ww.....wc=...............wwc.wf.w.
 row = ..........==========..............
 row = .......c.........ww==========Hc...
 row = .................ww==========a....
-row = ....ww...........ww...............
+row = ....ww...........ww...........L...
 row = ..........w.ww..............w.....
 row = ww....w.ww...........ww.w..w......
 
 [owners]
+own = 5,3,0
+own = 30,22,1
 own = 7,4,0
 own = 9,5,0
 own = 7,7,0

@@ -42,7 +42,7 @@ row = xx~~~~~.wwwwwwwww...hhhhh..............w...........h.~~~~~xx
 row = xx~~~~.wwwwwwwwwww....h......rr.....wwwwwww......hhhhh~~~~xx
 row = xx~~~c..fwwwwwwww............rr....wwwwwwwww....hhhhhhc~~~xx
 row = xx~~~....wwwwwww.............rr.....wwwwwww......hhfhh.~~~xx
-row = xx~~........w...^............rr........w...........h....~~xx
+row = xx~~L.......w...^............rr........w...........h....~~xx
 row = xx~~..........^^^^^..........rr............^............~~xx
 row = xx~~.H......f^^^^^^^.....................^^^^^..........~~xx
 row = xx~~..........^^^^^.....................^^^^^^^f......H.~~xx
@@ -69,6 +69,7 @@ row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [owners]
+own = 4,19,0
 own = 5,21,0
 own = 54,22,1
 own = 8,17,0

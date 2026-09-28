@@ -22,8 +22,8 @@ row = x.....wwwww................x
 row = x....cwwwwww......h..c.....x
 row = x.....wwwww.....hhhhh......x
 row = x.......w.....w...h........x
-row = x...........wwwww..........x
-row = x.=H==f====wwwwwww======H..x
+row = xL..........wwwww..........x
+row = x.=H==f====wwwwwww======H.Lx
 row = x...........wwwww..........x
 row = x.............w............x
 row = x.......w.........h........x
@@ -35,6 +35,8 @@ row = xxx......................xxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [owners]
+own = 1,7,0
+own = 26,8,1
 own = 3,8,0
 own = 6,8,0
 own = 5,4,0

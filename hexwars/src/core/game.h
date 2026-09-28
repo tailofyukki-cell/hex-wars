@@ -91,6 +91,16 @@ typedef struct Game {
      * 特に RUSH（全軍再行動）は、再行動で殴ったぶんゲージが溜まり直すので、
      * これが無いと同じ手番のうちに何度も撃てて止まらなくなる。 */
     uint8_t co_used_turn[MAX_PLAYERS];
+
+    /* 研究ポイント（陸・空・海の超兵器で共通のたまり）。自軍の研究所の上で
+     * 解隊すると、払い戻しと同じ額が資金ではなくここへ入る。 */
+    int32_t lab_points[MAX_PLAYERS];
+    /* 超兵器の建造状況。陣営ごと・領域ごと（SW_LAND/AIR/SEA）に1つまで。
+     * active=建造中、type=作っている種別、x,y=建造場所、left=完成までの手番数。 */
+    struct {
+        uint8_t active, x, y, left;
+        int16_t type;
+    } sw_build[MAX_PLAYERS][3];
     int8_t  co_power_turns[MAX_PLAYERS]; /* 効果継続ターン数（STRIKE/SCOUT用） */
 
     /* 天候（ラウンド単位で抽選し weather_left ターン継続。両陣営に同じ天候） */
@@ -204,7 +214,8 @@ void game_reembark(Game *g, int ui, int carrier, bool done);
  * 積荷のある輸送は不可。損失には数えない。戻り値=払い戻し額 / 不可なら -1 */
 bool game_can_disband(const Game *g, int ui);
 int  game_disband_refund(const Game *g, int ui);
-int  game_disband_unit(Game *g, int ui);
+int  game_disband_unit(Game *g, int ui);   /* 自軍の研究所の上なら研究ポイントへ */
+bool game_on_own_lab(const Game *g, int ui);
 /* 進化先のユニット型 index / -1（条件を満たさない・進化先が無い） */
 int  game_evolve_target(const Game *g, int ui);
 /* 進化に必要な資金（元ユニットの価格×EVOLVE_COST_MUL）。進化先が無ければ0 */
