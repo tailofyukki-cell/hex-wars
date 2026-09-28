@@ -225,6 +225,7 @@ SW_CANNOT       = Cannot build here
 SW_CONFIRM_FMT  = Build %s?
 SW_CONFIRM_COST_FMT = Uses %dpt research and %dG; ready in %d turns
 SW_CONFIRM_WARN = The enemy can see it. If this base is taken or destroyed, it starts over
+SW_FUEL_WARN_FMT = Fuel warning: %d per tile, %d per turn even when idle (max %d). Escort with a supply plane
 SW_YES          = Build
 SW_STARTED_FMT  = Started building %s (ready in %d turns)
 PANEL_SW_BUILD_FMT = Building %s (%d turns left)

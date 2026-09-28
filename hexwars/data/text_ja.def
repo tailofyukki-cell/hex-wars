@@ -221,6 +221,7 @@ SW_CANNOT       = ここでは建造できません
 SW_CONFIRM_FMT  = %s を建造しますか？
 SW_CONFIRM_COST_FMT = 研究ポイント %dpt と 資金 %dG を使い、%dターン後に完成します
 SW_CONFIRM_WARN = 建造中は敵にも見えます。拠点を奪われる・壊されると最初からやり直しです
+SW_FUEL_WARN_FMT = 燃費に注意: 移動1マスに燃料%d、待機でも毎ターン%d（最大%d）。補給機の随伴をおすすめします
 SW_YES          = 建造する
 SW_STARTED_FMT  = %s の建造を始めた（%dターン後に完成）
 PANEL_SW_BUILD_FMT = 建造中: %s（あと%dターン）

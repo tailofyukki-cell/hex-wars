@@ -2946,6 +2946,14 @@ static void draw_menus(App *a)
         snprintf(buf, sizeof buf, tx("SW_CONFIRM_COST_FMT"), ut->cost, ut->cost, SW_BUILD_TURNS);
         draw_text_center(a, a->font_s, WIN_W / 2, by + 52, COL_YELLOW, buf);
         draw_text_center(a, a->font_s, WIN_W / 2, by + 76, COL_GRAY, tx("SW_CONFIRM_WARN"));
+        /* 燃費が普通でないもの（飛行要塞）は、建造の時点で注意を出す。
+         * 生産後の行動中にも出すかは、遊んでみてから決める */
+        if (ut->fuel_rate > 1) {
+            snprintf(buf, sizeof buf, tx("SW_FUEL_WARN_FMT"),
+                     ut->fuel_rate, ut->upkeep, ut->fuel);
+            draw_text_center(a, a->font_s, WIN_W / 2, by + 100,
+                             (SDL_Color){ 255, 170, 120, 255 }, buf);
+        }
         for (int i = 0; i < 2; i++) {
             SDL_Rect r = evo_rect(i);
             bool sel = (a->amenu_idx == i);
