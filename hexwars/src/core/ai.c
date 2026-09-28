@@ -586,6 +586,8 @@ static void build_order(const Game *g, AiState *s)
             const Unit *u = &g->units[i];
             if (!(u->flags & UF_ALIVE) || u->owner != me) continue;
             if (u->flags & UF_DONE) continue;
+            /* 積まれている部隊は動かせない。空母の艦載機だけは出撃できる */
+            if ((u->flags & UF_LOADED) && !game_can_launch(g, i)) continue;
             const UnitType *t = &g->types[u->type];
             int cls;
             if (needs_fuel_return(g, me, u)) cls = 3;
@@ -891,6 +893,14 @@ static void act_unit(Game *g, AiState *s, int ui)
         for (int t = 0; t < g->n_terrains; t++)
             if (g->terrains[t].mcost[mc] > max_cost) max_cost = g->terrains[t].mcost[mc];
         fuel_per_hex = (max_cost + 1) / 2;
+        /* 空きのある自軍の空母も帰る先になる（着艦すれば次の手番に補給される） */
+        for (int i = 0; i < g->n_units && n_home < 64; i++) {
+            const Unit *c = &g->units[i];
+            if (!(c->flags & UF_ALIVE) || (c->flags & UF_LOADED) || c->owner != me) continue;
+            if (!g->types[c->type].resupply_cargo || i == ui) continue;
+            if (!game_can_board(g, ui, i)) continue;
+            home_x[n_home] = c->pos.x; home_y[n_home] = c->pos.y; n_home++;
+        }
         if (n_home == 0) fuel_guard = false;   /* 帰る先が無いなら判定しても仕方ない */
     }
 
@@ -1506,7 +1516,18 @@ int ai_step(Game *g, AiState *s)
         int ui = s->order[s->idx++];
         Unit *u = &g->units[ui];
         if (!(u->flags & UF_ALIVE) || (u->flags & UF_DONE)) continue;
+        /* 空母の艦載機は、空母のマスから飛び立ってから考える。動かなかったら
+         * そのまま着艦し直す（空母の上に浮いたまま燃料を払わせない） */
+        int carrier = -1;
+        if (u->flags & UF_LOADED) {
+            carrier = game_launch(g, ui);
+            if (carrier < 0) { u->flags |= UF_DONE; continue; }
+        }
         act_unit(g, s, ui);
+        if (carrier >= 0 && (u->flags & UF_ALIVE) && !(u->flags & UF_LOADED) &&
+            u->pos.x == g->units[carrier].pos.x && u->pos.y == g->units[carrier].pos.y &&
+            (g->units[carrier].flags & UF_ALIVE))
+            game_reembark(g, ui, carrier, true);
         return 1;
     }
     /* 全ユニットが動き終えた: 再行動系はここで撃つと全部隊がもう一度動ける */

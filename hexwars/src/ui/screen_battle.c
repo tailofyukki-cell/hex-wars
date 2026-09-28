@@ -839,6 +839,15 @@ static void select_action(App *a, int act)
         break;
     }
     case ACT_WAIT:
+        if (a->launch_carrier >= 0 &&
+            g->units[a->sel_unit].pos.x == g->units[a->launch_carrier].pos.x &&
+            g->units[a->sel_unit].pos.y == g->units[a->launch_carrier].pos.y) {
+            game_reembark(g, a->sel_unit, a->launch_carrier, true);
+            a->launch_carrier = -1;
+            a->sel_unit = -1;
+            a->bs = BS_IDLE;
+            break;
+        }
         game_wait_unit(g, a->sel_unit);
         a->sel_unit = -1;
         a->bs = BS_IDLE;
@@ -1185,7 +1194,7 @@ static SDL_Rect lpick_rect(App *a, int i)
 
 static void open_layer_pick(App *a, const int *units, int n, int mode)
 {
-    for (int i = 0; i < n && i < LAYER_COUNT + 1; i++) a->lpick_unit[i] = units[i];
+    for (int i = 0; i < n && i < LAYER_COUNT + 1 + MAX_CARGO; i++) a->lpick_unit[i] = units[i];
     a->lpick_n = n; a->lpick_idx = 0; a->lpick_mode = mode;
     a->lpick_x = a->cur_x; a->lpick_y = a->cur_y;   /* 開いたセルに固定（追従させない） */
     a->bs = BS_LAYER_PICK;
@@ -1194,6 +1203,11 @@ static void open_layer_pick(App *a, const int *units, int n, int mode)
 static void select_own_unit(App *a, int ui)
 {
     Game *g = &a->game;
+    a->launch_carrier = -1;
+    if (g->units[ui].flags & UF_LOADED) {
+        a->launch_carrier = game_launch(g, ui);    /* 空母のマスから飛び立つ */
+        if (a->launch_carrier < 0) return;
+    }
     a->sel_unit = ui;
     path_move_range(g, ui, &a->mr);
     a->undo_x = g->units[ui].pos.x;
@@ -1218,13 +1232,22 @@ static void confirm_at(App *a, int hx, int hy)
     switch (a->bs) {
     case BS_IDLE: {
         /* 立体化: 重なりセルは自軍の行動可能ユニットをレイヤーで列挙して選ぶ */
-        int cell[LAYER_COUNT], own[LAYER_COUNT + 1], n = 0;
+        int cell[LAYER_COUNT], own[LAYER_COUNT + 1 + MAX_CARGO], n = 0;
         game_units_at(g, hx, hy, cell);
         for (int L = 0; L < LAYER_COUNT; L++) {
             int u = cell[L];
             if (u >= 0 && g->units[u].owner == g->current &&
                 !(g->units[u].flags & UF_DONE))
                 own[n++] = u;
+        }
+        /* 空母の艦載機（未行動なら、空母のマスから出撃できる） */
+        for (int L = 0; L < LAYER_COUNT; L++) {
+            int c = cell[L];
+            if (c < 0 || g->units[c].owner != g->current) continue;
+            for (int s = 0; s < MAX_CARGO; s++) {
+                int cg = g->units[c].cargo[s];
+                if (cg >= 0 && game_can_launch(g, cg)) own[n++] = cg;
+            }
         }
         /* **自軍ユニットが乗っていても生産は候補に残すこと**。
          * 以前は1体でも居ると必ずそれが選ばれ、工場の上空を自軍機が
@@ -1356,6 +1379,9 @@ static void cancel_action(App *a)
 {
     switch (a->bs) {
     case BS_UNIT_SELECTED:
+        if (a->launch_carrier >= 0 && a->sel_unit >= 0)
+            game_reembark(&a->game, a->sel_unit, a->launch_carrier, false);
+        a->launch_carrier = -1;
         a->sel_unit = -1;
         a->bs = BS_IDLE;
         break;
@@ -2530,9 +2556,10 @@ static void draw_menus(App *a)
             }
             const Unit *u = &g->units[a->lpick_unit[i]];
             const UnitType *ut = &g->types[u->type];
-            snprintf(buf, sizeof buf, "[%s] %s",
+            snprintf(buf, sizeof buf, "[%s] %s%s",
                      layer_tag(unit_layer(ut->mclass)),
-                     unit_name_of(ut, u->owner));
+                     unit_name_of(ut, u->owner),
+                     (u->flags & UF_LOADED) ? tx("LPICK_ONBOARD") : "");
             draw_text(a, a->font_s, r.x + 12, r.y + 7,
                       sel ? COL_WHITE : COL_GRAY, buf);
             /* HPが満タンでなければ右端に表示 */

@@ -539,6 +539,60 @@ static void test_hidden_sight(void)
     printf("test_hidden_sight OK\n");
 }
 
+/* 空母の艦載機: 着艦した次の手番に、空母のマスから普通に出撃できる */
+static void test_carrier_launch(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    game_start(g, 7u);
+    g->n_units = 0;
+    int sea = -1;
+    for (int i = 0; i < g->n_terrains; i++)
+        if (!strcmp(g->terrains[i].id, "SEA")) sea = i;
+    for (int y = 4; y <= 10; y++)
+        for (int x = 2; x <= 14; x++) g->tiles[y][x].terrain = (uint8_t)sea;
+    int cv = data_find_unit_type(g, "CARRIER");
+    int fi = data_find_unit_type(g, "FIGHTER");
+    CHECK(cv >= 0 && fi >= 0);
+    int c = game_spawn_unit(g, 0, cv, 8, 7, 10);
+    int f = game_spawn_unit(g, 0, fi, 7, 7, 10);
+    /* 相手にも部隊を置く（居ないと全滅扱いで決着し、次の手番が来ない） */
+    CHECK(game_spawn_unit(g, 1, cv, 14, 10, 10) >= 0);
+    CHECK(game_can_board(g, f, c));
+    game_load_unit(g, f, c);
+    CHECK(g->units[f].flags & UF_LOADED);
+    CHECK(!game_can_launch(g, f));                     /* 着艦した手番は出られない */
+
+    /* 相手の手番を挟んで自分の手番へ */
+    g->current = 0;
+    game_end_turn(g);
+    while (g->current != 0) game_end_turn(g);
+    CHECK(g->units[f].flags & UF_LOADED);
+    CHECK(!(g->units[f].flags & UF_DONE));
+    CHECK(game_can_launch(g, f));
+
+    /* 出撃: 空母のマスに出て、普通に動ける。空母は行動済みにならない */
+    int got = game_launch(g, f);
+    CHECK(got == c);
+    CHECK(!(g->units[f].flags & UF_LOADED));
+    CHECK(g->units[f].pos.x == 8 && g->units[f].pos.y == 7);
+    CHECK(!(g->units[c].flags & UF_DONE));
+    MoveRange mr;
+    path_move_range(g, f, &mr);
+    CHECK(mr.cost[7][11] >= 0);                         /* 3マス先へ届く */
+
+    /* 取りやめ: 空母へ戻る（まだ行動できる） */
+    game_reembark(g, f, c, false);
+    CHECK(g->units[f].flags & UF_LOADED);
+    CHECK(!(g->units[f].flags & UF_DONE));
+    CHECK(game_can_launch(g, f));
+    printf("test_carrier_launch OK\n");
+}
+
 /* 解隊: 生産価格の半額×HP割合を資金に戻し、損失には数えない。積荷のある輸送は不可 */
 static void test_disband(void)
 {
@@ -4310,6 +4364,7 @@ int main(void)
     test_hidden_sight();
     test_subchaser();
     test_disband();
+    test_carrier_launch();
     test_language();
     test_paradrop();
     test_produce_layers();

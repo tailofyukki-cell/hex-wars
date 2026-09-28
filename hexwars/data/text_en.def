@@ -245,6 +245,7 @@ PANEL_INCOME_FMT = Income %dG
 PANEL_OWNER_FMT  = Owner: %s
 PANEL_CAP_FMT    = Capture: %d turns left
 LPICK_PRODUCE    = + Build
+LPICK_ONBOARD   =  (on board - launch)
 PANEL_NOUNIT     = (No unit)
 PANEL_HP_FMT     = HP %d/10   Fuel %d/%d   Ammo %d/%d
 PANEL_HP_SUP_FMT = HP %d/10   Fuel %d/%d   Supplies %d/%d

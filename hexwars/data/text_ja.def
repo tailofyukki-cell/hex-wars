@@ -241,6 +241,7 @@ PANEL_INCOME_FMT = 収入 %dG
 PANEL_OWNER_FMT  = 所有: %s
 PANEL_CAP_FMT    = 占領 あと%dターン
 LPICK_PRODUCE    = ＋ 生産
+LPICK_ONBOARD   = （艦載・出撃）
 PANEL_NOUNIT     = （ユニットなし）
 PANEL_HP_FMT     = HP %d/10   燃料 %d/%d   弾薬 %d/%d
 PANEL_HP_SUP_FMT = HP %d/10   燃料 %d/%d   物資 %d/%d

@@ -1301,6 +1301,62 @@ int game_join_units(Game *g, int mover, int target, int back_x, int back_y)
     return left;
 }
 
+/* 積荷 ui を積んでいる輸送の index。見つからなければ -1 */
+int game_carrier_of(const Game *g, int ui)
+{
+    for (int i = 0; i < g->n_units; i++) {
+        const Unit *t = &g->units[i];
+        if (!(t->flags & UF_ALIVE)) continue;
+        for (int s = 0; s < MAX_CARGO; s++)
+            if (t->cargo[s] == ui) return i;
+    }
+    return -1;
+}
+
+/* 艦載機の出撃。空母（resupply_cargo を持つ輸送）に積まれた、まだ行動して
+ * いない航空機は、空母のマスから普通に移動・攻撃できる。空母は行動済みに
+ * ならない。降ろす操作（隣接マスへ出して双方行動済み）とは別の経路。 */
+bool game_can_launch(const Game *g, int ui)
+{
+    const Unit *u = &g->units[ui];
+    if (!(u->flags & UF_ALIVE) || !(u->flags & UF_LOADED)) return false;
+    if (u->flags & UF_DONE) return false;
+    if (g->types[u->type].mclass != MC_AIR) return false;
+    int t = game_carrier_of(g, ui);
+    if (t < 0) return false;
+    const Unit *c = &g->units[t];
+    if (!g->types[c->type].resupply_cargo) return false;
+    /* 空母の真上の空が空いていること（飛び立った機体の居場所） */
+    return game_unit_at_layer(g, c->pos.x, c->pos.y, LAYER_AIR) < 0;
+}
+
+int game_launch(Game *g, int ui)
+{
+    if (!game_can_launch(g, ui)) return -1;
+    int t = game_carrier_of(g, ui);
+    Unit *c = &g->units[t];
+    Unit *u = &g->units[ui];
+    for (int s = 0; s < MAX_CARGO; s++)
+        if (c->cargo[s] == ui) c->cargo[s] = -1;
+    u->flags &= (uint8_t)~UF_LOADED;
+    u->pos = c->pos;
+    game_update_vision(g);
+    return t;
+}
+
+/* 出撃を取りやめて空母へ戻す（done=true なら着艦して行動済み） */
+void game_reembark(Game *g, int ui, int carrier, bool done)
+{
+    Unit *u = &g->units[ui];
+    Unit *c = &g->units[carrier];
+    for (int s = 0; s < MAX_CARGO; s++)
+        if (c->cargo[s] < 0) { c->cargo[s] = (int16_t)ui; break; }
+    u->flags |= UF_LOADED;
+    if (done) u->flags |= UF_DONE;
+    u->pos = c->pos;
+    game_update_vision(g);
+}
+
 bool game_can_board(const Game *g, int passenger, int transport)
 {
     const Unit *p = &g->units[passenger];
@@ -1421,8 +1477,11 @@ static void begin_player_turn(Game *g)
     for (int i = 0; i < g->n_units; i++) {
         Unit *u = &g->units[i];
         if (!(u->flags & UF_ALIVE) || u->owner != p) continue;
-        if (u->flags & UF_LOADED) continue; /* 搭載中は行動不可のまま */
+        /* 搭載中の部隊も行動済みを解く。空母の艦載機は、着艦した次の手番に
+         * 空母のマスから出撃できる（game_launch）。それ以外の積荷は盤上に
+         * いないので、行動済みを解いても選べない（降ろす操作でしか出てこない）。 */
         u->flags &= (uint8_t)~(UF_DONE | UF_MOVED);
+        if (u->flags & UF_LOADED) continue;
 
         const UnitType *ut = unit_type(g, u);
         const Tile *tile = &g->tiles[u->pos.y][u->pos.x];

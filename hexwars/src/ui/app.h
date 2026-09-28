@@ -247,7 +247,8 @@ struct App {
     /* レイヤー選択ポップアップ（重なりセルの選択・攻撃対象選択） */
     /* 候補（表示順）。**-1 は「生産」を表す**ので、レイヤー数より1つ多く取る。
      * 自軍ユニットが乗っているセルでも生産を選べるようにするため。 */
-    int   lpick_unit[LAYER_COUNT + 1];
+    int   lpick_unit[LAYER_COUNT + 1 + MAX_CARGO];   /* レイヤーごと＋生産＋艦載機 */
+    int   launch_carrier;   /* 選択中の部隊が空母から出撃した直後なら、その空母。-1=なし */
     int   lpick_n, lpick_idx;
     int   lpick_mode;                /* LP_SELECT=自軍選択 / LP_ATTACK=攻撃対象 */
     int   lpick_x, lpick_y;          /* ポップアップの表示基準セル（マウスで動かさない） */

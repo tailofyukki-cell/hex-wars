@@ -193,6 +193,13 @@ bool game_can_board(const Game *g, int passenger, int transport);
  * 進化先は生産できず（no_produce）、元には戻せない。経験値は0に戻る。
  * 自軍の「補給できる拠点」の上でのみ行える（陸=街/工場/首都、空=飛行場、海=港）。 */
 bool game_can_evolve(const Game *g, int ui);
+/* 艦載機の出撃: 空母に積まれた未行動の航空機を、空母のマスから普通に
+ * 動かせる状態で出す。game_launch は空母の index を返す（不可なら -1）。
+ * game_reembark は出撃を取りやめて戻す（done=true で着艦済み＝行動済み）。 */
+int  game_carrier_of(const Game *g, int ui);
+bool game_can_launch(const Game *g, int ui);
+int  game_launch(Game *g, int ui);
+void game_reembark(Game *g, int ui, int carrier, bool done);
 /* 解隊: 部隊を解散して生産価格の半額×HP割合を資金に戻す。
  * 積荷のある輸送は不可。損失には数えない。戻り値=払い戻し額 / 不可なら -1 */
 bool game_can_disband(const Game *g, int ui);
