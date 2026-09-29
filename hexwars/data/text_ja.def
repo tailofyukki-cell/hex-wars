@@ -170,6 +170,14 @@ BTN_MENU        = メニュー (E)
 CPU_THINKING    = CPU 思考中…
 HANDOVER_FMT    = %s軍の手番です
 HANDOVER_SUB    = プレイヤーを交代してください — Z / クリックで開始
+LOSS_TITLE_FMT  = 相手の手番で %d 部隊を失いました
+LOSS_POS_FMT    = (%d,%d)
+LOSS_WHY_KILLED = 撃破された
+LOSS_WHY_COUNTER = 反撃で倒れた
+LOSS_WHY_SPLASH = 巻き込まれた
+LOSS_WHY_FUEL   = 燃料切れ
+LOSS_WHY_CARGO  = 積荷ごと沈んだ
+LOSS_CLOSE      = Z / クリックで閉じる（赤い×が倒された場所）
 
 ACT_ATTACK      = 攻撃
 ACT_CAPTURE     = 占領

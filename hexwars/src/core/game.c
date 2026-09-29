@@ -360,7 +360,21 @@ void game_move_unit(Game *g, int ui, int x, int y, int fuel_cost)
     }
 }
 
-static void kill_unit(Game *g, int ui)
+void game_loss_clear(Game *g) { g->loss_n = 0; }
+
+static void loss_note(Game *g, const Unit *u, int why)
+{
+    if (g->loss_n >= 64) return;
+    g->loss[g->loss_n].type = u->type;
+    g->loss[g->loss_n].owner = u->owner;
+    g->loss[g->loss_n].x = u->pos.x;
+    g->loss[g->loss_n].y = u->pos.y;
+    g->loss[g->loss_n].why = (uint8_t)why;
+    g->loss[g->loss_n].turn_of = (int8_t)g->current;    /* 誰の手番のあいだに倒れたか */
+    g->loss_n++;
+}
+
+static void kill_unit_why(Game *g, int ui, int why)
 {
     Unit *u = &g->units[ui];
     /* 輸送ユニット撃破時、搭載ユニットも喪失（仕様書 5.9） */
@@ -368,15 +382,19 @@ static void kill_unit(Game *g, int ui)
         if (u->cargo[s] >= 0) {
             Unit *c = &g->units[u->cargo[s]];
             g->lost_units[c->owner]++;
+            loss_note(g, c, LOSS_CARGO);
             c->flags = 0;
             c->hp = 0;
             u->cargo[s] = -1;
         }
+    loss_note(g, u, why);
     g->lost_units[u->owner]++;
     u->flags = 0;
     u->hp = 0;
     clear_capture_by(g, ui);
 }
+
+static void kill_unit(Game *g, int ui) { kill_unit_why(g, ui, LOSS_KILLED); }
 
 /* 解隊（部隊を解散して資金に戻す）。増えすぎた部隊を整理するための操作。
  * 払い戻しは生産価格の半額 × 残りHPの割合。高く戻すと「作ってすぐ売る」
@@ -893,7 +911,7 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
             if (counter_dmg) *counter_dmg = c;
             if (a->hp <= 0) {
                 gain_exp(d, 20);
-                kill_unit(g, atk_i);
+                kill_unit_why(g, atk_i, LOSS_COUNTER);
                 if (atk_killed) *atk_killed = true;
             }
         }
@@ -919,7 +937,7 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
                 if (sd < 1) sd = 1;
                 v->hp = (int8_t)(v->hp - sd);
                 gain_exp(a, sd);
-                if (v->hp <= 0) { gain_exp(a, 10); kill_unit(g, k); }
+                if (v->hp <= 0) { gain_exp(a, 10); kill_unit_why(g, k, LOSS_SPLASH); }
             }
         }
     }
@@ -1722,10 +1740,10 @@ static void end_player_turn(Game *g)
         /* 燃料切れの扱い（既定では航空機=墜落 / 艦船=漂流 / それ以外=なし） */
         if (u->fuel == 0) {
             if (ut->no_fuel == NOFUEL_DIE) {
-                kill_unit(g, i);
+                kill_unit_why(g, i, LOSS_FUEL);
             } else if (ut->no_fuel == NOFUEL_DAMAGE) {
                 u->hp = (int8_t)(u->hp - 1);
-                if (u->hp <= 0) kill_unit(g, i);
+                if (u->hp <= 0) kill_unit_why(g, i, LOSS_FUEL);
             }
         }
     }

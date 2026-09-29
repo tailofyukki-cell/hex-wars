@@ -653,6 +653,64 @@ static void test_superweapon(void)
     printf("test_superweapon OK\n");
 }
 
+/* 倒された部隊の記録帳: 撃破・反撃・範囲攻撃・燃料切れ・積荷が理由つきで記録され、
+ * 解隊は載らない。読み終えたら空にできる */
+static void test_loss_log(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    game_start(g, 5u);
+    g->n_units = 0;
+    g->co_id[0] = g->co_id[1] = -1;
+    g->weather_on = 0; g->night_on = 0;
+    int inf = data_find_unit_type(g, "INFANTRY");
+    int tank = data_find_unit_type(g, "TANK");
+    int fi = data_find_unit_type(g, "FIGHTER");
+    CHECK(inf >= 0 && tank >= 0 && fi >= 0);
+    for (int y = 3; y <= 9; y++)
+        for (int x = 2; x <= 14; x++) { g->tiles[y][x].terrain = 0; g->tiles[y][x].owner = -1; }
+
+    /* 撃破: 自軍(0)の歩兵が敵(1)の戦車に撃たれて倒れる */
+    int mine = game_spawn_unit(g, 0, inf, 5, 5, 1);
+    int foe = game_spawn_unit(g, 1, tank, 6, 5, 10);
+    CHECK(game_spawn_unit(g, 0, inf, 12, 8, 10) >= 0);   /* 全滅させない */
+    game_loss_clear(g);
+    g->current = 1;
+    game_attack(g, foe, mine, NULL, NULL, NULL);
+    CHECK(g->loss_n == 1);
+    CHECK(g->loss[0].owner == 0 && g->loss[0].type == inf);
+    CHECK(g->loss[0].x == 5 && g->loss[0].y == 5 && g->loss[0].why == LOSS_KILLED);
+
+    /* 解隊は載らない */
+    int d = game_spawn_unit(g, 0, inf, 8, 6, 10);
+    game_loss_clear(g);
+    CHECK(game_disband_unit(g, d) >= 0);
+    CHECK(g->loss_n == 0);
+
+    /* 燃料切れは、その陣営の手番の終わりに起きる。誰の手番のあいだに倒れたかも残る */
+    int air = game_spawn_unit(g, 0, fi, 9, 7, 10);
+    g->units[air].fuel = 0;
+    game_loss_clear(g);
+    g->current = 0;
+    game_end_turn(g);                                   /* 陣営0の手番の終わり */
+    int fuel_recs = 0;
+    for (int i = 0; i < g->loss_n; i++)
+        if (g->loss[i].why == LOSS_FUEL && g->loss[i].type == fi) {
+            fuel_recs++;
+            CHECK(g->loss[i].owner == 0 && g->loss[i].turn_of == 0);
+        }
+    CHECK(fuel_recs == 1);
+
+    /* 空にする */
+    game_loss_clear(g);
+    CHECK(g->loss_n == 0);
+    printf("test_loss_log OK\n");
+}
+
 /* 空母の艦載機: 着艦した次の手番に、空母のマスから普通に出撃できる */
 static void test_carrier_launch(void)
 {
@@ -4536,6 +4594,7 @@ int main(void)
     test_subchaser();
     test_disband();
     test_carrier_launch();
+    test_loss_log();
     test_superweapon();
     test_language();
     test_paradrop();

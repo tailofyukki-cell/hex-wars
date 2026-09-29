@@ -50,6 +50,7 @@ typedef enum {
     BS_DISBAND_CONFIRM,/* 解隊の確認（部隊が消えるので必ず一度止める） */
     BS_STORE_DISBAND,  /* 倉庫の部隊の解隊の確認（生産メニューから開く） */
     BS_SW_CONFIRM,     /* 超兵器の建造の確認（生産メニューから開く） */
+    BS_LOSS_REPORT,    /* 相手の手番のあいだに倒された自軍の部隊の報告（手番の頭） */
     BS_BATTLE_ANIM,    /* 戦闘アニメ（仕様書 8.2） */
     BS_CPU_TURN,
     BS_HANDOVER,       /* ホットシート交代画面 */
@@ -249,6 +250,8 @@ struct App {
     /* 候補（表示順）。**-1 は「生産」を表す**ので、レイヤー数より1つ多く取る。
      * 自軍ユニットが乗っているセルでも生産を選べるようにするため。 */
     int   lpick_unit[LAYER_COUNT + 1 + MAX_CARGO];   /* レイヤーごと＋生産＋艦載機 */
+    struct LossRec loss_show[64];   /* 報告画面に出す損失（手番の頭に写す） */
+    int   loss_show_n, loss_scroll;
     int   launch_carrier;   /* 選択中の部隊が空母から出撃した直後なら、その空母。-1=なし */
     int   lpick_n, lpick_idx;
     int   lpick_mode;                /* LP_SELECT=自軍選択 / LP_ATTACK=攻撃対象 */

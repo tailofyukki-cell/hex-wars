@@ -92,6 +92,14 @@ typedef struct Game {
      * これが無いと同じ手番のうちに何度も撃てて止まらなくなる。 */
     uint8_t co_used_turn[MAX_PLAYERS];
 
+    /* 倒された部隊の記録帳。相手の手番のあいだに自軍の何が倒されたかを、次の自分の
+     * 手番の頭に報告するためのもの。撃破・反撃・範囲攻撃・燃料切れのどれで消えても
+     * kill_unit が同じ所で記録する。画面が読み終えたら game_loss_clear で空にする。
+     * 解隊は撃破ではないので載せない。セーブには入れない（報告は手番の頭で済むため、
+     * 手番の途中で保存しても、次に読み込んだ手番の頭で新しく始まる）。 */
+    struct LossRec { int16_t type; int8_t owner; uint8_t x, y; uint8_t why; int8_t turn_of; } loss[64];
+    int loss_n;
+
     /* 研究ポイント（陸・空・海の超兵器で共通のたまり）。自軍の研究所の上で
      * 解隊すると、払い戻しと同じ額が資金ではなくここへ入る。 */
     int32_t lab_points[MAX_PLAYERS][3];   /* [陣営][領域 0=陸 1=空 2=海] */
@@ -214,7 +222,10 @@ void game_reembark(Game *g, int ui, int carrier, bool done);
  * 積荷のある輸送は不可。損失には数えない。戻り値=払い戻し額 / 不可なら -1 */
 bool game_can_disband(const Game *g, int ui);
 int  game_disband_refund(const Game *g, int ui);
-int  game_disband_unit(Game *g, int ui);   /* 自軍の研究所の上なら研究ポイントへ */
+int  game_disband_unit(Game *g, int ui);
+/* 倒された理由（LossRec.why） */
+enum { LOSS_KILLED = 0, LOSS_COUNTER, LOSS_SPLASH, LOSS_FUEL, LOSS_CARGO };
+void game_loss_clear(Game *g);   /* 自軍の研究所の上なら研究ポイントへ */
 bool game_on_own_lab(const Game *g, int ui);    /* 自軍の研究所の上で、同じ領域の部隊か */
 int  game_lab_domain(const Game *g, int x, int y);  /* そのマスの研究所の領域（1〜3、0=研究所でない） */
 int  game_unit_lab_domain(const Game *g, int ui);   /* 部隊が解隊できる研究所の領域（1〜3） */

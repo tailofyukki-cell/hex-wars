@@ -37,6 +37,7 @@ static void snd_move_se(const Game *g, int ui)
 
 #define TOPBAR_H TOPBAR_FX   /* 天候演出と共有（app.h） */
 #define PANEL_H 116
+#define LOSS_VISIBLE 8     /* 損失の報告に一度に出す行数（多いときはスクロール） */
 
 /* ------------------------------------------------------------------ */
 /* カメラ                                                              */
@@ -228,6 +229,46 @@ static bool cpu_step_shown(const App *a, int *sx, int *sy)
     return false;
 }
 
+/* ------------------------------------------------------------------ */
+/* 損失の報告                                                          */
+/* ------------------------------------------------------------------ */
+/* 今の手番の陣営（と味方）が、直前の相手の手番のあいだに失った部隊を、一覧と地図上の
+ * ×印で報告する。何がやられたか分からない、という声への対応。
+ * 記録帳（Game.loss）には誰の損失も入っているので、ここで自軍のものだけを取り出す。
+ * 人間が全員の手番を交代で遊ぶ（ホットシート）ときは、次の人には次の人の分だけを見せる。 */
+static void open_loss_report(App *a)
+{
+    Game *g = &a->game;
+    a->loss_show_n = 0;
+    for (int i = 0; i < g->loss_n && a->loss_show_n < 64; i++) {
+        if (!game_same_team(g, g->loss[i].owner, g->current)) continue;
+        /* 自分たちの手番のあいだに倒れたもの（反撃で倒れた・範囲攻撃に巻き込まれた等）は、
+         * その場で演出が出ていて見えているので報告しない。ただし燃料切れは手番の
+         * 終わりに静かに起きるので、自分の手番の分でも報告に含める。 */
+        if (game_same_team(g, g->loss[i].turn_of, g->current) && g->loss[i].why != LOSS_FUEL)
+            continue;
+        a->loss_show[a->loss_show_n++] = g->loss[i];
+    }
+    game_loss_clear(g);       /* 読み終えた（見せる分は a->loss_show に写した） */
+    if (a->loss_show_n == 0 || a->bs != BS_IDLE) return;
+    a->loss_scroll = 0;
+    a->bs = BS_LOSS_REPORT;
+    /* 倒された場所が画面の外だと×印が見えない。最初の損失の場所を映しておく
+     * （手番の頭に focus_own_unit が自軍の部隊へ寄せているので、その上書きになる） */
+    center_camera(a, a->loss_show[0].x, a->loss_show[0].y);
+}
+
+static const char *loss_why_key(int why)
+{
+    switch (why) {
+    case LOSS_COUNTER: return "LOSS_WHY_COUNTER";
+    case LOSS_SPLASH:  return "LOSS_WHY_SPLASH";
+    case LOSS_FUEL:    return "LOSS_WHY_FUEL";
+    case LOSS_CARGO:   return "LOSS_WHY_CARGO";
+    default:           return "LOSS_WHY_KILLED";
+    }
+}
+
 static void begin_side(App *a)
 {
     Game *g = &a->game;
@@ -267,6 +308,7 @@ static void begin_side(App *a)
         snd_se(SE_TURN);
         focus_own_unit(a);
         run_map_events(a);     /* 増援などのイベント（ターン表示の後に上書き） */
+        open_loss_report(a);   /* 前の手番のあいだに倒された自軍の部隊があれば報告 */
     }
 }
 
@@ -1550,7 +1592,35 @@ void battle_event(App *a, const SDL_Event *e)
     Game *g = &a->game;
     bool human_turn = g->ctrl[g->current] == CTRL_HUMAN &&
                       a->bs != BS_GAMEOVER && a->bs != BS_CPU_TURN &&
-                      a->bs != BS_HANDOVER;
+                      a->bs != BS_HANDOVER && a->bs != BS_LOSS_REPORT;
+
+    /* --- 損失の報告 ---
+     * Z / Enter / クリック / X / Esc で閉じる。一覧が長いときはホイール・↑↓で送る。 */
+    if (a->bs == BS_LOSS_REPORT) {
+        int maxs = a->loss_show_n - LOSS_VISIBLE;
+        if (maxs < 0) maxs = 0;
+        if (e->type == SDL_MOUSEWHEEL) {
+            a->loss_scroll -= e->wheel.y;
+        } else if (e->type == SDL_KEYDOWN) {
+            SDL_Keycode k = e->key.keysym.sym;
+            if (k == SDLK_UP) a->loss_scroll--;
+            else if (k == SDLK_DOWN) a->loss_scroll++;
+            else if (k == SDLK_z || k == SDLK_RETURN || k == SDLK_x || k == SDLK_ESCAPE ||
+                     k == SDLK_SPACE) {
+                a->bs = BS_IDLE;
+                a->loss_show_n = 0;
+            }
+        } else if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT) {
+            a->bs = BS_IDLE;
+            a->loss_show_n = 0;
+        }
+        if (a->loss_scroll > maxs) a->loss_scroll = maxs;
+        if (a->loss_scroll < 0) a->loss_scroll = 0;
+        /* 先頭に出ている行の場所を映す（行を送ると、その場所へカメラが動く） */
+        if (a->loss_show_n > 0)
+            center_camera(a, a->loss_show[a->loss_scroll].x, a->loss_show[a->loss_scroll].y);
+        return;
+    }
 
     /* --- ホットシート交代画面 --- */
     if (a->bs == BS_HANDOVER) {
@@ -3346,6 +3416,63 @@ static void draw_sub_objectives(App *a)
     }
 }
 
+/* 損失の報告を描く。倒された場所に赤い×印を重ね、種別と原因の一覧を中央に出す。
+ * 霧の中で倒された場所も、自軍の部隊がいた場所なので出してよい（敵の居場所ではない）。 */
+static void draw_loss_report(App *a)
+{
+    Game *g = &a->game;
+    if (a->loss_show_n <= 0) return;
+    /* 地図上の×印 */
+    for (int i = 0; i < a->loss_show_n; i++) {
+        float cx, cy;
+        hex_center_px(a, a->loss_show[i].x, a->loss_show[i].y, &cx, &cy);
+        /* 先頭に出ている行の×は大きく、ほかは小さめにして、どれがどれか追えるようにする */
+        bool cur = (i == a->loss_scroll);
+        SDL_SetRenderDrawColor(a->ren, cur ? 255 : 220, cur ? 200 : 90, cur ? 80 : 80, 255);
+        for (int t = -1; t <= 1; t++) {
+            SDL_RenderDrawLine(a->ren, (int)cx - 12, (int)cy - 12 + t, (int)cx + 12, (int)cy + 12 + t);
+            SDL_RenderDrawLine(a->ren, (int)cx - 12, (int)cy + 12 + t, (int)cx + 12, (int)cy - 12 + t);
+        }
+    }
+    int shown = a->loss_show_n < LOSS_VISIBLE ? a->loss_show_n : LOSS_VISIBLE;
+    int bw = 640, bh = 96 + shown * 32, bx = WIN_W / 2 - bw / 2, by = 120;
+    /* ×印が一覧の下に隠れないよう、画面に出ている損失の位置の反対側へ寄せる
+     * （損失が画面の上半分に多ければ一覧を下へ、下半分に多ければ上へ） */
+    {
+        int upper = 0, lower = 0;
+        for (int i = 0; i < a->loss_show_n; i++) {
+            float lx, ly;
+            hex_center_px(a, a->loss_show[i].x, a->loss_show[i].y, &lx, &ly);
+            if (ly < 0 || ly > WIN_H) continue;
+            if (ly < WIN_H / 2) upper++; else lower++;
+        }
+        if (upper >= lower) by = WIN_H - PANEL_H - 16 - bh;   /* 損失が上寄り: 一覧は下へ */
+        if (by < 44) by = 44;
+    }
+    fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 90 });
+    fill_rect(a, bx, by, bw, bh, (SDL_Color){ 40, 26, 26, 244 });
+    outline_rect(a, bx, by, bw, bh, (SDL_Color){ 230, 90, 80, 255 });
+    char buf[160];
+    snprintf(buf, sizeof buf, tx("LOSS_TITLE_FMT"), a->loss_show_n);
+    draw_text_center(a, a->font_m, WIN_W / 2, by + 12, (SDL_Color){ 255, 150, 140, 255 }, buf);
+    for (int i = 0; i < shown; i++) {
+        const struct LossRec *r = &a->loss_show[a->loss_scroll + i];
+        const UnitType *ut = &g->types[r->type];
+        int y = by + 52 + i * 32;
+        draw_text(a, a->font_s, bx + 24, y, COL_WHITE, unit_name_of(ut, r->owner));
+        snprintf(buf, sizeof buf, tx("LOSS_POS_FMT"), (int)r->x, (int)r->y);
+        draw_text(a, a->font_s, bx + 330, y, COL_GRAY, buf);
+        draw_text(a, a->font_s, bx + 450, y, (SDL_Color){ 255, 170, 150, 255 },
+                  tx(loss_why_key(r->why)));
+    }
+    if (a->loss_show_n > shown) {
+        snprintf(buf, sizeof buf, "%d-%d / %d", a->loss_scroll + 1,
+                 a->loss_scroll + shown, a->loss_show_n);
+        draw_text_center(a, a->font_s, WIN_W / 2, by + bh - 58, COL_DIM, buf);
+    }
+    draw_text_center(a, a->font_s, WIN_W / 2, by + bh - 32, COL_YELLOW, tx("LOSS_CLOSE"));
+}
+
 void battle_draw(App *a)
 {
     Game *g = &a->game;
@@ -3369,6 +3496,7 @@ void battle_draw(App *a)
     draw_sub_objectives(a);
     draw_panels(a);
     draw_menus(a);
+    if (a->bs == BS_LOSS_REPORT) draw_loss_report(a);
 
     /* CPU手番表示 */
     if (a->bs == BS_CPU_TURN) {

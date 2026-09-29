@@ -175,6 +175,14 @@ BTN_MENU        = Menu (E)
 CPU_THINKING    = CPU is thinking...
 HANDOVER_FMT    = %s's turn
 HANDOVER_SUB    = Pass control to the next player - Z / Click to start
+LOSS_TITLE_FMT  = You lost %d units during the enemy turn
+LOSS_POS_FMT    = (%d,%d)
+LOSS_WHY_KILLED = Destroyed
+LOSS_WHY_COUNTER = Lost to a counterattack
+LOSS_WHY_SPLASH = Caught in a blast
+LOSS_WHY_FUEL   = Out of fuel
+LOSS_WHY_CARGO  = Lost with its carrier
+LOSS_CLOSE      = Z / Click to close (red X = where they fell)
 ACT_ATTACK      = Attack
 ACT_CAPTURE     = Capture
 ACT_WAIT        = Wait
