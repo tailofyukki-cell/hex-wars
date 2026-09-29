@@ -24,10 +24,10 @@ row = xx.......wwwww..=......h......xx
 row = xx......wwwwwww.c....hhhhh....xx
 row = xx....c..wwwww..=......h......xx
 row = xx.........w....w........c....xx
-row = xxL...........wwwww...........xx
-row = xx..H........wwwwwww..........xx
-row = xx..........wwwwwww........H..xx
-row = xx...........wwwww...........Lxx
+row = xx............wwwww...........xx
+row = xx.LH........wwwwwww..........xx
+row = xx..........wwwwwww........HL.xx
+row = xx...........wwwww............xx
 row = xx....c........w....w.........xx
 row = xx......h......=..wwwww..c....xx
 row = xx....hhhhh....c.wwwwwww......xx
@@ -39,8 +39,8 @@ row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [owners]
-own = 2,9,0
-own = 29,12,1
+own = 3,10,0
+own = 28,11,1
 own = 4,10,0
 own = 27,11,1
 own = 6,7,0

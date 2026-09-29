@@ -94,7 +94,7 @@ typedef struct Game {
 
     /* 研究ポイント（陸・空・海の超兵器で共通のたまり）。自軍の研究所の上で
      * 解隊すると、払い戻しと同じ額が資金ではなくここへ入る。 */
-    int32_t lab_points[MAX_PLAYERS];
+    int32_t lab_points[MAX_PLAYERS][3];   /* [陣営][領域 0=陸 1=空 2=海] */
     /* 超兵器の建造状況。陣営ごと・領域ごと（SW_LAND/AIR/SEA）に1つまで。
      * active=建造中、type=作っている種別、x,y=建造場所、left=完成までの手番数。 */
     struct {
@@ -215,7 +215,9 @@ void game_reembark(Game *g, int ui, int carrier, bool done);
 bool game_can_disband(const Game *g, int ui);
 int  game_disband_refund(const Game *g, int ui);
 int  game_disband_unit(Game *g, int ui);   /* 自軍の研究所の上なら研究ポイントへ */
-bool game_on_own_lab(const Game *g, int ui);
+bool game_on_own_lab(const Game *g, int ui);    /* 自軍の研究所の上で、同じ領域の部隊か */
+int  game_lab_domain(const Game *g, int x, int y);  /* そのマスの研究所の領域（1〜3、0=研究所でない） */
+int  game_unit_lab_domain(const Game *g, int ui);   /* 部隊が解隊できる研究所の領域（1〜3） */
 
 /* 超兵器の建造（units.def の superweapon: 1=陸 2=空 3=海）。
  * 陸=自軍の工場、空=自軍の空港、海=自軍の港で、研究ポイントと資金を
@@ -223,6 +225,7 @@ bool game_on_own_lab(const Game *g, int ui);
  * 建造場所を奪われる／壊されると取りやめ（ポイントと資金は戻る）。 */
 #define SW_BUILD_TURNS 3
 bool game_sw_building_at(const Game *g, int x, int y);
+bool game_can_open_lab(const Game *g, int p, int x, int y);   /* 自軍の研究所で、建造メニューを開けるか */
 bool game_sw_taken(const Game *g, int p, int sw);
 int  game_sw_check(const Game *g, int p, int x, int y, int type);
 bool game_sw_order(Game *g, int p, int x, int y, int type);

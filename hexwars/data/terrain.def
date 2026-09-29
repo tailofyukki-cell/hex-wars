@@ -117,12 +117,15 @@ height     = 3
 breaks_to   = RUBBLE
 repair_cost = 500
 
-# 研究所: 超兵器のための研究ポイントを貯める施設。自軍の研究所の上で解隊すると、
-# 資金ではなく研究ポイントが入る（払い戻しと同じ額）。奪える。首都のあるマップに
-# 陣営ごとに1つ、首都の近くに置く。生産も補給もしない。
-[terrain LAB]
-name       = 研究所
-name@en    = Laboratory
+# 研究所: 超兵器のための研究施設。陸・空・海の3種類で、研究ポイントも領域ごとに別々。
+# **同じ領域の自軍の部隊だけ**、その研究所の上で解隊して研究ポイントに変えられる
+# （資金には戻らない）。貯まったポイントと同じ額の資金で、その研究所の上に超兵器を
+# 建造する。研究所では超兵器しか作れない。奪える。首都のあるマップで、
+# 陸=首都の横 / 空=首都から一番近い空港の横 / 海=首都から一番近い港の横 に置く
+# （tools/place_labs.py）。lab = 1 陸 / 2 空 / 3 海。
+[terrain LAB_LAND]
+name       = 陸の研究所
+name@en    = Land Laboratory
 link_road  = 2
 image      = gfx/terrain/lab.png
 char       = L
@@ -138,6 +141,43 @@ hide       = 1
 color      = B8C8D8
 height     = 3
 breaks_to   = RUBBLE
+repair_cost = 600
+
+[terrain LAB_AIR]
+name       = 空の研究所
+name@en    = Air Laboratory
+link_road  = 2
+image      = gfx/terrain/lab_air.png
+char       = M
+def        = 20
+cost_foot  = 2
+cost_wheel = 2
+cost_track = 2
+cost_air   = 2
+income     = 50
+capturable = 1
+lab        = 2
+color      = C4C8E0
+height     = 2
+breaks_to   = RUBBLE
+repair_cost = 600
+
+# 海の研究所は港の横の海に建つ。船・潜水艦が入れ、陸の部隊は入れない
+[terrain LAB_SEA]
+name       = 海の研究所
+name@en    = Naval Laboratory
+image      = gfx/terrain/lab_sea.png
+char       = N
+def        = 20
+cost_air   = 2
+cost_sea   = 2
+cost_sub   = 2
+income     = 50
+capturable = 1
+lab        = 3
+color      = A8C0D0
+height     = 1
+breaks_to   = SEA
 repair_cost = 600
 
 [terrain FACTORY]

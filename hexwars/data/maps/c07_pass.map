@@ -20,11 +20,11 @@ row = xxxxxxxxxxxxxxx................xxxxxxxxxxx
 row = xxxxxxxxxxxxxx.....^^^^^^....wwxxxxxxxxxxx
 row = xxxxxxxxxxxxxx.....^^^^^^^^...c.xxxxxxxxxx
 row = xxxxxxxxxxxxax.....^^^^^^^^.....xxxxxxxxxx
-row = xxxxxxxxxxxx......^^^^^^^^^.wwwwxxxxxxxxxx
+row = xxxxxxxxxxxxM.....^^^^^^^^^.wwwwxxxxxxxxxx
 row = xxxxxxxxxxxxca....^^^^^^^^^^.f.wfxxxxxxxxx
-row = xxxxxxxxxxH...f.^^^^^^^^^^^^.ac.Hxxxxxxxxx
-row = xxxxxxxxxxxLc.w.^^^^^^^^^^^^....axxxxxxxxx
-row = xxxxxxxxxxxxf..www^^^^^^^^^^....Lxxxxxxxxx
+row = xxxxxxxxxxHL..f.^^^^^^^^^^^^.ac.Hxxxxxxxxx
+row = xxxxxxxxxxx.c.w.^^^^^^^^^^^^...Laxxxxxxxxx
+row = xxxxxxxxxxxxf..www^^^^^^^^^^....Mxxxxxxxxx
 row = xxxxxxxxxxxx..wwww^^^^^^^^^.....xxxxxxxxxx
 row = xxxxxxxxxxxxxxwwwww^^^^^^^^..wwwxxxxxxxxxx
 row = xxxxxxxxxxxxxxwwwww^^^^^^^^..wwwxxxxxxxxxx
@@ -37,7 +37,9 @@ row = xxxxxxxxxxxxxxxx...ww.......xxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [owners]
-own = 11,13,0
+own = 11,12,0
+own = 12,10,0
+own = 31,13,1
 own = 32,14,1
 own = 10,12,0
 own = 12,14,0

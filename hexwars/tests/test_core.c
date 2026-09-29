@@ -67,7 +67,7 @@ static void test_data_and_battle(void)
     if (s_fail) { printf("  %s\n", err); return; }
     CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
     if (s_fail) { printf("  %s\n", err); return; }
-    CHECK(g->n_terrains == 18);   /* 地形12種 + 圏外 + 生産できない飛行場/泊地 + 瓦礫2種 + 研究所 */
+    CHECK(g->n_terrains == 20);   /* 地形12種 + 圏外 + 生産できない飛行場/泊地 + 瓦礫2種 + 研究所3種 */
     {   /* 野戦飛行場・泊地は「都市の空・海版」。
          * 補給（回復・進化）はできるが生産はできないことを固める。 */
         int as_ = -1, an_ = -1;
@@ -553,9 +553,12 @@ static void test_superweapon(void)
     g->n_units = 0;
     g->co_id[0] = g->co_id[1] = -1;
     g->weather_on = 0; g->night_on = 0;
-    int plain = 0, factory = -1, sea = -1, rubble = -1;
+    int plain = 0, factory = -1, sea = -1, rubble = -1, lab_land = -1, lab_air = -1, lab_sea = -1;
     for (int i = 0; i < g->n_terrains; i++) {
         if (!strcmp(g->terrains[i].id, "FACTORY")) factory = i;
+        if (!strcmp(g->terrains[i].id, "LAB_LAND")) lab_land = i;
+        if (!strcmp(g->terrains[i].id, "LAB_AIR")) lab_air = i;
+        if (!strcmp(g->terrains[i].id, "LAB_SEA")) lab_sea = i;
         if (!strcmp(g->terrains[i].id, "SEA")) sea = i;
         if (!strcmp(g->terrains[i].id, "RUBBLE")) rubble = i;
     }
@@ -565,22 +568,29 @@ static void test_superweapon(void)
     int inf = data_find_unit_type(g, "INFANTRY");
     int fi = data_find_unit_type(g, "FIGHTER");
     CHECK(st >= 0 && ff >= 0 && ab >= 0 && factory >= 0 && sea >= 0 && rubble >= 0);
+    CHECK(lab_land >= 0 && lab_air >= 0 && lab_sea >= 0);
+    CHECK(g->terrains[lab_land].is_lab == 1 && g->terrains[lab_air].is_lab == 2 &&
+          g->terrains[lab_sea].is_lab == 3);
     /* 首都（2,11）は塗らない（消すと陣営0の負けで手番が進まない） */
     for (int y = 2; y <= 9; y++)
         for (int x = 1; x <= 15; x++) { g->tiles[y][x].terrain = (uint8_t)plain; g->tiles[y][x].owner = -1; }
-    g->tiles[5][5].terrain = (uint8_t)factory; g->tiles[5][5].owner = 0;
+    g->tiles[5][5].terrain = (uint8_t)lab_land; g->tiles[5][5].owner = 0;   /* 陸の研究所 */
+    g->tiles[6][5].terrain = (uint8_t)factory;  g->tiles[6][5].owner = 0;   /* 工場では作れない */
     CHECK(game_spawn_unit(g, 1, inf, 14, 12, 10) >= 0);   /* 両軍に部隊が居ないと全滅扱いで決着してしまう */
     CHECK(game_spawn_unit(g, 0, inf, 12, 9, 10) >= 0);
 
     /* 建造: 場所・ポイント・資金 */
-    g->lab_points[0] = 2999; g->funds[0] = 5000;
+    g->lab_points[0][0] = 2999; g->funds[0] = 5000;
     CHECK(game_sw_check(g, 0, 5, 5, st) == 3);           /* ポイント不足 */
-    g->lab_points[0] = 3000; g->funds[0] = 2999;
+    g->lab_points[0][0] = 3000; g->funds[0] = 2999;
     CHECK(game_sw_check(g, 0, 5, 5, st) == 4);           /* 資金不足 */
     g->funds[0] = 3500;
-    CHECK(game_sw_check(g, 0, 6, 5, st) == 1);           /* 工場ではない */
+    CHECK(game_sw_check(g, 0, 5, 6, st) == 1);           /* 工場では作れない（研究所だけ） */
+    CHECK(game_sw_check(g, 0, 5, 5, ff) == 1);           /* 陸の研究所で空の超兵器は作れない */
+    CHECK(!game_can_produce_at(g, 0, 5, 5));             /* 研究所は普通の生産をしない */
+    CHECK(game_can_open_lab(g, 0, 5, 5));                /* 建造メニューは開ける */
     CHECK(game_sw_order(g, 0, 5, 5, st));
-    CHECK(g->lab_points[0] == 0 && g->funds[0] == 500);
+    CHECK(g->lab_points[0][0] == 0 && g->funds[0] == 500);
     CHECK(!game_can_produce_at(g, 0, 5, 5));             /* 建造中は生産できない */
     CHECK(game_sw_taken(g, 0, 1));                       /* 同じ領域は1体まで */
     /* 3手番で完成 */
@@ -597,13 +607,13 @@ static void test_superweapon(void)
 
     /* 取りやめ: 建造場所を壊されたら、ポイントと資金は戻る */
     g->units[tank].flags = 0;                          /* 盤から外して作り直す */
-    g->lab_points[0] = 3000; g->funds[0] = 3000;
+    g->lab_points[0][0] = 3000; g->funds[0] = 3000;
     CHECK(game_sw_order(g, 0, 5, 5, st));
     g->tiles[5][5].terrain = (uint8_t)rubble;
     game_end_turn(g);
     while (g->current != 0) game_end_turn(g);
     CHECK(!g->sw_build[0][0].active);
-    CHECK(g->lab_points[0] == 3000 && g->funds[0] >= 3000);
+    CHECK(g->lab_points[0][0] == 3000 && g->funds[0] >= 3000);
 
     /* 超重戦車: 射程4まで減衰しない */
     g->n_units = 0;
@@ -735,27 +745,51 @@ static void test_disband(void)
         CHECK(!game_can_disband(g, tr));
         CHECK(!game_can_disband(g, rider));          /* 積まれている側も不可 */
     }
-    /* 自軍の研究所の上で解隊すると、資金ではなく研究ポイントに入る。
-     * 敵の研究所の上では普通に資金で戻る */
+    /* 研究所は陸・空・海の3種。同じ領域の自軍の部隊だけ、資金ではなく研究ポイントに
+     * なる（領域ごとに別々に貯まる）。違う領域の研究所や敵の研究所の上では資金で戻る */
     {
-        int lab = -1;
-        for (int i = 0; i < g->n_terrains; i++)
-            if (g->terrains[i].is_lab) lab = i;
-        CHECK(lab >= 0);
-        CHECK(!strcmp(g->terrains[lab].id, "LAB") && g->terrains[lab].capturable);
-        g->tiles[5][8].terrain = (uint8_t)lab;
+        int land = -1, air = -1, sea_l = -1;
+        for (int i2 = 0; i2 < g->n_terrains; i2++) {
+            if (g->terrains[i2].is_lab == 1) land = i2;
+            if (g->terrains[i2].is_lab == 2) air = i2;
+            if (g->terrains[i2].is_lab == 3) sea_l = i2;
+        }
+        CHECK(land >= 0 && air >= 0 && sea_l >= 0);
+        CHECK(g->terrains[land].capturable && g->terrains[air].capturable &&
+              g->terrains[sea_l].capturable);
+        CHECK(g->terrains[sea_l].mcost[MC_SEA] > 0 && g->terrains[sea_l].mcost[MC_FOOT] <= 0);
+        g->tiles[5][8].terrain = (uint8_t)land;
         g->tiles[5][8].owner = 0;
         int t2 = game_spawn_unit(g, 0, tank, 8, 5, 10);
-        g->funds[0] = 0; g->lab_points[0] = 0;
+        g->funds[0] = 0; memset(g->lab_points[0], 0, sizeof g->lab_points[0]);
         CHECK(game_on_own_lab(g, t2));
         int r = game_disband_unit(g, t2);
         CHECK(r == g->types[tank].cost / 2);
-        CHECK(g->lab_points[0] == r && g->funds[0] == 0);
-        g->tiles[5][8].owner = 1;                        /* 敵の研究所 */
+        CHECK(g->lab_points[0][0] == r && g->lab_points[0][1] == 0 && g->funds[0] == 0);
+
+        /* 陸の研究所の上の航空機は、領域が違うので資金で戻る */
+        int fi2 = data_find_unit_type(g, "FIGHTER");
+        int air_u = game_spawn_unit(g, 0, fi2, 8, 5, 10);
+        CHECK(!game_on_own_lab(g, air_u));
+        r = game_disband_unit(g, air_u);
+        CHECK(g->funds[0] == r && g->lab_points[0][1] == 0);
+
+        /* 空の研究所の上の航空機は、空のポイントになる */
+        g->tiles[5][8].terrain = (uint8_t)air;
+        g->funds[0] = 0;
+        air_u = game_spawn_unit(g, 0, fi2, 8, 5, 10);
+        CHECK(game_on_own_lab(g, air_u));
+        r = game_disband_unit(g, air_u);
+        CHECK(g->lab_points[0][1] == r && g->funds[0] == 0);
+
+        /* 敵の研究所の上では普通に資金で戻る */
+        g->tiles[5][8].terrain = (uint8_t)land;
+        g->tiles[5][8].owner = 1;
+        g->funds[0] = 0; memset(g->lab_points[0], 0, sizeof g->lab_points[0]);
         int t3 = game_spawn_unit(g, 0, tank, 8, 5, 10);
         CHECK(!game_on_own_lab(g, t3));
         r = game_disband_unit(g, t3);
-        CHECK(g->funds[0] == r && g->lab_points[0] == g->types[tank].cost / 2);
+        CHECK(g->funds[0] == r && g->lab_points[0][0] == 0);
     }
     printf("test_disband OK\n");
 }
@@ -1603,7 +1637,8 @@ static void test_save_load(void)
     g->map_weather_on = 1; g->weather_on = 0;
     g->map_night_on = 1;   g->night_on = 0;
     /* v18: 研究ポイントと超兵器の建造状況 */
-    g->lab_points[0] = 3210; g->lab_points[1] = 77;
+    g->lab_points[0][0] = 3210; g->lab_points[0][1] = 41; g->lab_points[0][2] = 5;
+    g->lab_points[1][2] = 77;
     g->sw_build[1][2].active = 1; g->sw_build[1][2].x = 5; g->sw_build[1][2].y = 6;
     g->sw_build[1][2].left = 2;   g->sw_build[1][2].type = 42;
 
@@ -1618,7 +1653,8 @@ static void test_save_load(void)
 
     CHECK(g2.w == g->w && g2.h == g->h);
     CHECK(g2.funds[0] == 4321);
-    CHECK(g2.lab_points[0] == 3210 && g2.lab_points[1] == 77);
+    CHECK(g2.lab_points[0][0] == 3210 && g2.lab_points[0][1] == 41 &&
+          g2.lab_points[0][2] == 5 && g2.lab_points[1][2] == 77);
     CHECK(g2.sw_build[1][2].active == 1 && g2.sw_build[1][2].x == 5 &&
           g2.sw_build[1][2].y == 6 && g2.sw_build[1][2].left == 2 &&
           g2.sw_build[1][2].type == 42);

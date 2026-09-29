@@ -1293,7 +1293,8 @@ static void confirm_at(App *a, int hx, int hy)
          * 以前は1体でも居ると必ずそれが選ばれ、工場の上空を自軍機が
          * 飛んでいるだけで（地上レイヤーは空いているのに）生産できなかった。
          * -1 が「生産」を表す。 */
-        bool can_prod = game_can_produce_at(g, g->current, hx, hy);
+        bool can_prod = game_can_produce_at(g, g->current, hx, hy) ||
+                        game_can_open_lab(g, g->current, hx, hy);
         if (can_prod) own[n++] = -1;
 
         if (n == 1) {
@@ -2288,12 +2289,14 @@ static void draw_topbar(App *a)
 
     /* 研究ポイント（研究所のあるマップか、ポイントを持っているときだけ） */
     {
-        bool has_lab = g->lab_points[g->current] > 0;
+        bool has_lab = false;
+        for (int d = 0; d < 3; d++) if (g->lab_points[g->current][d] > 0) has_lab = true;
         for (int y = 0; y < g->h && !has_lab; y++)
             for (int x = 0; x < g->w && !has_lab; x++)
                 if (g->terrains[g->tiles[y][x].terrain].is_lab) has_lab = true;
         if (has_lab) {
-            snprintf(buf, sizeof buf, tx("TOP_LAB_FMT"), g->lab_points[g->current]);
+            snprintf(buf, sizeof buf, tx("TOP_LAB_FMT"), g->lab_points[g->current][0],
+                     g->lab_points[g->current][1], g->lab_points[g->current][2]);
             draw_text(a, a->font_m, tx_, 6, (SDL_Color){ 150, 210, 255, 255 }, buf);
             tx_ += text_width(a, a->font_m, buf) + 24;
         }
@@ -2797,7 +2800,7 @@ static void draw_menus(App *a)
                          unit_name_of(&g->types[t], g->current));
                 draw_text(a, a->font_m, r.x + 14, r.y + 7, ok ? COL_WHITE : COL_DIM, sb);
                 snprintf(sb, sizeof sb, tx("PROD_SW_COST_FMT"),
-                         g->lab_points[g->current], g->types[t].cost,
+                         g->lab_points[g->current][g->types[t].superweapon - 1], g->types[t].cost,
                          g->types[t].cost, SW_BUILD_TURNS);
                 int sw_w = text_width(a, a->font_s, sb);
                 draw_text(a, a->font_s, r.x + r.w - 14 - sw_w, r.y + 12,

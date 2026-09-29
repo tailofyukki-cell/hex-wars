@@ -31,10 +31,10 @@ funds4           = 2600
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxxxxx........................xxxxxxxx
-row = xxxxx...............cL.............xxxxx
+row = xxxxx...............c..............xxxxx
 row = xxxx................................xxxx
 row = xxx.............c.f.H.f.c............xxx
-row = xxx..................................xxx
+row = xxx..................L...............xxx
 row = xxx.................c................xxx
 row = xx...........w.............w..........xx
 row = xx.........wwwww.........wwwww........xx
@@ -49,8 +49,8 @@ row = xx............^^hhhh.....^^...........xx
 row = xx...c........^^h......ch^^h......c...xx
 row = xxc...........^...f......h^..........cxx
 row = xx.f.H.f.c...==.c...H.....==..c.f.H.f.xx
-row = xx.L..........=h.c....f...=...........xx
-row = xx...c.......h^^hh...L..c^^.......cL..xx
+row = xx...L........=h.c....f...=.......L...xx
+row = xx...c.......h^^hh...L..c^^.......c...xx
 row = xx............^^...f..hhh^^h..........xx
 row = xx.......w.....^^...hhhh^^.....w......xx
 row = xx.....wwwww....^^^...^^^....wwwww....xx
@@ -63,18 +63,18 @@ row = xx.........wwwww.........wwwww........xx
 row = xxx..........w......c......w.........xxx
 row = xxx..................................xxx
 row = xxx.............c.f.H.f.c............xxx
-row = xxxx................................xxxx
-row = xxxxx...............cL.............xxxxx
+row = xxxx................L...............xxxx
+row = xxxxx...............c..............xxxxx
 row = xxxxxxxx........................xxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [owners]
-own = 21,3,1
-own = 3,21,4
+own = 21,6,1
+own = 5,21,4
 own = 21,22,0
-own = 35,22,2
-own = 21,36,3
+own = 34,21,2
+own = 20,35,3
 own = 20,20,0
 own = 18,19,0
 own = 22,21,0

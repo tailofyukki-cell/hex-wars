@@ -39,12 +39,12 @@ row = xx~~~~~~~~c...........h......rr..................p~~~~~~~~xx
 row = xx~~~~~~~...w.......hhhhh....rr..............c.....~~~~~~~xx
 row = xx~~~~~a.wwwwwww...hhhhhhh...........................~~~~~xx
 row = xx~~~~~.wwwwwwwww...hhhhh..............w...........h.~~~~~xx
-row = xx~~~~.wwwwwwwwwww....h......rr.....wwwwwww......hhhhh~~~~xx
+row = xx~~~~Mwwwwwwwwwww....h......rr.....wwwwwww......hhhhh~~~~xx
 row = xx~~~c..fwwwwwwww............rr....wwwwwwwww....hhhhhhc~~~xx
 row = xx~~~....wwwwwww.............rr.....wwwwwww......hhfhh.~~~xx
-row = xx~~L.......w...^............rr........w...........h....~~xx
+row = xx~~........w...^............rr........w...........h....~~xx
 row = xx~~..........^^^^^..........rr............^............~~xx
-row = xx~~.H......f^^^^^^^.....................^^^^^..........~~xx
+row = xx~~LH......f^^^^^^^.....................^^^^^..........~~xx
 row = xx~~..........^^^^^.....................^^^^^^^f......H.~~xx
 row = xx~~............^............rr..........^^^^^..........~~xx
 row = xx~~....h...........w........rr............^...w........~~xx
@@ -69,7 +69,8 @@ row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [owners]
-own = 4,19,0
+own = 4,21,0
+own = 6,16,0
 own = 5,21,0
 own = 54,22,1
 own = 8,17,0

@@ -12,9 +12,9 @@ funds1 = 2250
 [terrain]
 row = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 row = xxxxaxxxcxxxxxxxxxxxxxxxxxxxxxxxxxfxxfcxxx
-row = xxxx...w...........xxxxx............L...xx
-row = xxxx.L.Hwfc.........xxxx........w.aa.....x
-row = xxx.fa.www..........xxx..ww........H.....x
+row = xxxx...w...........xxxxx...........M....xx
+row = xxxxM.LHwfc.........xxxx........w.aa.....x
+row = xxx.fa.www..........xxx..ww........HL....x
 row = xxx....www..........xxx..ww...........c..x
 row = xxxx.................xx............w.ww..x
 row = xxxx...............w....................xx
@@ -37,8 +37,10 @@ row = xxxxxxxxxxxxxxxxxxx......xxxxxxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxxxxxxx.....xxxxxxxxxxxxxxxxx
 
 [owners]
-own = 5,3,0
-own = 36,2,1
+own = 6,3,0
+own = 4,3,0
+own = 36,4,1
+own = 35,2,1
 own = 7,3,0
 own = 9,3,0
 own = 4,4,0

@@ -6,12 +6,12 @@
 
 | | 数 |
 |---|---|
-| 参照されているパス | 105 |
+| 参照されているパス | 107 |
 | うち実体あり | 78 |
-| うち**未用意** | **27** |
+| うち**未用意** | **29** |
 
 
-## 地形（マップのセル）（17本）
+## 地形（マップのセル）（19本）
 
 定義場所: `data/terrain.def` の `image =`
 
@@ -26,7 +26,9 @@
 | `gfx/terrain/river.png` | RIVER（River） | ○ | 192x192 |
 | `gfx/terrain/sea.png` | SEA（Sea） | ○ | 192x192 |
 | `gfx/terrain/city.png` | CITY（City） | ○ | 192x192 |
-| `gfx/terrain/lab.png` | LAB（Laboratory） | **未** | - |
+| `gfx/terrain/lab.png` | LAB_LAND（Land Laboratory） | **未** | - |
+| `gfx/terrain/lab_air.png` | LAB_AIR（Air Laboratory） | **未** | - |
+| `gfx/terrain/lab_sea.png` | LAB_SEA（Naval Laboratory） | **未** | - |
 | `gfx/terrain/factory.png` | FACTORY（Factory） | ○ | 192x192 |
 | `gfx/terrain/airport.png` | AIRPORT（Airport） | ○ | 192x192 |
 | `gfx/terrain/port.png` | PORT（Port） | ○ | 192x192 |
@@ -156,7 +158,9 @@
 
 | パス | 用途 | 描き方のメモ |
 |---|---|---|
-| `gfx/terrain/lab.png` | LAB（Laboratory） | 研究所。192x192の正方形、真上から見た屋根。超兵器の研究施設なので、都市より無機質でアンテナや円形の設備があるとよい。基調色は terrain.def の color（B8C8D8） |
+| `gfx/terrain/lab.png` | LAB_LAND（Land Laboratory） | 陸の研究所。192x192の正方形、真上から見た屋根。超兵器の研究施設なので、都市より無機質でアンテナや円形の設備があるとよい。基調色は terrain.def の color（B8C8D8） |
+| `gfx/terrain/lab_air.png` | LAB_AIR（Air Laboratory） | 空の研究所。192x192の正方形、真上から見た絵。滑走路と格納庫がそろった、空港より研究施設らしい見た目（レーダー、風洞など）。基調色は C4C8E0 |
+| `gfx/terrain/lab_sea.png` | LAB_SEA（Naval Laboratory） | 海の研究所。192x192の正方形、真上から見た絵。海の上に建つ施設なので、海の波の上に桟橋と建物が載る形（周りは海として描く）。基調色は A8C0D0 |
 | `gfx/terrain/airstrip.png` | AIRSTRIP（Airstrip） |  |
 | `gfx/terrain/anchorage.png` | ANCHORAGE（Anchorage） |  |
 | `gfx/terrain/rubble.png` | RUBBLE（Rubble） |  |

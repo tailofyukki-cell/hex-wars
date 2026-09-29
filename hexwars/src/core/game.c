@@ -395,12 +395,29 @@ bool game_can_disband(const Game *g, int ui)
     return game_first_cargo(g, ui) < 0;
 }
 
-/* 自軍の研究所の上にいるか（そこで解隊すると研究ポイントになる） */
+int game_lab_domain(const Game *g, int x, int y)
+{
+    return g->terrains[g->tiles[y][x].terrain].is_lab;
+}
+
+/* 部隊の領域に対応する研究所の種類（1=陸 2=空 3=海）。潜水艦は海 */
+int game_unit_lab_domain(const Game *g, int ui)
+{
+    switch ((MoveClass)g->types[g->units[ui].type].mclass) {
+    case MC_AIR: return 2;
+    case MC_SEA: case MC_SUB: return 3;
+    default: return 1;
+    }
+}
+
+/* 自軍の研究所の上にいて、しかも同じ領域の部隊か。その場合だけ、解隊すると
+ * 資金ではなく研究ポイントになる（陸の研究所で艦は解隊できない、など） */
 bool game_on_own_lab(const Game *g, int ui)
 {
     const Unit *u = &g->units[ui];
     const Tile *t = &g->tiles[u->pos.y][u->pos.x];
-    return t->owner == u->owner && g->terrains[t->terrain].is_lab;
+    return t->owner == u->owner &&
+           g->terrains[t->terrain].is_lab == game_unit_lab_domain(g, ui);
 }
 
 int game_disband_unit(Game *g, int ui)
@@ -408,7 +425,7 @@ int game_disband_unit(Game *g, int ui)
     if (!game_can_disband(g, ui)) return -1;
     Unit *u = &g->units[ui];
     int refund = game_disband_refund(g, ui);
-    if (game_on_own_lab(g, ui)) g->lab_points[u->owner] += refund;
+    if (game_on_own_lab(g, ui)) g->lab_points[u->owner][game_unit_lab_domain(g, ui) - 1] += refund;
     else                        g->funds[u->owner] += refund;
     u->flags = 0;
     u->hp = 0;
@@ -420,19 +437,20 @@ int game_disband_unit(Game *g, int ui)
 /* ------------------------------------------------------------------ */
 /* 超兵器の建造                                                        */
 /* ------------------------------------------------------------------ */
-/* 領域（1=陸 2=空 3=海）ごとの建造場所: 陸=自軍の工場、空=自軍の空港、海=自軍の港。
- * 首都は陸を生産できるが、建造場所にはしない（研究所と同じく守る場所なので）。 */
+/* 領域（1=陸 2=空 3=海）ごとの建造場所: その領域の自軍の研究所の上。
+ * 研究所では超兵器しか作れない（game_can_produce_at は研究所を弾く）。 */
 static bool sw_site_ok(const Game *g, int p, int sw, int x, int y)
 {
     const Tile *t = &g->tiles[y][x];
-    const TerrainType *tt = &g->terrains[t->terrain];
-    if (t->owner != p) return false;
-    switch (sw) {
-    case 1: return tt->produces == PROD_LAND && !tt->is_hq;
-    case 2: return tt->produces == PROD_AIR;
-    case 3: return tt->produces == PROD_SEA;
-    default: return false;
-    }
+    return t->owner == p && g->terrains[t->terrain].is_lab == sw;
+}
+
+/* 自軍の研究所の上で、まだ建造中でなければ、建造メニューを開ける */
+bool game_can_open_lab(const Game *g, int p, int x, int y)
+{
+    const Tile *t = &g->tiles[y][x];
+    return t->owner == p && g->terrains[t->terrain].is_lab &&
+           !game_sw_building_at(g, x, y);
 }
 
 bool game_sw_building_at(const Game *g, int x, int y)
@@ -464,7 +482,7 @@ int game_sw_check(const Game *g, int p, int x, int y, int type)
     int sw = ut->superweapon;
     if (!sw || !sw_site_ok(g, p, sw, x, y) || game_sw_building_at(g, x, y)) return 1;
     if (game_sw_taken(g, p, sw)) return 2;
-    if (g->lab_points[p] < ut->cost) return 3;
+    if (g->lab_points[p][sw - 1] < ut->cost) return 3;
     if (g->funds[p] < ut->cost) return 4;
     return 0;
 }
@@ -474,7 +492,7 @@ bool game_sw_order(Game *g, int p, int x, int y, int type)
 {
     if (game_sw_check(g, p, x, y, type) != 0) return false;
     const UnitType *ut = &g->types[type];
-    g->lab_points[p] -= ut->cost;
+    g->lab_points[p][ut->superweapon - 1] -= ut->cost;
     g->funds[p] -= ut->cost;
     int k = ut->superweapon - 1;
     g->sw_build[p][k].active = 1;
@@ -498,7 +516,7 @@ static void sw_advance(Game *g, int p)
         if (type < 0 || type >= g->n_types) { g->sw_build[p][k].active = 0; continue; }
         const UnitType *ut = &g->types[type];
         if (!sw_site_ok(g, p, k + 1, x, y)) {
-            g->lab_points[p] += ut->cost;
+            g->lab_points[p][k] += ut->cost;
             g->funds[p] += ut->cost;
             g->sw_build[p][k].active = 0;
             continue;
@@ -978,6 +996,7 @@ bool game_type_buildable_at(const Game *g, int x, int y, int type)
 bool game_can_produce_at(const Game *g, int player, int x, int y)
 {
     if (game_sw_building_at(g, x, y)) return false;   /* 超兵器の建造中 */
+    if (g->terrains[g->tiles[y][x].terrain].is_lab) return false;   /* 研究所は超兵器だけ */
     const Tile *tile = &g->tiles[y][x];
     const TerrainType *t = &g->terrains[tile->terrain];
     if (t->produces == PROD_NONE) return false;

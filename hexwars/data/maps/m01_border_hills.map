@@ -16,10 +16,10 @@ row = xxxxxxxxxxxxxxx..............xxxxxxxxxxxxx
 row = xxxxxxxxxxxxxxx.ww.w...........xxxxxxxxxxx
 row = xxxxxxxxxxxxxf.............hhhhxxxxxxxxxxx
 row = xxxxxxxxxxxxxf.............hhhhxxxxxxxxxxx
-row = xxxxxxxxxxxxxxLw....w..w...hhhhhxxxxxxxxxx
+row = xxxxxxxxxxxxxx.w....w..w...hhhhhxxxxxxxxxx
 row = xxxxxxxxxxxxwwww...w.....hhhhhh.xxxxxxxxxx
-row = xxxxxxxxxxxxHca...www....^^^h....xxxxxxxxx
-row = xxxxxxxxxxxx......www....^^^hc...xxxxxxxxx
+row = xxxxxxxxxxxxHcaM..www....^^^h....xxxxxxxxx
+row = xxxxxxxxxxxxL.....www....^^^hc...xxxxxxxxx
 row = xxxxxxxxxxx=====........^hhh.....xxxxxxxxx
 row = xxxxxxxxxxxwa...==...hhh^hhh.......xxxxxxx
 row = xxxxxxxxxc..c...==..hhh^hhh........xxxxxxx
@@ -30,10 +30,10 @@ row = xxxxxxxxxx......hhh^hc.....=...w....xxxxxx
 row = xxxxxxxxxx......hhh^h......=...wcc..xxxxxx
 row = xxxxxxxxxx.....hhh^hhww....=====.c.xxxxxxx
 row = xxxxxxxxxxx....hhh^hh...........=..xxxxxxx
-row = xxxxxxxxxxx..c.h^^w...........a.=xxxxxxxxx
+row = xxxxxxxxxxx..c.h^^w...........aM=xxxxxxxxx
 row = xxxxxxxxxxx....h^^w.........ffH.=xxxxxxxxx
-row = xxxxxxxxxxxx..hh^^...ww.......a.wxxxxxxxxx
-row = xxxxxxxxxxxxhhhh...............Lxxxxxxxxxx
+row = xxxxxxxxxxxx..hh^^...ww.......aLwxxxxxxxxx
+row = xxxxxxxxxxxxhhhh................xxxxxxxxxx
 row = xxxxxxxxxxxxxxhh...w............xxxxxxxxxx
 row = xxxxxxxxxxxxxxhh...w............xxxxxxxxxx
 row = xxxxxxxxxxxxxxh........w.......xxxxxxxxxxx
@@ -41,8 +41,10 @@ row = xxxxxxxxxxxxxxx........ww......xxxxxxxxxxx
 row = xxxxxxxxxxxxxxx.ww.wwww......xxxxxxxxxxxxx
 
 [owners]
-own = 14,6,0
-own = 31,23,1
+own = 12,9,0
+own = 15,8,0
+own = 31,22,1
+own = 31,20,1
 own = 12,8,0
 own = 13,5,0
 own = 13,4,0

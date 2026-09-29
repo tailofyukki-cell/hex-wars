@@ -198,7 +198,7 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
     for (int p = 0; p < MAX_PLAYERS; p++) w_u8(w, g->co_used_turn[p]);
     /* v18: 研究ポイントと超兵器の建造状況 */
     for (int p = 0; p < MAX_PLAYERS; p++) {
-        w_u32(w, (uint32_t)g->lab_points[p]);
+        for (int d = 0; d < 3; d++) w_u32(w, (uint32_t)g->lab_points[p][d]);
         for (int k = 0; k < 3; k++) {
             w_u8(w, g->sw_build[p][k].active);
             w_u8(w, g->sw_build[p][k].x);
@@ -387,7 +387,9 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
     memset(g->sw_build, 0, sizeof g->sw_build);
     if (ver >= 18)
         for (int p = 0; p < MAX_PLAYERS; p++) {
-            g->lab_points[p] = (int32_t)r_u32(r);
+            /* v18 は全領域共通の1つだけ。領域ごとになる前の仕様なので陸に入れる */
+            if (ver >= 19) for (int d = 0; d < 3; d++) g->lab_points[p][d] = (int32_t)r_u32(r);
+            else           g->lab_points[p][0] = (int32_t)r_u32(r);
             for (int k = 0; k < 3; k++) {
                 g->sw_build[p][k].active = r_u8(r);
                 g->sw_build[p][k].x = r_u8(r);

@@ -217,7 +217,7 @@ typedef struct {
     int16_t  mcost[MC_COUNT];     /* 移動コスト（2倍整数、0=進入不可） */
     int16_t  income;              /* 収入 */
     uint8_t  capturable;          /* 占領対象か */
-    uint8_t  is_lab;              /* 研究所（lab = 1）。自軍の研究所で解隊すると研究ポイント */
+    uint8_t  is_lab;              /* 研究所の領域（lab = 1 陸 / 2 空 / 3 海。0=研究所でない） */
     uint8_t  produces;            /* ProduceCat */
     uint8_t  supplies;            /* 補給対象 MoveClass のビットマスク */
     uint8_t  hide;                /* 1=隣接しないと中の敵を視認不可 */

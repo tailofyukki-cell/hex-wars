@@ -783,36 +783,31 @@ static bool ai_try_co_power(Game *g, AiState *s, int phase)
  * 研究所へ向かわせる。敵が1体も見えていない領域では解隊しない（霧の中で戦力を
  * 捨てないため）。余りを全部解隊しても目標のポイントに届かないなら、始めない
  * （遠い目標のために戦力を削らない）。海の部隊は研究所へ行けないので対象外。 */
-static int sw_goal_type(const Game *g, int me)
+static int sw_goal_type(const Game *g, int me, int sw)
 {
-    int best = -1;
     for (int t = 0; t < g->n_types; t++) {
-        int sw = g->types[t].superweapon;
-        if (!sw || game_sw_taken(g, me, sw)) continue;
-        bool site = false;                         /* 建造できる拠点を持っているか */
-        for (int y = 0; y < g->h && !site; y++)
-            for (int x = 0; x < g->w && !site; x++) {
-                int c = game_sw_check(g, me, x, y, t);
-                if (c != 1) site = true;
-            }
-        if (!site) continue;
-        if (best < 0 || g->types[t].cost < g->types[best].cost) best = t;
+        if (g->types[t].superweapon != sw || game_sw_taken(g, me, sw)) continue;
+        /* その領域の自軍の研究所を持っていること（無ければ作れない） */
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++)
+                if (game_sw_check(g, me, x, y, t) != 1) return t;
     }
-    return best;
+    return -1;
 }
 
-static void plan_lab(Game *g, AiState *s)
+/* 領域ごと（sw=1 陸 / 2 空 / 3 海）に、研究所へ向かわせて解隊する部隊を決める。
+ * 領域 dom = sw-1 の戦力（値段×HP）が、見えている敵の同じ領域の戦力の1.5倍を
+ * 超える分だけを余りとする。敵が見えていない領域では解隊しない。 */
+static void plan_lab_domain(Game *g, AiState *s, int sw)
 {
-    int me = g->current;
-    memset(s->to_lab, 0, sizeof s->to_lab);
-    s->lab_x = s->lab_y = -1;
-    s->sw_saving = false;
-    int goal = sw_goal_type(g, me);
+    int me = g->current, d = sw - 1;
+    s->lab_x[d] = s->lab_y[d] = -1;
+    int goal = sw_goal_type(g, me, sw);
     if (goal < 0) return;
     int need = g->types[goal].cost;
 
     /* ポイントは足りている: 資金が3手番以内に貯まるなら普通の生産を控える */
-    if (g->lab_points[me] >= need) {
+    if (g->lab_points[me][d] >= need) {
         int inc = 0;
         for (int y = 0; y < g->h; y++)
             for (int x = 0; x < g->w; x++)
@@ -820,47 +815,46 @@ static void plan_lab(Game *g, AiState *s)
         if (g->funds[me] < need && g->funds[me] + inc * 3 >= need) s->sw_saving = true;
         return;
     }
-    /* 自軍の研究所（自分の首都に近いものを1つ） */
+    /* 自軍のその領域の研究所（首都に近いもの） */
     int best = 1 << 30;
     for (int y = 0; y < g->h; y++)
         for (int x = 0; x < g->w; x++) {
             const Tile *t = &g->tiles[y][x];
-            if (t->owner != me || !g->terrains[t->terrain].is_lab) continue;
-            int d = 0;
+            if (t->owner != me || g->terrains[t->terrain].is_lab != sw) continue;
+            int dist = 0;
             for (int yy = 0; yy < g->h; yy++)
                 for (int xx = 0; xx < g->w; xx++)
                     if (g->tiles[yy][xx].owner == me && g->terrains[g->tiles[yy][xx].terrain].is_hq)
-                        d = hex_distance(x, y, xx, yy);
-            if (d < best) { best = d; s->lab_x = x; s->lab_y = y; }
+                        dist = hex_distance(x, y, xx, yy);
+            if (dist < best) { best = dist; s->lab_x[d] = x; s->lab_y[d] = y; }
         }
-    if (s->lab_x < 0) return;
+    if (s->lab_x[d] < 0) return;
 
-    /* 領域ごとの戦力（0=陸 1=空） */
-    long mine[2] = { 0, 0 }, foe[2] = { 0, 0 };
+    long mine = 0, foe = 0;
     for (int i = 0; i < g->n_units; i++) {
         const Unit *u = &g->units[i];
         if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
-        const UnitType *t = &g->types[u->type];
-        int dom = domain_from_mclass(t->mclass);
-        if (dom > 1) continue;
-        long v = (long)t->cost * u->hp / 10;
-        if (u->owner == me) mine[dom] += v;
-        else if (game_is_enemy(g, me, u->owner) && game_unit_visible_to(g, me, u)) foe[dom] += v;
+        if (game_unit_lab_domain(g, i) != sw) continue;
+        long v = (long)g->types[u->type].cost * u->hp / 10;
+        if (u->owner == me) mine += v;
+        else if (game_is_enemy(g, me, u->owner) && game_unit_visible_to(g, me, u)) foe += v;
     }
-    /* 候補: 余りのある領域の、安い（値段×HP の小さい）部隊から。
-     * 超兵器・占領役・補給・輸送は残す。研究所から遠すぎる部隊は外す */
+    /* 敵の同じ領域の部隊が見えているときは、こちらの戦力がその1.5倍を超えた分が余り。
+     * 空は敵機が霧の中で見えないことが多く、見えるまで待つと一度も解隊しない。
+     * 見えていない間は、自軍の戦力の1/4までを余りとする（見えないだけで敵が
+     * いないとは限らないので、全部は使わない）。 */
+    long surplus = (foe > 0) ? mine - foe * 3 / 2 : mine / 4;
+    if (surplus <= 0) return;
+
+    /* 候補: 超兵器・占領役・補給・輸送は残す。研究所から遠すぎる部隊は外す */
     int cand[MAX_UNITS], nc = 0;
-    long surplus[2];
-    for (int d = 0; d < 2; d++)
-        surplus[d] = (foe[d] > 0) ? mine[d] - foe[d] * 3 / 2 : 0;
     for (int i = 0; i < g->n_units; i++) {
         const Unit *u = &g->units[i];
         if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED) || u->owner != me) continue;
+        if (game_unit_lab_domain(g, i) != sw) continue;
         const UnitType *t = &g->types[u->type];
-        int dom = domain_from_mclass(t->mclass);
-        if (dom > 1 || surplus[dom] <= 0) continue;
         if (t->superweapon || t->can_capture || t->supply || type_unarmed(t)) continue;
-        if (hex_distance(u->pos.x, u->pos.y, s->lab_x, s->lab_y) > t->move * 3) continue;
+        if (hex_distance(u->pos.x, u->pos.y, s->lab_x[d], s->lab_y[d]) > t->move * 3) continue;
         cand[nc++] = i;
     }
     for (int i = 1; i < nc; i++) {                 /* 値打ちの小さい順 */
@@ -871,19 +865,25 @@ static void plan_lab(Game *g, AiState *s)
         }
         cand[j + 1] = c;
     }
-    long pts = g->lab_points[me];
+    long pts = g->lab_points[me][d];
     int pick[MAX_UNITS], np = 0;
     for (int i = 0; i < nc && pts < need; i++) {
         const Unit *u = &g->units[cand[i]];
-        int dom = domain_from_mclass(g->types[u->type].mclass);
         long v = (long)g->types[u->type].cost * u->hp / 10;
-        if (v > surplus[dom]) continue;
-        surplus[dom] -= v;
+        if (v > surplus) continue;
+        surplus -= v;
         pts += game_disband_refund(g, cand[i]);
         pick[np++] = cand[i];
     }
     if (pts < need) return;                        /* 余りを全部使っても届かない */
     for (int i = 0; i < np; i++) s->to_lab[pick[i]] = 1;
+}
+
+static void plan_lab(Game *g, AiState *s)
+{
+    memset(s->to_lab, 0, sizeof s->to_lab);
+    s->sw_saving = false;
+    for (int sw = 1; sw <= 3; sw++) plan_lab_domain(g, s, sw);
 }
 
 void ai_begin_turn(Game *g, AiState *s)
@@ -922,29 +922,33 @@ static void act_unit(Game *g, AiState *s, int ui)
     bool hard = g->ctrl[me] == CTRL_CPU_HARD;
 
     /* 研究所へ向かう部隊: 研究所に一番近い所まで動き、着いたら解隊する */
-    if (s->to_lab[ui] && s->lab_x >= 0) {
-        s->last_unit = ui;
-        s->last_target = -1;
-        if (!(u->pos.x == s->lab_x && u->pos.y == s->lab_y)) {
-            path_move_range(g, ui, &s_mr);
-            Layer L = unit_layer(mc);
-            int bx = u->pos.x, by = u->pos.y;
-            int bd = hex_distance(bx, by, s->lab_x, s->lab_y);
-            for (int y = 0; y < g->h; y++)
-                for (int x = 0; x < g->w; x++) {
-                    if (s_mr.cost[y][x] < 0 || !s_mr.stop[y][x]) continue;
-                    int occ = game_unit_at_layer(g, x, y, L);
-                    if (occ >= 0 && occ != ui) continue;
-                    int d = hex_distance(x, y, s->lab_x, s->lab_y);
-                    if (d < bd) { bd = d; bx = x; by = y; }
-                }
-            int fx, fy, fuel;
-            path_walk(g, ui, &s_mr, bx, by, &fx, &fy, &fuel);
-            game_move_unit(g, ui, fx, fy, fuel);
+    if (s->to_lab[ui]) {
+        int dm = game_unit_lab_domain(g, ui) - 1;
+        int lx = s->lab_x[dm], ly = s->lab_y[dm];
+        if (lx >= 0) {
+            s->last_unit = ui;
+            s->last_target = -1;
+            if (!(u->pos.x == lx && u->pos.y == ly)) {
+                path_move_range(g, ui, &s_mr);
+                Layer L = unit_layer(mc);
+                int bx = u->pos.x, by = u->pos.y;
+                int bd = hex_distance(bx, by, lx, ly);
+                for (int y = 0; y < g->h; y++)
+                    for (int x = 0; x < g->w; x++) {
+                        if (s_mr.cost[y][x] < 0 || !s_mr.stop[y][x]) continue;
+                        int occ = game_unit_at_layer(g, x, y, L);
+                        if (occ >= 0 && occ != ui) continue;
+                        int dd = hex_distance(x, y, lx, ly);
+                        if (dd < bd) { bd = dd; bx = x; by = y; }
+                    }
+                int fx, fy, fuel;
+                path_walk(g, ui, &s_mr, bx, by, &fx, &fy, &fuel);
+                game_move_unit(g, ui, fx, fy, fuel);
+            }
+            if (game_on_own_lab(g, ui)) game_disband_unit(g, ui);
+            else if (g->units[ui].flags & UF_ALIVE) game_wait_unit(g, ui);
+            return;
         }
-        if (game_on_own_lab(g, ui)) game_disband_unit(g, ui);
-        else if (g->units[ui].flags & UF_ALIVE) game_wait_unit(g, ui);
-        return;
     }
 
     /* 進化: できるなら進化する（rank5 は上限で、貯め続けても無駄になるため）。

@@ -30,7 +30,7 @@ typedef struct {
      * focused[敵] = 誰かに割り当てた敵か。 */
     /* 研究所へ向かわせて解隊する部隊（plan_lab が決める）と、向かう研究所 */
     uint8_t to_lab[MAX_UNITS];
-    int     lab_x, lab_y;
+    int     lab_x[3], lab_y[3];      /* 領域ごと（0=陸 1=空 2=海）の向かう研究所。-1=なし */
     /* 超兵器のために資金を貯める手番か（普通の生産を控える） */
     bool    sw_saving;
     int16_t focus[MAX_UNITS];
