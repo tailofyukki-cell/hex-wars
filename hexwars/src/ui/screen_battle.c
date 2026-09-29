@@ -2329,18 +2329,29 @@ static void draw_topbar(App *a)
 
     /* 昼夜。周期が固定なので残りターン数を出すと作戦が立てられる。
      * 天候の隣に置く（どちらも「今の戦場の条件」なので並んでいた方が読みやすい）。 */
-    if (g->night_on) {
-        bool nite = game_is_night(g);
-        snprintf(buf, sizeof buf, tx("TOP_PHASE_FMT"),
-                 tx(nite ? "PHASE_NIGHT" : "PHASE_DAY"), game_phase_left(g));
+    {
+        /* 昼夜なしのマップ（序盤の作戦など）は常に昼。切り替わらないので
+         * 「あと◯」は出さず、「昼（常時）」とだけ出す。表示が無いと、昼夜のある
+         * マップと違って雨の日に昼か夜か分からない。昼夜ありのマップと区別できるよう、
+         * 枠と色は控えめにしてある。 */
+        bool fixed = !g->night_on;
+        bool nite = !fixed && game_is_night(g);
+        if (fixed)
+            snprintf(buf, sizeof buf, "%s", tx("PHASE_DAY_FIXED"));
+        else
+            snprintf(buf, sizeof buf, tx("TOP_PHASE_FMT"),
+                     tx(nite ? "PHASE_NIGHT" : "PHASE_DAY"), game_phase_left(g));
         /* 雨や曇りの日は画面が暗く、昼か夜か見分けにくい。絵と、枠で囲んだ
          * はっきりした色の文字で、天候の表示とは別にいつも示す。 */
         SDL_Color pc = nite ? (SDL_Color){ 170, 190, 255, 255 }
-                            : (SDL_Color){ 255, 225, 120, 255 };
+                     : fixed ? (SDL_Color){ 215, 195, 130, 255 }
+                             : (SDL_Color){ 255, 225, 120, 255 };
         int pw = text_width(a, a->font_m, buf);
         fill_rect(a, tx_ - 4, 4, 24 + pw + 8, 28,
-                  nite ? (SDL_Color){ 30, 38, 78, 235 } : (SDL_Color){ 88, 70, 24, 235 });
-        outline_rect(a, tx_ - 4, 4, 24 + pw + 8, 28, pc);
+                  nite ? (SDL_Color){ 30, 38, 78, 235 }
+                       : fixed ? (SDL_Color){ 60, 52, 30, 235 }
+                               : (SDL_Color){ 88, 70, 24, 235 });
+        outline_rect(a, tx_ - 4, 4, 24 + pw + 8, 28, fixed ? COL_DIM : pc);
         render_phase_icon(a, tx_, 9, nite);
         draw_text(a, a->font_m, tx_ + 24, 6, pc, buf);
         tx_ += 24 + pw + 24;

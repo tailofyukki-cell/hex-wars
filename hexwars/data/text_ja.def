@@ -165,6 +165,7 @@ WX_RAIN         = 雨
 TOP_PHASE_FMT   = %s（あと%d）
 PHASE_DAY       = 昼
 PHASE_NIGHT     = 夜
+PHASE_DAY_FIXED = 昼（常時）
 BTN_MENU        = メニュー (E)
 CPU_THINKING    = CPU 思考中…
 HANDOVER_FMT    = %s軍の手番です

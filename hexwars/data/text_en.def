@@ -170,6 +170,7 @@ WX_RAIN         = Rain
 TOP_PHASE_FMT   = %s (%d left)
 PHASE_DAY       = Day
 PHASE_NIGHT     = Night
+PHASE_DAY_FIXED = Day (always)
 BTN_MENU        = Menu (E)
 CPU_THINKING    = CPU is thinking...
 HANDOVER_FMT    = %s's turn
