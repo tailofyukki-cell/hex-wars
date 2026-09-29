@@ -860,6 +860,28 @@ void render_weather_fx(App *a, int weather, uint32_t frame)
     }
 }
 
+/* 上のバーに出す昼夜のアイコン。天候のアイコンは晴れの日だけ太陽／月になり、
+ * 雨・曇りでは雲だけになって昼か夜か分からなくなるので、昼夜は天候とは別に
+ * いつも描く。昼は太陽、夜は三日月と星。 */
+void render_phase_icon(App *a, int x, int y, bool nite)
+{
+    float cx = (float)x + 9.0f, cy = (float)y + 9.0f;
+    if (!nite) {
+        const SDL_Color SUN = { 250, 205, 90, 255 };
+        for (int i = 0; i < 8; i++) {
+            float an = (float)i * 3.14159f / 4.0f;
+            fill_circle(a, cx + cosf(an) * 8.0f, cy + sinf(an) * 8.0f, 1.6f, SUN);
+        }
+        fill_circle(a, cx, cy, 5.0f, SUN);
+        return;
+    }
+    const SDL_Color MOON = { 205, 216, 245, 255 };
+    fill_circle(a, cx, cy, 6.0f, MOON);
+    fill_circle(a, cx + 3.6f, cy - 2.0f, 5.2f, (SDL_Color){ 22, 26, 32, 255 });
+    fill_circle(a, cx + 8.0f, cy - 6.0f, 1.3f, MOON);      /* 星 */
+    fill_circle(a, cx + 5.0f, cy + 6.0f, 1.0f, MOON);
+}
+
 /* 上のバーに出す天候アイコン。文字だけだと目に入らないので絵も添える。
  * 夜の晴天は太陽ではなく月を描く（夜なのに太陽が出ていると矛盾する）。 */
 void render_weather_icon(App *a, int x, int y, int weather)

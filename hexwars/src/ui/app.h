@@ -280,6 +280,7 @@ void draw_text(App *a, TTF_Font *f, int x, int y, SDL_Color c, const char *s);
 #define TOPBAR_FX 36        /* 上のバーの高さ（ここより下だけに演出をかける） */
 void render_weather_fx(App *a, int weather, uint32_t frame);
 void render_weather_icon(App *a, int x, int y, int weather);
+void render_phase_icon(App *a, int x, int y, bool nite);   /* 昼夜（天候とは別に常に出す） */
 void draw_text_center(App *a, TTF_Font *f, int cx, int y, SDL_Color c, const char *s);
 int  text_width(App *a, TTF_Font *f, const char *s);
 

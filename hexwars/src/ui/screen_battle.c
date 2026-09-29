@@ -2330,10 +2330,17 @@ static void draw_topbar(App *a)
         bool nite = game_is_night(g);
         snprintf(buf, sizeof buf, tx("TOP_PHASE_FMT"),
                  tx(nite ? "PHASE_NIGHT" : "PHASE_DAY"), game_phase_left(g));
-        draw_text(a, a->font_s, tx_, 9,
-                  nite ? (SDL_Color){ 150, 170, 235, 255 }
-                       : (SDL_Color){ 250, 220, 130, 255 }, buf);
-        tx_ += text_width(a, a->font_s, buf) + 18;
+        /* 雨や曇りの日は画面が暗く、昼か夜か見分けにくい。絵と、枠で囲んだ
+         * はっきりした色の文字で、天候の表示とは別にいつも示す。 */
+        SDL_Color pc = nite ? (SDL_Color){ 170, 190, 255, 255 }
+                            : (SDL_Color){ 255, 225, 120, 255 };
+        int pw = text_width(a, a->font_m, buf);
+        fill_rect(a, tx_ - 4, 4, 24 + pw + 8, 28,
+                  nite ? (SDL_Color){ 30, 38, 78, 235 } : (SDL_Color){ 88, 70, 24, 235 });
+        outline_rect(a, tx_ - 4, 4, 24 + pw + 8, 28, pc);
+        render_phase_icon(a, tx_, 9, nite);
+        draw_text(a, a->font_m, tx_ + 24, 6, pc, buf);
+        tx_ += 24 + pw + 24;
     }
 
     /* 拠点確保条件（仕様書 5.10）。マップ固有の情報で毎フレーム見る類ではないので、
