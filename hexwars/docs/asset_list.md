@@ -6,12 +6,12 @@
 
 | | 数 |
 |---|---|
-| 参照されているパス | 101 |
+| 参照されているパス | 105 |
 | うち実体あり | 78 |
-| うち**未用意** | **23** |
+| うち**未用意** | **27** |
 
 
-## 地形（マップのセル）（16本）
+## 地形（マップのセル）（17本）
 
 定義場所: `data/terrain.def` の `image =`
 
@@ -26,6 +26,7 @@
 | `gfx/terrain/river.png` | RIVER（River） | ○ | 192x192 |
 | `gfx/terrain/sea.png` | SEA（Sea） | ○ | 192x192 |
 | `gfx/terrain/city.png` | CITY（City） | ○ | 192x192 |
+| `gfx/terrain/lab.png` | LAB（Laboratory） | **未** | - |
 | `gfx/terrain/factory.png` | FACTORY（Factory） | ○ | 192x192 |
 | `gfx/terrain/airport.png` | AIRPORT（Airport） | ○ | 192x192 |
 | `gfx/terrain/port.png` | PORT（Port） | ○ | 192x192 |
@@ -36,7 +37,7 @@
 | `gfx/terrain/rubble.png` | RUBBLE（Rubble） | **未** | - |
 | `gfx/terrain/rubble_port.png` | RUBBLE_PORT（Ruined Port） | **未** | - |
 
-## ユニット（42本）
+## ユニット（45本）
 
 定義場所: `data/units.def` の `image = / image0 =` 〜 `image4 =`
 
@@ -49,7 +50,7 @@
 | `gfx/units/common/at_infantry.png` | AT_INFANTRY ほか1件 | ○ | 96x96 |
 | `gfx/units/common/recon.png` | RECON ほか1件 | ○ | 96x96 |
 | `gfx/units/common/tank.png` | TANK ほか1件 | ○ | 96x96 |
-| `gfx/cutin/tank.png` | TANK ほか7件 | ○ | 520x900 |
+| `gfx/cutin/tank.png` | TANK ほか8件 | ○ | 520x900 |
 | `gfx/anim/sample_land.mp4` | TANK | ○ | - |
 | `gfx/units/common/htank.png` | HTANK ほか1件 | ○ | 96x96 |
 | `gfx/units/common/artillery.png` | ARTILLERY ほか1件 | ○ | 96x96 |
@@ -57,11 +58,11 @@
 | `gfx/units/common/truck.png` | TRUCK ほか1件 | ○ | 96x96 |
 | `gfx/units/common/t_copter.png` | T_COPTER ほか1件 | ○ | 96x96 |
 | `gfx/units/common/fighter.png` | FIGHTER ほか1件 | ○ | 96x96 |
-| `gfx/cutin/air.png` | FIGHTER ほか9件 | ○ | 520x900 |
+| `gfx/cutin/air.png` | FIGHTER ほか10件 | ○ | 520x900 |
 | `gfx/units/common/bomber.png` | BOMBER ほか1件 | ○ | 96x96 |
 | `gfx/units/common/heli.png` | HELI ほか1件 | ○ | 96x96 |
 | `gfx/units/common/destroyer.png` | DESTROYER ほか1件 | ○ | 96x96 |
-| `gfx/cutin/ship.png` | DESTROYER ほか9件 | ○ | 520x900 |
+| `gfx/cutin/ship.png` | DESTROYER ほか10件 | ○ | 520x900 |
 | `gfx/units/common/cruiser.png` | CRUISER ほか1件 | ○ | 96x96 |
 | `gfx/units/common/submarine.png` | SUBMARINE ほか1件 | ○ | 96x96 |
 | `gfx/units/common/t_ship.png` | T_SHIP ほか1件 | ○ | 96x96 |
@@ -86,6 +87,9 @@
 | `gfx/units/common/night_boat.png` | NIGHT_BOAT（Dark Boat） ほか1件 | **未** | - |
 | `gfx/units/common/night_fighter.png` | NIGHT_FIGHTER（Nighthawk） ほか1件 | **未** | - |
 | `gfx/units/common/subchaser.png` | SUBCHASER ほか1件 | ○ | 96x96 |
+| `gfx/units/common/sw_tank.png` | SW_TANK | **未** | - |
+| `gfx/units/common/sw_fortress.png` | SW_FORTRESS | **未** | - |
+| `gfx/units/common/sw_battleship.png` | SW_BATTLESHIP | **未** | - |
 
 ## 指揮官（11本）
 
@@ -150,31 +154,35 @@
 
 ## 未用意のもの
 
-| パス | 用途 |
-|---|---|
-| `gfx/terrain/airstrip.png` | AIRSTRIP（Airstrip） |
-| `gfx/terrain/anchorage.png` | ANCHORAGE（Anchorage） |
-| `gfx/terrain/rubble.png` | RUBBLE（Rubble） |
-| `gfx/terrain/rubble_port.png` | RUBBLE_PORT（Ruined Port） |
-| `gfx/units/common/engineer.png` | ENGINEER／ENGINEER_V（Master Diggers） |
-| `gfx/units/common/night_inf.png` | NIGHT_INF（Night Blades）／NIGHT_INF_V（Masters of the Dark） |
-| `gfx/units/common/night_boat.png` | NIGHT_BOAT（Dark Boat）／NIGHT_BOAT_V（Black Boat） |
-| `gfx/units/common/night_fighter.png` | NIGHT_FIGHTER（Nighthawk）／NIGHT_FIGHTER_V（Lord of the Night） |
-| `gfx/co/herta.png` | HERTA（Paymaster Capt. Herta） |
-| `gfx/co/noel.png` | NOEL（Instructor Noel） |
-| `gfx/co/dieter.png` | DIETER（Captain Dieter） |
-| `gfx/brief/m13.png` | M13 |
-| `gfx/reward/m13.png` | M13 |
-| `gfx/brief/m11.png` | M11 |
-| `gfx/reward/m11.png` | M11 |
-| `gfx/brief/m14.png` | M14 |
-| `gfx/reward/m14.png` | M14 |
-| `gfx/brief/m12.png` | M12 |
-| `gfx/reward/m12.png` | M12 |
-| `gfx/brief/m19.png` | M19 |
-| `gfx/reward/m19.png` | M19 |
-| `gfx/brief/m20.png` | M20 |
-| `gfx/reward/m20.png` | M20 |
+| パス | 用途 | 描き方のメモ |
+|---|---|---|
+| `gfx/terrain/lab.png` | LAB（Laboratory） | 研究所。192x192の正方形、真上から見た屋根。超兵器の研究施設なので、都市より無機質でアンテナや円形の設備があるとよい。基調色は terrain.def の color（B8C8D8） |
+| `gfx/terrain/airstrip.png` | AIRSTRIP（Airstrip） |  |
+| `gfx/terrain/anchorage.png` | ANCHORAGE（Anchorage） |  |
+| `gfx/terrain/rubble.png` | RUBBLE（Rubble） |  |
+| `gfx/terrain/rubble_port.png` | RUBBLE_PORT（Ruined Port） |  |
+| `gfx/units/common/engineer.png` | ENGINEER／ENGINEER_V（Master Diggers） |  |
+| `gfx/units/common/night_inf.png` | NIGHT_INF（Night Blades）／NIGHT_INF_V（Masters of the Dark） |  |
+| `gfx/units/common/night_boat.png` | NIGHT_BOAT（Dark Boat）／NIGHT_BOAT_V（Black Boat） |  |
+| `gfx/units/common/night_fighter.png` | NIGHT_FIGHTER（Nighthawk）／NIGHT_FIGHTER_V（Lord of the Night） |  |
+| `gfx/units/common/sw_tank.png` | SW_TANK | 超重戦車（陸の超兵器）。96x96の透過PNG。重戦車の一回り以上大きい車体に長砲身。移動2の遅い壁なので、どっしりした形にする。全陣営共通 |
+| `gfx/units/common/sw_fortress.png` | SW_FORTRESS | 飛行要塞（空の超兵器）。96x96の透過PNG。爆撃機より巨大で、多発エンジンと銃座が並ぶ大型機。全陣営共通 |
+| `gfx/units/common/sw_battleship.png` | SW_BATTLESHIP | 決戦航空戦艦（海の超兵器）。96x96の透過PNG。戦艦の船体に後部の飛行甲板（艦載機2機ぶん）を持つ、砲と甲板の両方が見える形。全陣営共通 |
+| `gfx/co/herta.png` | HERTA（Paymaster Capt. Herta） |  |
+| `gfx/co/noel.png` | NOEL（Instructor Noel） |  |
+| `gfx/co/dieter.png` | DIETER（Captain Dieter） |  |
+| `gfx/brief/m13.png` | M13 |  |
+| `gfx/reward/m13.png` | M13 |  |
+| `gfx/brief/m11.png` | M11 |  |
+| `gfx/reward/m11.png` | M11 |  |
+| `gfx/brief/m14.png` | M14 |  |
+| `gfx/reward/m14.png` | M14 |  |
+| `gfx/brief/m12.png` | M12 |  |
+| `gfx/reward/m12.png` | M12 |  |
+| `gfx/brief/m19.png` | M19 |  |
+| `gfx/reward/m19.png` | M19 |  |
+| `gfx/brief/m20.png` | M20 |  |
+| `gfx/reward/m20.png` | M20 |  |
 
 ## 寸法の目安
 

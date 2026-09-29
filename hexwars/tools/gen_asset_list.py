@@ -68,6 +68,23 @@ SEC = [
      "`reward_video` を書くと mp4/GIF が優先される。"),
 ]
 
+# 絵を用意するときのメモ（パス → 何をどう描くか）。未用意の表にだけ添える。
+# 新しい専用の絵を data/ に指定したら、ここにも1行足すと資料に残る。
+NOTES = {
+    "gfx/terrain/lab.png":
+        "研究所。192x192の正方形、真上から見た屋根。超兵器の研究施設なので、"
+        "都市より無機質でアンテナや円形の設備があるとよい。基調色は terrain.def の color（B8C8D8）",
+    "gfx/units/common/sw_tank.png":
+        "超重戦車（陸の超兵器）。96x96の透過PNG。重戦車の一回り以上大きい車体に長砲身。"
+        "移動2の遅い壁なので、どっしりした形にする。全陣営共通",
+    "gfx/units/common/sw_fortress.png":
+        "飛行要塞（空の超兵器）。96x96の透過PNG。爆撃機より巨大で、多発エンジンと"
+        "銃座が並ぶ大型機。全陣営共通",
+    "gfx/units/common/sw_battleship.png":
+        "決戦航空戦艦（海の超兵器）。96x96の透過PNG。戦艦の船体に後部の飛行甲板"
+        "（艦載機2機ぶん）を持つ、砲と甲板の両方が見える形。全陣営共通",
+}
+
 out = []
 out.append("# 差し替えできる画像の一覧\n")
 out.append("すべて `hexwars/assets/` からの相対パスで、**データ定義に書いた"
@@ -99,9 +116,9 @@ for cat, title, where, note in SEC:
 out.append("\n## 未用意のもの\n")
 miss = [(p, e) for p, e in uniq.items() if not e["exists"]]
 if miss:
-    out.append("| パス | 用途 |\n|---|---|")
+    out.append("| パス | 用途 | 描き方のメモ |\n|---|---|---|")
     for p, e in miss:
-        out.append("| `%s` | %s |" % (p, "／".join(e["users"])))
+        out.append("| `%s` | %s | %s |" % (p, "／".join(e["users"]), NOTES.get(p, "")))
 else:
     out.append("なし。\n")
 

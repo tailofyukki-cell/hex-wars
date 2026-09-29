@@ -124,6 +124,7 @@ repair_cost = 500
 name       = 研究所
 name@en    = Laboratory
 link_road  = 2
+image      = gfx/terrain/lab.png
 char       = L
 def        = 30
 cost_foot  = 2
