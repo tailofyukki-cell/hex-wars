@@ -86,7 +86,7 @@ static void test_data_and_battle(void)
     }
     /* 生産できる36種 + 進化先36種。進化先は no_produce なので生産に出ない。
      * 生産側の36には夜間ユニットの3種と駆潜艇を含み、それらも進化先を持つ。 */
-    CHECK(g->n_types == 75);   /* + 超兵器3種（生産不可・進化しない） */
+    CHECK(g->n_types == 78);   /* + 超兵器3種とその進化先3種（生産不可） */
     {
         int producible = 0, evo = 0, sw = 0;
         for (int i = 0; i < g->n_types; i++) {
@@ -94,7 +94,7 @@ static void test_data_and_battle(void)
             else if (g->types[i].no_produce) evo++;
             else producible++;
         }
-        CHECK(producible == 36 && evo == 36 && sw == 3);
+        CHECK(producible == 36 && evo == 36 && sw == 6);   /* 超兵器3種＋その進化先3種 */
         /* 進化先を持つ種は、その進化先が実在し、生産不可であること */
         for (int i = 0; i < g->n_types; i++) {
             if (!g->types[i].evolve_to[0]) continue;
@@ -126,7 +126,7 @@ static void test_data_and_battle(void)
         }
         /* 進化先も同じ内訳で増えるので倍になる。
          * 夜間ユニットは陸・空・海に1つずつ。駆潜艇は海。 */
-        CHECK(land == 33 && air == 19 && sea == 23);   /* 超兵器が陸・空・海に1つずつ */
+        CHECK(land == 34 && air == 20 && sea == 24);   /* 超兵器（と進化先）が陸・空・海に2つずつ */
     }
     /* 画像指定（image=）が全陣営分に読めていること。
      * 陣営2〜4 が抜けると、乱戦マップでその陣営だけ
@@ -615,6 +615,32 @@ static void test_superweapon(void)
     while (g->current != 0) game_end_turn(g);
     CHECK(!g->sw_build[0][0].active);
     CHECK(g->lab_points[0][0] == stc && g->funds[0] >= stc);
+
+    /* 進化: 超兵器は進化先があるが、研究所では進化先を作れない。経験値は半分しか入らない */
+    {
+        int stv = data_find_unit_type(g, "SW_TANK_V");
+        CHECK(stv >= 0 && !strcmp(g->types[st].evolve_to, "SW_TANK_V"));
+        CHECK(g->types[stv].superweapon == 1 && g->types[stv].range_max == 5);
+        g->lab_points[0][0] = 99999; g->funds[0] = 99999;
+        CHECK(game_sw_check(g, 0, 5, 5, stv) == 1);     /* 進化先は建造できない */
+        /* 同じ超重戦車で同じ相手を撃つ。片方は超兵器の印を一時的に外して比べる
+         * （ダメージに乱数は無いので、入る経験値だけが違う） */
+        int ex = game_spawn_unit(g, 0, st, 9, 9, 10);
+        int ta = game_spawn_unit(g, 0, st, 11, 9, 10);
+        int v1 = game_spawn_unit(g, 1, inf, 9, 10, 1);
+        int v2 = game_spawn_unit(g, 1, inf, 11, 10, 1);
+        CHECK(ex >= 0 && ta >= 0 && v1 >= 0 && v2 >= 0);
+        g->current = 0;
+        game_attack(g, ex, v1, NULL, NULL, NULL);
+        g->types[st].superweapon = 0;
+        game_attack(g, ta, v2, NULL, NULL, NULL);
+        g->types[st].superweapon = 1;
+        CHECK(g->units[ta].exp > 0);
+        CHECK(g->units[ex].exp * 2 <= g->units[ta].exp + 1 &&
+              g->units[ex].exp * 2 >= g->units[ta].exp - 2);   /* 半分（呼び出しごとの端数を許す） */
+        g->units[ex].flags = 0; g->units[ta].flags = 0;
+        g->lab_points[0][0] = 0; g->funds[0] = 0;
+    }
 
     /* 超重戦車: 射程4まで減衰しない */
     g->n_units = 0;
@@ -1309,10 +1335,12 @@ static void test_evolved_transport(void)
         if (evo < 0) continue;
 
         /* この輸送手段に乗れる客を1つ探す */
+        /* 艦載機を補給する艦（resupply_cargo: 航空戦艦）は、空母の客をそのまま載せる */
+        const char *host = g->types[base].resupply_cargo ? "CARRIER" : g->types[base].id;
         int pass = -1;
         for (int i = 0; i < g->n_types && pass < 0; i++)
             for (int k = 0; k < g->types[i].n_transport_by; k++)
-                if (!strcmp(g->types[i].transport_by[k], g->types[base].id)) {
+                if (!strcmp(g->types[i].transport_by[k], host)) {
                     pass = i; break;
                 }
         CHECK(pass >= 0);

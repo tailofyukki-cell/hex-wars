@@ -408,6 +408,30 @@ bool campaign_sub_done(const Game *g, const CpnNode *node, int i)
     }
 }
 
+int campaign_sub_value(const Game *g, const CpnNode *node, int i)
+{
+    if (!g || !node || i < 0 || i >= node->n_subs) return 0;
+    const SubObjective *o = &node->subs[i];
+    switch (o->type) {
+    case SUB_MAX_LOSS:  return g->lost_units[0];
+    case SUB_MAX_TURNS: return g->turn;
+    case SUB_MIN_KILLS: return enemy_losses(g);
+    case SUB_KEEP_BLD:
+    case SUB_CAPTURE:   return game_count_buildings(g, 0);
+    case SUB_SURVIVE: {
+        int n = 0;
+        for (int u = 0; u < g->n_units; u++) {
+            const Unit *un = &g->units[u];
+            if (!(un->flags & UF_ALIVE) || un->owner != 0) continue;
+            if (o->unit[0] && !type_is_kind(g, un->type, o->unit)) continue;
+            n++;
+        }
+        return n;
+    }
+    default: return 0;
+    }
+}
+
 int campaign_sub_count_done(const Game *g, const CpnNode *node)
 {
     if (!node) return 0;

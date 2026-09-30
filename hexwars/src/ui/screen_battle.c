@@ -21,7 +21,7 @@ static const char *ACT_KEYS[] = {
 };
 
 /* ターンメニューの項目（順番を変えたらここだけ直せば済むように名前を付ける） */
-enum { TM_UNITLIST = 0, TM_END, TM_SAVE, TM_TILT, TM_OPTIONS, TM_TITLE, TM_CLOSE, TMENU_ITEMS };
+enum { TM_UNITLIST = 0, TM_GOALS, TM_END, TM_SAVE, TM_TILT, TM_OPTIONS, TM_TITLE, TM_CLOSE, TMENU_ITEMS };
 
 #define UNITLIST_VISIBLE 10   /* 未行動一覧に一度に表示する行数 */
 /* 重なりセルの情報パネルを切り替える間隔（フレーム。60fps想定で約1.5秒） */
@@ -1212,6 +1212,10 @@ static void tmenu_select(App *a)
         a->bs = BS_UNITLIST;
         snd_se(SE_CURSOR);
         break;
+    case TM_GOALS:
+        a->bs = BS_GOALS;
+        snd_se(SE_CURSOR);
+        break;
     case TM_END:
         a->bs = BS_IDLE;
         do_end_turn(a);
@@ -1592,7 +1596,21 @@ void battle_event(App *a, const SDL_Event *e)
     Game *g = &a->game;
     bool human_turn = g->ctrl[g->current] == CTRL_HUMAN &&
                       a->bs != BS_GAMEOVER && a->bs != BS_CPU_TURN &&
-                      a->bs != BS_HANDOVER && a->bs != BS_LOSS_REPORT;
+                      a->bs != BS_HANDOVER && a->bs != BS_LOSS_REPORT &&
+                      a->bs != BS_GOALS;
+
+    /* --- 目標確認: Z / X / Esc / Enter / E / クリックでメニューへ戻る --- */
+    if (a->bs == BS_GOALS) {
+        if ((e->type == SDL_KEYDOWN &&
+             (e->key.keysym.sym == SDLK_z || e->key.keysym.sym == SDLK_x ||
+              e->key.keysym.sym == SDLK_ESCAPE || e->key.keysym.sym == SDLK_RETURN ||
+              e->key.keysym.sym == SDLK_e)) ||
+            e->type == SDL_MOUSEBUTTONDOWN) {
+            a->bs = BS_TURN_MENU;
+            snd_se(SE_CURSOR);
+        }
+        return;
+    }
 
     /* --- 損失の報告 ---
      * Z / Enter / クリック / X / Esc で閉じる。一覧が長いときはホイール・↑↓で送る。 */
@@ -3189,7 +3207,7 @@ static void draw_menus(App *a)
         snprintf(tiltbuf, sizeof tiltbuf, tx("TMENU_TILT_FMT"),
                  tx(a->opt_tilt ? "OPT_TILT_ON" : "OPT_TILT_OFF"));
         const char *items[TMENU_ITEMS] = {
-            tx("TMENU_UNITLIST"), tx("TMENU_END"), tx("TMENU_SAVE"),
+            tx("TMENU_UNITLIST"), tx("TMENU_GOALS"), tx("TMENU_END"), tx("TMENU_SAVE"),
             tiltbuf, tx("TMENU_OPTIONS"), tx("TMENU_TITLE"), tx("TMENU_CLOSE")
         };
         fill_rect(a, WIN_W / 2 - 150, 240, 300, TMENU_ITEMS * 52 + 30,
@@ -3389,31 +3407,107 @@ static void draw_battle_anim(App *a)
     draw_cutin(a, an);
 }
 
-/* 副目標の進捗を左上（トップバー直下）に常時表示する。
- * 達成/未達が戦闘中に分かるようにしないと、狙って動きようがないため。
- * キャンペーンで副目標のある作戦のときだけ出る。 */
-static void draw_sub_objectives(App *a)
+/* 目標確認（メニューから開く）。以前は副目標を左上に常時出していたが、主目標と
+ * 見分けがつかず、どちらが勝敗に関わるのか分かりにくかった。ここに主目標（勝ち方・
+ * 負け方・早期勝利）と副目標を分けて並べ、それぞれ今の数も出す。 */
+static void goals_line(App *a, int x, int *y, SDL_Color c, const char *s)
 {
-    if (!a->campaign_mode) return;
-    const CpnNode *node = campaign_find_node(&a->cpn, a->cps.node);
-    if (!node || node->n_subs <= 0) return;
+    draw_text(a, a->font_s, x, *y, c, s);
+    *y += 24;
+}
 
-    const int x = 8, w = 300;
-    const int y = TOPBAR_H + 8;
-    const int h = 24 + node->n_subs * 20;
-    fill_rect(a, x, y, w, h, (SDL_Color){ 22, 26, 34, 200 });
-    outline_rect(a, x, y, w, h, COL_DIM);
-    draw_text(a, a->font_s, x + 8, y + 4, COL_YELLOW, tx("SUB_HUD_TITLE"));
-
+static void draw_goals(App *a)
+{
     Game *g = &a->game;
-    for (int i = 0; i < node->n_subs; i++) {
-        bool ok = campaign_sub_done(g, node, i);
-        char buf[128];
-        snprintf(buf, sizeof buf, ok ? tx("SUB_OK_FMT") : tx("SUB_NG_FMT"),
-                 node->subs[i].desc);
-        draw_text(a, a->font_s, x + 8, y + 24 + i * 20,
-                  ok ? (SDL_Color){ 130, 220, 130, 255 } : COL_GRAY, buf);
+    int p = g->current;
+    const CpnNode *node = a->campaign_mode ? campaign_find_node(&a->cpn, a->cps.node) : NULL;
+    const SDL_Color HEAD = COL_YELLOW, OKC = { 130, 220, 130, 255 },
+                    NGC = { 240, 130, 120, 255 }, TXT = COL_WHITE;
+    const int bw = 720, bx = WIN_W / 2 - bw / 2, by = 90, bh = WIN_H - 180;
+    fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 8, 10, 14, 120 });
+    fill_rect(a, bx, by, bw, bh, (SDL_Color){ 28, 32, 40, 248 });
+    outline_rect(a, bx, by, bw, bh, COL_DIM);
+    draw_text_center(a, a->font_m, WIN_W / 2, by + 12, COL_WHITE, tx("GOALS_TITLE"));
+    int x = bx + 28, y = by + 56;
+    char buf[200];
+
+    /* ---- 主目標: 勝ち方 ---- */
+    goals_line(a, x, &y, HEAD, tx("GOALS_MAIN"));
+    x += 16;
+    bool enemy_hq = false, own_hq = false;
+    for (int yy = 0; yy < g->h; yy++)
+        for (int xx = 0; xx < g->w; xx++) {
+            const Tile *t = &g->tiles[yy][xx];
+            if (!g->terrains[t->terrain].is_hq || t->owner < 0) continue;
+            if (game_is_enemy(g, p, t->owner)) enemy_hq = true;
+            else if (game_same_team(g, p, t->owner)) own_hq = true;
+        }
+    if (g->objective_count > 0) {
+        int have = game_count_buildings(g, g->objective_player);
+        if (game_same_team(g, p, g->objective_player))
+            snprintf(buf, sizeof buf, tx("GOAL_OBJ_OWN_FMT"), g->objective_count, have);
+        else
+            snprintf(buf, sizeof buf, tx("GOAL_OBJ_FOE_FMT"), g->objective_count, have);
+        goals_line(a, x, &y, TXT, buf);
     }
+    if (enemy_hq) goals_line(a, x, &y, TXT, tx("GOAL_TAKE_HQ"));
+    {
+        int foes = 0;
+        for (int i = 0; i < g->n_units; i++)
+            if ((g->units[i].flags & UF_ALIVE) && game_is_enemy(g, p, g->units[i].owner)) foes++;
+        snprintf(buf, sizeof buf, tx("GOAL_ANNIHILATE_FMT"), foes);
+        goals_line(a, x, &y, TXT, buf);
+    }
+    if (g->turn_limit > 0) {
+        int left = g->turn_limit - g->turn + 1;
+        if (left < 0) left = 0;
+        if (g->timeout_winner >= 0 && game_same_team(g, p, g->timeout_winner))
+            snprintf(buf, sizeof buf, tx("GOAL_HOLD_FMT"), g->turn_limit, left);
+        else if (g->timeout_winner >= 0)
+            snprintf(buf, sizeof buf, tx("GOAL_LIMIT_LOSE_FMT"), g->turn_limit, left);
+        else
+            snprintf(buf, sizeof buf, tx("GOAL_LIMIT_DRAW_FMT"), g->turn_limit, left);
+        goals_line(a, x, &y, TXT, buf);
+    }
+    /* 負け方 */
+    if (own_hq) goals_line(a, x, &y, NGC, tx("GOAL_LOSE_HQ"));
+    goals_line(a, x, &y, NGC, tx("GOAL_LOSE_ALL"));
+    /* 早期勝利（キャンペーンの分岐） */
+    if (node && node->next_win_fast[0] && node->fast_turns > 0) {
+        int left = node->fast_turns - g->turn + 1;
+        if (left > 0) {
+            snprintf(buf, sizeof buf, tx("GOAL_FAST_FMT"), node->fast_turns, left);
+            goals_line(a, x, &y, OKC, buf);
+        } else {
+            snprintf(buf, sizeof buf, tx("GOAL_FAST_MISSED_FMT"), node->fast_turns);
+            goals_line(a, x, &y, COL_GRAY, buf);
+        }
+    }
+    x -= 16;
+    y += 12;
+
+    /* ---- 副目標（キャンペーンのみ。勝敗には関わらず、ボーナスが増える） ---- */
+    if (node && node->n_subs > 0) {
+        goals_line(a, x, &y, HEAD, tx("GOALS_SUB"));
+        draw_text(a, a->font_s, x + 16, y, COL_DIM, tx("GOALS_SUB_NOTE"));
+        y += 28;
+        for (int i = 0; i < node->n_subs; i++) {
+            const SubObjective *o = &node->subs[i];
+            bool ok = campaign_sub_done(g, node, i);
+            int v = campaign_sub_value(g, node, i);
+            /* 上限型（損失・ターン）は「守れているか」、下限型は「届いたか」 */
+            bool cap = (o->type == SUB_MAX_LOSS || o->type == SUB_MAX_TURNS);
+            const char *st = cap ? (ok ? tx("GOAL_KEEP") : tx("GOAL_FAILED"))
+                                 : (ok ? tx("GOAL_DONE") : tx("GOAL_NOTYET"));
+            draw_text(a, a->font_s, x + 16, y, TXT, o->desc);
+            snprintf(buf, sizeof buf, tx(cap ? "GOAL_NOW_CAP_FMT" : "GOAL_NOW_MIN_FMT"),
+                     v, o->param);
+            draw_text(a, a->font_s, bx + bw - 250, y, COL_GRAY, buf);
+            draw_text(a, a->font_s, bx + bw - 100, y, ok ? OKC : (cap ? NGC : COL_GRAY), st);
+            y += 26;
+        }
+    }
+    draw_text_center(a, a->font_s, WIN_W / 2, by + bh - 34, COL_YELLOW, tx("GOALS_CLOSE"));
 }
 
 /* 損失の報告を描く。倒された場所に赤い×印を重ね、種別と原因の一覧を中央に出す。
@@ -3493,10 +3587,10 @@ void battle_draw(App *a)
     draw_overlays(a);
     draw_popups(a);
     draw_topbar(a);
-    draw_sub_objectives(a);
     draw_panels(a);
     draw_menus(a);
     if (a->bs == BS_LOSS_REPORT) draw_loss_report(a);
+    if (a->bs == BS_GOALS) draw_goals(a);
 
     /* CPU手番表示 */
     if (a->bs == BS_CPU_TURN) {

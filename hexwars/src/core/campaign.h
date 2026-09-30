@@ -95,6 +95,8 @@ int  campaign_rank_bonus(CpnRank r);
 bool campaign_sub_done(const Game *g, const CpnNode *node, int i);
 /* 達成した副目標の数 */
 int  campaign_sub_count_done(const Game *g, const CpnNode *node);
+/* 副目標の「今の数」（損失数・ターン・撃破数・建物数・生存数）。目標確認の画面用 */
+int  campaign_sub_value(const Game *g, const CpnNode *node, int i);
 /* 副目標1個あたりのボーナス資金 */
 int  campaign_sub_bonus(void);
 /* ランクの表示文字（"S"/"A"/"B"/"C"、未取得は "-"） */

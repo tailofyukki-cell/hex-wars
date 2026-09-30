@@ -51,6 +51,7 @@ typedef enum {
     BS_STORE_DISBAND,  /* 倉庫の部隊の解隊の確認（生産メニューから開く） */
     BS_SW_CONFIRM,     /* 超兵器の建造の確認（生産メニューから開く） */
     BS_LOSS_REPORT,    /* 相手の手番のあいだに倒された自軍の部隊の報告（手番の頭） */
+    BS_GOALS,          /* 目標確認（メニューから開く。主目標・副目標と現状） */
     BS_BATTLE_ANIM,    /* 戦闘アニメ（仕様書 8.2） */
     BS_CPU_TURN,
     BS_HANDOVER,       /* ホットシート交代画面 */

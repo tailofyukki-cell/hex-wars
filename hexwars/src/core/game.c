@@ -313,8 +313,15 @@ static void clear_capture_by(Game *g, int ui)
 #define EXP_CARRIER   2   /* 空母: 艦載機1機を整備 */
 #define EXP_CAPTURE  15   /* 占領完了（戦闘ぶんへの上乗せ） */
 
-static void gain_exp(Unit *u, int amount)
+/* 超兵器は経験値が半分しか入らない（進化に要る経験が通常の2倍）。強いので
+ * 経験がすぐ貯まり、あっという間に進化してしまうのを抑える。端数は切り捨てるが、
+ * 0 にはしない（少しの手柄でも何も入らないのは分かりにくい）。 */
+static void gain_exp(Game *g, Unit *u, int amount)
 {
+    if (amount > 0 && g->types[u->type].superweapon) {
+        amount /= 2;
+        if (amount < 1) amount = 1;
+    }
     int e = u->exp + amount;
     u->exp = (uint8_t)(e > 100 ? 100 : e);
 }
@@ -354,7 +361,7 @@ void game_move_unit(Game *g, int ui, int x, int y, int fuel_cost)
         for (int yy = 0; yy < g->h; yy++)
             for (int xx = 0; xx < g->w; xx++)
                 if (!was_visible[yy][xx] && g->visible[u->owner][yy][xx]) {
-                    gain_exp(u, EXP_RECON);
+                    gain_exp(g, u, EXP_RECON);
                     return;                  /* 1回の移動につき1回だけ */
                 }
     }
@@ -499,6 +506,8 @@ int game_sw_check(const Game *g, int p, int x, int y, int type)
     const UnitType *ut = &g->types[type];
     int sw = ut->superweapon;
     if (!sw || !sw_site_ok(g, p, sw, x, y) || game_sw_building_at(g, x, y)) return 1;
+    for (int t = 0; t < g->n_types; t++)        /* 進化先は建造できない（育てて進化させる） */
+        if (!strcmp(g->types[t].evolve_to, ut->id)) return 1;
     if (game_sw_taken(g, p, sw)) return 2;
     if (g->lab_points[p][sw - 1] < ut->cost) return 3;
     if (g->funds[p] < ut->cost) return 4;
@@ -833,7 +842,7 @@ bool game_co_activate(Game *g, int p)
         for (int i = 0; i < g->n_units; i++) {
             Unit *u = &g->units[i];
             if (!(u->flags & UF_ALIVE) || u->owner != p) continue;
-            gain_exp(u, c->power_val);      /* 上限100の丸めを共通化する */
+            gain_exp(g, u, c->power_val);      /* 上限100の丸めを共通化する */
         }
         break;
     case CO_POW_BARRAGE: {
@@ -882,7 +891,7 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
     if (atk_killed)  *atk_killed = false;
     int dmg = battle_roll_damage(g, a, d);
     a->ammo--;
-    gain_exp(a, 2 * dmg);
+    gain_exp(g, a, 2 * dmg);
     d->hp = (int8_t)(d->hp - dmg);
     /* 指揮官ゲージ: 与ダメージで攻撃側、被ダメージで防御側が溜まる
      * （劣勢側も溜まるので逆転の目が残る）。
@@ -891,7 +900,7 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
     game_co_add_gauge(g, d->owner, dmg * CO_GAUGE_PER_DMG_DEF);
 
     if (d->hp <= 0) {
-        gain_exp(a, 20);
+        gain_exp(g, a, 20);
         kill_unit(g, def_i);
         if (def_killed) *def_killed = true;
     } else {
@@ -906,11 +915,11 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
             unit_can_attack_target(g, d, a)) {
             int c = battle_roll_damage(g, d, a);
             d->ammo--;
-            gain_exp(d, 2 * c);
+            gain_exp(g, d, 2 * c);
             a->hp = (int8_t)(a->hp - c);
             if (counter_dmg) *counter_dmg = c;
             if (a->hp <= 0) {
-                gain_exp(d, 20);
+                gain_exp(g, d, 20);
                 kill_unit_why(g, atk_i, LOSS_COUNTER);
                 if (atk_killed) *atk_killed = true;
             }
@@ -936,8 +945,8 @@ int game_attack(Game *g, int atk_i, int def_i, int *counter_dmg,
                 int sd = (battle_roll_damage(g, a, v) + 1) / 2;
                 if (sd < 1) sd = 1;
                 v->hp = (int8_t)(v->hp - sd);
-                gain_exp(a, sd);
-                if (v->hp <= 0) { gain_exp(a, 10); kill_unit_why(g, k, LOSS_SPLASH); }
+                gain_exp(g, a, sd);
+                if (v->hp <= 0) { gain_exp(g, a, 10); kill_unit_why(g, k, LOSS_SPLASH); }
             }
         }
     }
@@ -970,7 +979,7 @@ int game_capture(Game *g, int ui)
         t->cap_hp = CAPTURE_HP;
         t->capturer = -1;
         t->owner = (int8_t)u->owner;
-        gain_exp(u, EXP_CAPTURE);        /* 拠点を取るのも歩兵の手柄 */
+        gain_exp(g, u, EXP_CAPTURE);        /* 拠点を取るのも歩兵の手柄 */
         game_update_vision(g);
         game_check_victory(g);
         return 1;
@@ -1146,7 +1155,7 @@ int game_supply_adjacent(Game *g, int ui)
         v->fuel = t->fuel;
         if (!t->supply) v->ammo = t->ammo;       /* 補給ユニットの物資は補充しない */
         u->ammo--;                               /* 物資-1 */
-        gain_exp(u, EXP_SUPPLY);
+        gain_exp(g, u, EXP_SUPPLY);
         done++;
     }
     u->flags |= UF_DONE;
@@ -1208,7 +1217,7 @@ int game_supply_heal(Game *g, int ui)
     if (best < 0) return 0;                       /* 回復対象なし */
     g->units[best].hp++;                          /* 1回につきHP1のみ */
     u->ammo -= SUPPLY_HEAL_COST;
-    gain_exp(u, EXP_SUPPLY * SUPPLY_HEAL_COST);   /* 消費した物資ぶん */
+    gain_exp(g, u, EXP_SUPPLY * SUPPLY_HEAL_COST);   /* 消費した物資ぶん */
     return 1;
 }
 
@@ -1607,7 +1616,7 @@ int game_unload_unit(Game *g, int transport, int x, int y)
     p->pos.x = (uint8_t)x;
     p->pos.y = (uint8_t)y;
     t->flags |= UF_DONE;
-    gain_exp(t, EXP_UNLOAD);      /* 部隊を送り届けるのが輸送の仕事 */
+    gain_exp(g, t, EXP_UNLOAD);      /* 部隊を送り届けるのが輸送の仕事 */
     game_update_vision(g);
     return 0;
 }
@@ -1685,7 +1694,7 @@ static void begin_player_turn(Game *g)
                     if (g->funds[p] >= cost) {
                         g->funds[p] -= cost;
                         c->hp = (int8_t)(c->hp + heal);
-                        gain_exp(u, EXP_CARRIER);   /* 整備も空母の手柄 */
+                        gain_exp(g, u, EXP_CARRIER);   /* 整備も空母の手柄 */
                     }
                 }
             }

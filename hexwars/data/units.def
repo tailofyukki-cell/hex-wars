@@ -2284,9 +2284,10 @@ sonar        = 5
 no_produce   = 1
 
 # ---- 超兵器（研究所で解隊して貯めた研究ポイントと、同じ額の資金で建造する）----
-# superweapon = 1 陸（自軍の工場で建造）/ 2 空（自軍の空港）/ 3 海（自軍の港）。
+# superweapon = 1 陸 / 2 空 / 3 海。その領域の自軍の研究所の上で建造する。
 # cost が必要な研究ポイントと資金の両方。建造は3手番。1陣営に各領域1体まで。
-# 生産メニューからは買えない（no_produce）。進化もしない。
+# 生産メニューからは買えない（no_produce）。進化はできるが、経験値が半分しか入らない
+# （進化に要る経験が通常の2倍）。進化先（_V）は研究所では作れない。
 # 絵は専用（sw_*.png）を描く予定で、まだ無い間は図形で描画される（未用意の一覧は docs/asset_list.md）。
 
 # 超重戦車: 動きは遅いが、射程1〜4を減衰なしで撃てる。2マス以上離れて撃てば
@@ -2323,7 +2324,7 @@ range_max = 4
 no_falloff = 1
 superweapon = 1
 no_produce = 1
-
+evolve_to = SW_TANK_V
 # 飛行要塞: 狙ったマスに100%、周りの6マスの敵に50%の範囲爆撃。弾は2発。
 # 移動1マスに燃料2、空中で待つだけでも毎手番8を使う（すぐ燃料が尽きる）。
 [unit SW_FORTRESS]
@@ -2358,7 +2359,7 @@ fuel_rate = 2
 splash    = 1
 superweapon = 2
 no_produce = 1
-
+evolve_to = SW_FORTRESS_V
 # 決戦航空戦艦: 戦艦と同じ足で、射程2〜10。空母と同じく艦載機を2機載せて補給できる。
 # 視界は3のままなので、長い射程を活かすには味方の目が要る。
 [unit SW_BATTLESHIP]
@@ -2392,6 +2393,111 @@ range_min = 2
 range_max = 10
 move_and_fire = 0
 capacity  = 2
+resupply_cargo = 1
+superweapon = 3
+no_produce = 1
+evolve_to = SW_BATTLESHIP_V
+
+# 要塞戦車（超重戦車の進化後）: 射程が5まで伸び、防御も少し上がる。遅いのはそのまま。
+[unit SW_TANK_V]
+image     = gfx/units/common/sw_tank.png
+cutin     = gfx/cutin/tank.png
+name      = 要塞戦車「Gx-2型」
+name1     = 要塞戦車「ZK-200」
+name2     = 巨象
+name3     = 四十式要塞戦車
+name4     = 鋼の山脈
+name@en   = Gx-2 Fortress Tank
+name1@en  = ZK-200 Fortress Tank
+name2@en  = Behemoth
+name3@en  = Type 40 Fortress Tank
+name4@en  = Steel Range
+icon      = 巨
+icon@en   = ST
+class     = LAND_TRACK
+armor     = HARD
+cost      = 5000
+move      = 2
+fuel      = 60
+ammo      = 8
+vision    = 2
+atk_soft  = 98
+atk_hard  = 91
+atk_air   = 15
+atk_sea   = 20
+def       = 95
+range_min = 1
+range_max = 5
+no_falloff = 1
+superweapon = 1
+no_produce = 1
+
+# 空中要塞（飛行要塞の進化後）: 燃料80・弾3発。燃費2倍はそのまま（補給機は要る）。
+[unit SW_FORTRESS_V]
+image     = gfx/units/common/sw_fortress.png
+cutin     = gfx/cutin/air.png
+name      = 空中要塞「Bx-60型」
+name1     = 空中要塞「IB-60」
+name2     = 大鳳
+name3     = 四十一式空中要塞
+name4     = 天空の城塞
+name@en   = Bx-60 Sky Fortress
+name1@en  = IB-60 Sky Fortress
+name2@en  = Great Phoenix
+name3@en  = Type 41 Sky Fortress
+name4@en  = Citadel in the Sky
+icon      = 要
+icon@en   = FF
+class     = AIR
+armor     = AIR
+cost      = 5500
+move      = 7
+fuel      = 80
+ammo      = 3
+vision    = 3
+atk_soft  = 85
+atk_hard  = 80
+atk_air   = 0
+atk_sea   = 85
+def       = 50
+upkeep    = 8
+fuel_rate = 2
+splash    = 1
+superweapon = 2
+no_produce = 1
+
+# 超弩級航空戦艦（決戦航空戦艦の進化後）: 艦載機3機、防御も少し上がる。
+[unit SW_BATTLESHIP_V]
+image     = gfx/units/common/sw_battleship.png
+cutin     = gfx/cutin/ship.png
+name      = 超弩級航空戦艦「Rz-40型」
+name1     = 超弩級航空戦艦「計画200号」
+name2     = 大白鯨
+name3     = 四十二式超弩級航空戦艦
+name4     = 動く要塞島
+name@en   = Rz-40 Super Aviation Battleship
+name1@en  = Project 200 Super Aviation Battleship
+name2@en  = Leviathan
+name3@en  = Type 42 Super Aviation Battleship
+name4@en  = Moving Fortress Isle
+icon      = 決
+icon@en   = AB
+class     = SEA
+armor     = SEA
+cost      = 6000
+move      = 4
+fuel      = 99
+ammo      = 8
+vision    = 3
+atk_soft  = 85
+atk_hard  = 80
+atk_air   = 25
+atk_sea   = 75
+def       = 85
+range_min = 2
+range_max = 10
+move_and_fire = 0
+capacity  = 3
 resupply_cargo = 1
 superweapon = 3
 no_produce = 1

@@ -52,7 +52,7 @@
 | `gfx/units/common/at_infantry.png` | AT_INFANTRY ほか1件 | ○ | 96x96 |
 | `gfx/units/common/recon.png` | RECON ほか1件 | ○ | 96x96 |
 | `gfx/units/common/tank.png` | TANK ほか1件 | ○ | 96x96 |
-| `gfx/cutin/tank.png` | TANK ほか8件 | ○ | 520x900 |
+| `gfx/cutin/tank.png` | TANK ほか9件 | ○ | 520x900 |
 | `gfx/anim/sample_land.mp4` | TANK | ○ | - |
 | `gfx/units/common/htank.png` | HTANK ほか1件 | ○ | 96x96 |
 | `gfx/units/common/artillery.png` | ARTILLERY ほか1件 | ○ | 96x96 |
@@ -60,11 +60,11 @@
 | `gfx/units/common/truck.png` | TRUCK ほか1件 | ○ | 96x96 |
 | `gfx/units/common/t_copter.png` | T_COPTER ほか1件 | ○ | 96x96 |
 | `gfx/units/common/fighter.png` | FIGHTER ほか1件 | ○ | 96x96 |
-| `gfx/cutin/air.png` | FIGHTER ほか10件 | ○ | 520x900 |
+| `gfx/cutin/air.png` | FIGHTER ほか11件 | ○ | 520x900 |
 | `gfx/units/common/bomber.png` | BOMBER ほか1件 | ○ | 96x96 |
 | `gfx/units/common/heli.png` | HELI ほか1件 | ○ | 96x96 |
 | `gfx/units/common/destroyer.png` | DESTROYER ほか1件 | ○ | 96x96 |
-| `gfx/cutin/ship.png` | DESTROYER ほか10件 | ○ | 520x900 |
+| `gfx/cutin/ship.png` | DESTROYER ほか11件 | ○ | 520x900 |
 | `gfx/units/common/cruiser.png` | CRUISER ほか1件 | ○ | 96x96 |
 | `gfx/units/common/submarine.png` | SUBMARINE ほか1件 | ○ | 96x96 |
 | `gfx/units/common/t_ship.png` | T_SHIP ほか1件 | ○ | 96x96 |
@@ -89,9 +89,9 @@
 | `gfx/units/common/night_boat.png` | NIGHT_BOAT（Dark Boat） ほか1件 | **未** | - |
 | `gfx/units/common/night_fighter.png` | NIGHT_FIGHTER（Nighthawk） ほか1件 | **未** | - |
 | `gfx/units/common/subchaser.png` | SUBCHASER ほか1件 | ○ | 96x96 |
-| `gfx/units/common/sw_tank.png` | SW_TANK | **未** | - |
-| `gfx/units/common/sw_fortress.png` | SW_FORTRESS | **未** | - |
-| `gfx/units/common/sw_battleship.png` | SW_BATTLESHIP | **未** | - |
+| `gfx/units/common/sw_tank.png` | SW_TANK ほか1件 | **未** | - |
+| `gfx/units/common/sw_fortress.png` | SW_FORTRESS ほか1件 | **未** | - |
+| `gfx/units/common/sw_battleship.png` | SW_BATTLESHIP ほか1件 | **未** | - |
 
 ## 指揮官（11本）
 
@@ -169,9 +169,9 @@
 | `gfx/units/common/night_inf.png` | NIGHT_INF（Night Blades）／NIGHT_INF_V（Masters of the Dark） |  |
 | `gfx/units/common/night_boat.png` | NIGHT_BOAT（Dark Boat）／NIGHT_BOAT_V（Black Boat） |  |
 | `gfx/units/common/night_fighter.png` | NIGHT_FIGHTER（Nighthawk）／NIGHT_FIGHTER_V（Lord of the Night） |  |
-| `gfx/units/common/sw_tank.png` | SW_TANK | 超重戦車（陸の超兵器）。96x96の透過PNG。重戦車の一回り以上大きい車体に長砲身。移動2の遅い壁なので、どっしりした形にする。全陣営共通 |
-| `gfx/units/common/sw_fortress.png` | SW_FORTRESS | 飛行要塞（空の超兵器）。96x96の透過PNG。爆撃機より巨大で、多発エンジンと銃座が並ぶ大型機。全陣営共通 |
-| `gfx/units/common/sw_battleship.png` | SW_BATTLESHIP | 決戦航空戦艦（海の超兵器）。96x96の透過PNG。戦艦の船体に後部の飛行甲板（艦載機2機ぶん）を持つ、砲と甲板の両方が見える形。全陣営共通 |
+| `gfx/units/common/sw_tank.png` | SW_TANK／SW_TANK_V | 超重戦車（陸の超兵器）。96x96の透過PNG。重戦車の一回り以上大きい車体に長砲身。移動2の遅い壁なので、どっしりした形にする。全陣営共通 |
+| `gfx/units/common/sw_fortress.png` | SW_FORTRESS／SW_FORTRESS_V | 飛行要塞（空の超兵器）。96x96の透過PNG。爆撃機より巨大で、多発エンジンと銃座が並ぶ大型機。全陣営共通 |
+| `gfx/units/common/sw_battleship.png` | SW_BATTLESHIP／SW_BATTLESHIP_V | 決戦航空戦艦（海の超兵器）。96x96の透過PNG。戦艦の船体に後部の飛行甲板（艦載機2機ぶん）を持つ、砲と甲板の両方が見える形。全陣営共通 |
 | `gfx/co/herta.png` | HERTA（Paymaster Capt. Herta） |  |
 | `gfx/co/noel.png` | NOEL（Instructor Noel） |  |
 | `gfx/co/dieter.png` | DIETER（Captain Dieter） |  |
