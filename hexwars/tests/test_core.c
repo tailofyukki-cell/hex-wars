@@ -580,11 +580,12 @@ static void test_superweapon(void)
     CHECK(game_spawn_unit(g, 0, inf, 12, 9, 10) >= 0);
 
     /* 建造: 場所・ポイント・資金 */
-    g->lab_points[0][0] = 2999; g->funds[0] = 5000;
+    const int stc = g->types[st].cost;                   /* 値段はデータから（調整で変わる） */
+    g->lab_points[0][0] = stc - 1; g->funds[0] = stc + 2000;
     CHECK(game_sw_check(g, 0, 5, 5, st) == 3);           /* ポイント不足 */
-    g->lab_points[0][0] = 3000; g->funds[0] = 2999;
+    g->lab_points[0][0] = stc; g->funds[0] = stc - 1;
     CHECK(game_sw_check(g, 0, 5, 5, st) == 4);           /* 資金不足 */
-    g->funds[0] = 3500;
+    g->funds[0] = stc + 500;
     CHECK(game_sw_check(g, 0, 5, 6, st) == 1);           /* 工場では作れない（研究所だけ） */
     CHECK(game_sw_check(g, 0, 5, 5, ff) == 1);           /* 陸の研究所で空の超兵器は作れない */
     CHECK(!game_can_produce_at(g, 0, 5, 5));             /* 研究所は普通の生産をしない */
@@ -607,13 +608,13 @@ static void test_superweapon(void)
 
     /* 取りやめ: 建造場所を壊されたら、ポイントと資金は戻る */
     g->units[tank].flags = 0;                          /* 盤から外して作り直す */
-    g->lab_points[0][0] = 3000; g->funds[0] = 3000;
+    g->lab_points[0][0] = stc; g->funds[0] = stc;
     CHECK(game_sw_order(g, 0, 5, 5, st));
     g->tiles[5][5].terrain = (uint8_t)rubble;
     game_end_turn(g);
     while (g->current != 0) game_end_turn(g);
     CHECK(!g->sw_build[0][0].active);
-    CHECK(g->lab_points[0][0] == 3000 && g->funds[0] >= 3000);
+    CHECK(g->lab_points[0][0] == stc && g->funds[0] >= stc);
 
     /* 超重戦車: 射程4まで減衰しない */
     g->n_units = 0;
@@ -1246,6 +1247,38 @@ static void test_evolved_carry(void)
     CHECK(st.n_carry == 6);
     /* 先頭が進化後（価格が高い）＝出撃枠が少なくても真っ先に出る */
     CHECK(st.carry[0].type == evo);
+}
+
+/* 早期勝利の分岐: 規定ターン以内の勝利で次の作戦を飛ばす（M01→M03、M04→M06）。
+ * 規定ターンちょうどは飛ばす側、1ターンでも超えたら通常ルート。 */
+static void test_campaign_fast_route(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    game_start(g, 1u);
+    g->n_units = 0;
+    game_spawn_unit(g, 0, data_find_unit_type(g, "INFANTRY"), 2, 2, 10);
+    static Campaign c;
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    static const struct { const char *from; int turn; const char *to; } T[] = {
+        { "M01", 10, "M03" }, { "M01", 11, "M02" }, { "M01", 3, "M03" },
+        { "M04", 18, "M06" }, { "M04", 19, "M05" },
+    };
+    for (int i = 0; i < (int)(sizeof T / sizeof T[0]); i++) {
+        static CampaignState st;
+        memset(&st, 0, sizeof st);
+        snprintf(st.node, sizeof st.node, "%s", T[i].from);
+        g->winner = 0; g->turn = T[i].turn;
+        CHECK(campaign_on_victory(g, &c, &st) == 0);
+        if (strcmp(st.node, T[i].to) != 0)
+            printf("  fast route %s turn %d -> %s (want %s)\n", T[i].from, T[i].turn, st.node, T[i].to);
+        CHECK(!strcmp(st.node, T[i].to));
+    }
+    printf("test_campaign_fast_route OK\n");
 }
 
 /* 進化した輸送手段にも従来どおり搭載できること。
@@ -4595,6 +4628,7 @@ int main(void)
     test_disband();
     test_carrier_launch();
     test_loss_log();
+    test_campaign_fast_route();
     test_superweapon();
     test_language();
     test_paradrop();
