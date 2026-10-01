@@ -662,7 +662,7 @@ static void setup_draw_info(App *a, int px, int py, int pw)
         strncat(note, tx("SETUP_TAG_WXFIXED"), sizeof note - strlen(note) - 1);
     }
     if (g->objective_count > 0) {
-        char o[48];
+        char o[256];
         snprintf(o, sizeof o, tx("SETUP_TAG_OBJ_FMT"), g->objective_count);
         if (note[0]) strncat(note, " / ", sizeof note - strlen(note) - 1);
         strncat(note, o, sizeof note - strlen(note) - 1);
@@ -818,7 +818,7 @@ static const char *setup_row_value(App *a, int i, char *lbuf, size_t lsz)
  * 押しやすいよう、矢印の周りに少し余裕（PAD）を持たせる。 */
 static int setup_arrow_hit(App *a, int i, int mx)
 {
-    char lbuf[96];
+    char lbuf[256];
     const char *val = setup_row_value(a, i, lbuf, sizeof lbuf);
     if (!val) return 0;
     TTF_Font *f = (setup_rows(a) > 8) ? a->font_s : a->font_m;
@@ -992,7 +992,7 @@ static void setup_draw(App *a)
             continue;
         }
 
-        char lbuf[96], vbuf[96];
+        char lbuf[256], vbuf[96];
         const char *label = lbuf;
         const char *val = setup_row_value(a, i, lbuf, sizeof lbuf);
         /* 陣営の行はその陣営の色でラベルを出す（対応が一目で分かる） */
@@ -1016,7 +1016,7 @@ static void setup_draw(App *a)
         /* 顔絵は正方形に縮めて、空いた下を能力の表示に使う。
          * 名前と一言だけでは、どれを選べばいいのか判断できない。 */
         draw_co_portrait(a, a->sel_co[p], 985, 246, 264, 264);
-        char buf[64];
+        char buf[256];
         snprintf(buf, sizeof buf, tx("SETUP_CO_FMT"), faction_name(p));
         draw_text_center(a, a->font_s, 985 + 132, 214, COL_GRAY, buf);
         setup_draw_co_detail(a, a->sel_co[p], 985, 522, 264);
@@ -1403,13 +1403,13 @@ static void opt_draw(App *a)
             }
         }
         int vx = r.x + 320, vy = r.y + ty;
-        char buf[80];
+        char buf[256];
         switch (i) {
         case OPT_LANG_ROW:
             /* 言語名はどの言語で表示していてもその言語自身の書き方で出す。
              * 対戦中は変えられないので暗く出し、理由を添える */
             if (a->opt_from_battle) {
-                char lb[96];
+                char lb[256];
                 snprintf(lb, sizeof lb, "%s  %s",
                          !strcmp(a->opt_lang, "en") ? "English" : "日本語",
                          tx("OPT_LANG_LOCKED"));
@@ -1625,7 +1625,7 @@ static int cpnmap_find_index(const Campaign *c, const char *id)
  * 横断するような見た目になってしまうため。 */
 static int cpnmap_slot(const Campaign *c, int i)
 {
-    char cur[32];
+    char cur[256];
     snprintf(cur, sizeof cur, "%s", c->start);
     for (int slot = 0; slot < c->n_nodes; slot++) {
         int idx = cpnmap_find_index(c, cur);
@@ -1838,14 +1838,14 @@ static void cpnmap_draw(App *a)
             float pulse = 1.0f + 0.05f * sinf((float)a->frame * 0.12f);
             render_hex_outline(a, (float)x, (float)y, 46.0f * pulse, COL_YELLOW);
         }
-        char nlab[32];
+        char nlab[256];
         cpnmap_node_label(c, i, nlab, sizeof nlab);
         draw_text_center(a, a->font_m, x, y - 12,
                          done || current ? COL_WHITE : COL_GRAY, nlab);
         if (done) {
             /* 制圧済みは取得ランクを併記（未評価なら従来どおり「制圧」） */
             if (nrank != RANK_NONE) {
-                char rb[32];
+                char rb[256];
                 snprintf(rb, sizeof rb, "%s  %s", tx("CPNMAP_DONE"),
                          campaign_rank_str((CpnRank)nrank));
                 draw_text_center(a, a->font_s, x, y + 10,
@@ -1881,7 +1881,7 @@ static void cpnmap_draw(App *a)
         draw_text_center(a, a->font_m, WIN_W / 2, WIN_H - 172, COL_WHITE, buf);
     }
     if (a->cps.n_carry > 0) {
-        char buf[96];
+        char buf[256];
         snprintf(buf, sizeof buf, tx("BRIEF_CARRY_FMT"),
                  a->cps.n_carry, a->cps.funds_carry);
         draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 146, COL_YELLOW, buf);
@@ -2012,14 +2012,14 @@ static void brief_draw(App *a)
     y += node->n_brief * line_h + 8;
 
     if (a->cps.n_carry > 0) {
-        char buf[96];
+        char buf[256];
         snprintf(buf, sizeof buf, tx("BRIEF_CARRY_FMT"),
                  a->cps.n_carry, a->cps.funds_carry);
         draw_text_center(a, a->font_s, WIN_W / 2, y, COL_YELLOW, buf);
         y += 24;
     }
     if (a->cps.n_store > 0) {
-        char buf[96];
+        char buf[256];
         snprintf(buf, sizeof buf, tx("BRIEF_STORE_FMT"), a->cps.n_store);
         draw_text_center(a, a->font_s, WIN_W / 2, y,
                          (SDL_Color){ 130, 220, 130, 255 }, buf);
@@ -2123,7 +2123,7 @@ static void reward_draw(App *a)
         draw_text_center(a, a->font_m, WIN_W / 2, 84, COL_WHITE, node->title);
     } else if (!a->campaign_mode && a->game.winner >= 0) {
         /* フリー対戦: 勝者陣営名を副題に */
-        char buf[96];
+        char buf[256];
         snprintf(buf, sizeof buf, tx("RESULT_WIN_FMT"),
                  faction_name(a->game.winner));
         draw_text_center(a, a->font_m, WIN_W / 2, 84, COL_WHITE, buf);
@@ -2288,7 +2288,7 @@ static void result_draw(App *a)
         buf[0] = 0;
         for (int p = 0; p < MAX_PLAYERS; p++) {
             if (!game_player_in_play(g, p) && g->lost_units[p] == 0) continue;
-            char one[48];
+            char one[128];
             snprintf(one, sizeof one, tx("RESULT_LOSS_ONE_FMT"),
                      faction_name(p), g->lost_units[p]);
             if (n++) strncat(buf, "   ", sizeof buf - strlen(buf) - 1);
@@ -2807,7 +2807,7 @@ static void story_draw(App *a)
 
         int y = by + 20 + i * lh;
         if (L[i].who[0]) {
-            char who[40];
+            char who[256];
             snprintf(who, sizeof who, "%s", L[i].who);
             draw_text(a, a->font_m, bx + 24, y, WHO, who);
             int w = text_width(a, a->font_m, who);

@@ -355,7 +355,7 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
             e->act = r_u8(r);
             e->a1 = r_i16(r); e->a2 = r_i16(r); e->a3 = r_i16(r);
             e->a4 = r_i16(r); e->a5 = r_i16(r);
-            r_str(r, e->msg, sizeof e->msg);
+            r_str(r, e->msg, ver >= 21 ? sizeof e->msg : 96);   /* v20 以前は 96 */
         }
     }
 
@@ -369,7 +369,7 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
             ReinfWave *v = &g->waves[i];
             v->turn = r_i16(r); v->count = r_i16(r);
             v->owner = (int8_t)r_u8(r); v->done = (int8_t)r_u8(r);
-            r_str(r, v->msg, sizeof v->msg);
+            r_str(r, v->msg, ver >= 21 ? sizeof v->msg : 64);   /* v20 以前は 64 */
         }
     }
 

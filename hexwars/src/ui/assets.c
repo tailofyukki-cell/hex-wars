@@ -67,7 +67,7 @@ int assets_init(App *a)
 /* ---- テキストキャッシュ ---- */
 #define TC_SIZE 192
 typedef struct {
-    char key[96];
+    char key[512];
     TTF_Font *font;
     SDL_Color col;
     SDL_Texture *tex;
@@ -78,7 +78,33 @@ typedef struct {
 static TextEntry s_cache[TC_SIZE];
 static uint32_t s_tick;
 
+/* 固定長の文字列に収めたとき、日本語の1文字（3バイト）の途中で切れていると、
+ * その欠片が□で描かれる。描く前に、末尾の欠けた1文字を落とす。 */
+static const char *utf8_clip(const char *s, char *buf, size_t n)
+{
+    size_t len = strlen(s);
+    if (len >= n) len = n - 1;
+    memcpy(buf, s, len);
+    buf[len] = 0;
+    size_t i = len;
+    while (i > 0 && ((unsigned char)buf[i - 1] & 0xC0) == 0x80) i--;   /* 続きのバイト */
+    if (i > 0) {
+        unsigned char lead = (unsigned char)buf[i - 1];
+        size_t need = lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1;
+        if (len - (i - 1) < need) buf[i - 1] = 0;                       /* 欠けている */
+    }
+    return buf;
+}
+
+static TextEntry *get_text_raw(App *a, TTF_Font *f, SDL_Color c, const char *s);
+
 static TextEntry *get_text(App *a, TTF_Font *f, SDL_Color c, const char *s)
+{
+    char clean[512];
+    return get_text_raw(a, f, c, utf8_clip(s, clean, sizeof clean));
+}
+
+static TextEntry *get_text_raw(App *a, TTF_Font *f, SDL_Color c, const char *s)
 {
     s_tick++;
     int free_i = -1, oldest_i = 0;
@@ -87,7 +113,7 @@ static TextEntry *get_text(App *a, TTF_Font *f, SDL_Color c, const char *s)
         TextEntry *e = &s_cache[i];
         if (!e->tex) { if (free_i < 0) free_i = i; continue; }
         if (e->font == f && e->col.r == c.r && e->col.g == c.g &&
-            e->col.b == c.b && !strncmp(e->key, s, sizeof e->key - 1)) {
+            e->col.b == c.b && !strcmp(e->key, s)) {
             e->last_used = s_tick;
             return e;
         }

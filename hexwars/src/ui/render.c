@@ -670,7 +670,7 @@ void render_map(App *a)
                         if (g->sw_build[p][k].active && g->sw_build[p][k].x == x &&
                             g->sw_build[p][k].y == y) {
                             /* 建物の上側に出す。下側は次の段のマスに隠れるため */
-                            char sb[32];
+                            char sb[256];
                             snprintf(sb, sizeof sb, tx("MAP_SW_BUILD_FMT"), g->sw_build[p][k].left);
                             int tw = text_width(a, a->font_s, sb);
                             int ty = (int)(cy - s * 1.25f);

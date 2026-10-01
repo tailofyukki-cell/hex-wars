@@ -24,7 +24,7 @@ typedef struct {
     int16_t count;     /* 出す部隊数 */
     int8_t  owner;
     int8_t  done;      /* 1=到着済み */
-    char    msg[64];   /* 画面に出す知らせ */
+    char    msg[192];  /* 画面に出す知らせ */
 } ReinfWave;
 
 typedef struct Game {

@@ -128,7 +128,7 @@ static void check_over(App *a)
     }
     a->bs = BS_GAMEOVER;
     a->sel_unit = -1;
-    char buf[64];
+    char buf[256];
     if (a->game.winner >= 0)
         snprintf(buf, sizeof buf, tx("RESULT_WIN_FMT"),
                  faction_name(a->game.winner));
@@ -281,7 +281,7 @@ static void begin_side(App *a)
     check_over(a);
     if (a->bs == BS_GAMEOVER) return;
 
-    char buf[64];
+    char buf[160];
     snprintf(buf, sizeof buf, tx("BANNER_TURN_FMT"),
              g->turn, faction_name(g->current));
 
@@ -355,7 +355,7 @@ static void show_ai_co_power(App *a)
     Game *g = &a->game;
     const CommanderType *co = game_co(g, g->current);
     if (!co) return;
-    char buf[96];
+    char buf[192];
     snprintf(buf, sizeof buf, tx("CO_POWER_BANNER_FMT"), co->name, co->power_name);
     set_banner(a, buf, 120);
     battle_add_popup(a, a->cur_x, a->cur_y, co->power_name, COL_YELLOW);
@@ -372,7 +372,7 @@ static void try_co_power(App *a)
         return;
     }
     if (game_co_activate(g, g->current)) {
-        char buf[96];
+        char buf[192];
         snprintf(buf, sizeof buf, tx("CO_POWER_BANNER_FMT"), co->name, co->power_name);
         set_banner(a, buf, 100);
         battle_add_popup(a, a->cur_x, a->cur_y, co->power_name, COL_YELLOW);
@@ -672,7 +672,7 @@ static void build_action_menu(App *a)
 static void finish_attack_effects(App *a)
 {
     BattleAnim *an = &a->anim;
-    char buf[48];
+    char buf[256];
     snprintf(buf, sizeof buf, "-%d", an->dmg);
     battle_add_popup(a, an->dx, an->dy, buf, (SDL_Color){ 255, 120, 100, 255 });
     if (an->def_killed)
@@ -794,7 +794,7 @@ static void do_disband(App *a)
     bool lab = game_on_own_lab(g, ui);
     int refund = game_disband_unit(g, ui);
     if (refund >= 0) {
-        char buf[48];
+        char buf[256];
         snprintf(buf, sizeof buf, tx(lab ? "POP_DISBAND_LAB_FMT" : "POP_DISBAND_FMT"), refund);
         battle_add_popup(a, x, y, buf, COL_YELLOW);
         snd_se(SE_CAPTURE);
@@ -857,7 +857,7 @@ static void select_action(App *a, int act)
         break;
     case ACT_SUPPLY: {
         int n = game_supply_adjacent(g, a->sel_unit);
-        char buf[48];
+        char buf[256];
         snprintf(buf, sizeof buf, tx("POP_SUPPLY_FMT"), n);
         battle_add_popup(a, u->pos.x, u->pos.y, buf, COL_YELLOW);
         snd_se(SE_CAPTURE);
@@ -877,7 +877,7 @@ static void select_action(App *a, int act)
         return;
     case ACT_HEAL: {
         int hp = game_supply_heal(g, a->sel_unit);
-        char buf[48];
+        char buf[256];
         snprintf(buf, sizeof buf, tx("POP_HEAL_FMT"), hp);
         battle_add_popup(a, u->pos.x, u->pos.y, buf,
                          (SDL_Color){ 140, 240, 140, 255 });
@@ -1049,7 +1049,7 @@ static void store_disband_do(App *a)
     int refund = store_refund(a, slot);
     g->funds[g->current] += refund;
     campaign_store_remove(&a->cps, slot);
-    char buf[64];
+    char buf[256];
     snprintf(buf, sizeof buf, tx("POP_DISBAND_FMT"), refund);
     set_banner(a, buf, 90);
     snd_se(SE_CAPTURE);
@@ -1390,7 +1390,7 @@ static void confirm_at(App *a, int hx, int hy)
             kind = game_do_work(g, a->sel_unit, hx, hy);
             if (kind == WORK_NONE) { snd_se(SE_CANCEL); return; }
             if (kind == WORK_REPAIR) {
-                char buf[48];
+                char buf[256];
                 snprintf(buf, sizeof buf, tx("POP_REPAIR_FMT"), cost);
                 battle_add_popup(a, hx, hy, buf, COL_YELLOW);
             } else {
@@ -1460,7 +1460,7 @@ static void do_join(App *a)
     int hx = g->units[tgt].pos.x, hy = g->units[tgt].pos.y;
     /* はみ出した分は合流前にいたマスへ部隊として残す */
     int left = game_join_units(g, ui, tgt, a->undo_x, a->undo_y);
-    char msg[48];
+    char msg[256];
     snprintf(msg, sizeof msg, tx("POP_JOIN_FMT"), g->units[tgt].hp);
     battle_add_popup(a, hx, hy, msg, COL_WHITE);
     if (left > 0) {
@@ -2486,7 +2486,7 @@ static void draw_topbar(App *a)
             if (fw > 0) fill_rect(a, r.x, r.y, fw, r.h, fc);
             outline_rect(a, r.x, r.y, r.w, r.h, ready ? COL_YELLOW : COL_DIM);
 
-            char cb[96];
+            char cb[256];
             if (ready)
                 snprintf(cb, sizeof cb, "%s  %s", co->name, tx("CO_READY"));
             else if (g->co_used_turn[g->current] && cur >= cost)
@@ -2577,7 +2577,7 @@ static void draw_panels(App *a)
 
 
     if (t->capturable) {
-        char ownbuf[64];
+        char ownbuf[256];
         const char *own = ownbuf;
         if (tile->owner < 0) {
             snprintf(ownbuf, sizeof ownbuf, "%s", tx("NEUTRAL"));
@@ -2640,7 +2640,7 @@ static void draw_panels(App *a)
                      layer_tag(unit_layer(ut->mclass)),
                      unit_name_of(ut, u->owner));
             draw_text(a, a->font_l, ux + 14, py + 8, COL_P[u->owner], buf);
-            char cb[32];
+            char cb[256];
             snprintf(cb, sizeof cb, "%d/%d", scyc + 1, n_stack);
             draw_text(a, a->font_s, ux + 420 - 52, py + 14, COL_YELLOW, cb);
         } else {
@@ -2663,7 +2663,7 @@ static void draw_panels(App *a)
             snprintf(buf, sizeof buf, tx("PANEL_SUPPLY_HINT"));
             draw_text(a, a->font_s, ux + 14, py + 88, COL_GRAY, buf);
         } else if (game_first_cargo(g, ui) >= 0) {
-            char names[64] = "";
+            char names[256] = "";
             for (int s = 0; s < 2; s++)
                 if (u->cargo[s] >= 0) {
                     if (names[0]) strncat(names, tx("LIST_SEP"), sizeof names - strlen(names) - 1);
@@ -2757,7 +2757,7 @@ static void draw_menus(App *a)
                       sel ? (SDL_Color){ 80, 110, 160, 250 }
                           : (SDL_Color){ 38, 44, 56, 250 });
             outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
-            char buf[96];
+            char buf[256];
             if (a->lpick_unit[i] < 0) {          /* 生産 */
                 draw_text(a, a->font_s, r.x + 12, r.y + 7,
                           sel ? COL_WHITE : COL_YELLOW, tx("LPICK_PRODUCE"));
@@ -2854,7 +2854,7 @@ static void draw_menus(App *a)
         int ph = 40 + shown * 44 + 12;
         fill_rect(a, WIN_W / 2 - 360, 100, 720, ph, (SDL_Color){ 28, 32, 38, 245 });
         outline_rect(a, WIN_W / 2 - 360, 100, 720, ph, COL_DIM);
-        char title[64];
+        char title[256];
         if (scrollable)
             snprintf(title, sizeof title, "%s  (%d/%d)", tx("PROD_TITLE"),
                      a->prod_idx + 1, a->prod_n);
@@ -2866,7 +2866,7 @@ static void draw_menus(App *a)
             SDL_Rect sr = prod_sort_rect();
             fill_rect(a, sr.x, sr.y, sr.w, sr.h, (SDL_Color){ 44, 52, 66, 255 });
             outline_rect(a, sr.x, sr.y, sr.w, sr.h, COL_DIM);
-            char sb[64];
+            char sb[256];
             snprintf(sb, sizeof sb, tx("PROD_SORT_FMT"), prod_sort_name(a));
             draw_text_center(a, a->font_s, sr.x + sr.w / 2, sr.y + 8,
                              COL_YELLOW, sb);
@@ -2922,7 +2922,7 @@ static void draw_menus(App *a)
                       sel ? (SDL_Color){ 80, 110, 160, 255 }
                           : (SDL_Color){ 40, 48, 60, 255 });
             outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
-            char buf[96];
+            char buf[256];
             /* 倉庫からの引き出しは名前頭に[倉]を付け、右端は無料表示 */
             const char *tname = unit_name_of(&g->types[t], g->current);
             if (from_store)
@@ -2960,7 +2960,7 @@ static void draw_menus(App *a)
         int ph = 50 + shown * 42 + (scrollable ? 24 : 12);
         fill_rect(a, WIN_W / 2 - 360, 100, 720, ph, (SDL_Color){ 28, 32, 38, 246 });
         outline_rect(a, WIN_W / 2 - 360, 100, 720, ph, COL_DIM);
-        char title[96];
+        char title[256];
         snprintf(title, sizeof title, tx("ULIST_TITLE_FMT"), a->ulist_n);
         draw_text_center(a, a->font_m, WIN_W / 2, 108, COL_WHITE, title);
 
@@ -3214,7 +3214,7 @@ static void draw_menus(App *a)
         }
     }
     if (a->bs == BS_TURN_MENU) {
-        char tiltbuf[64];
+        char tiltbuf[128];
         snprintf(tiltbuf, sizeof tiltbuf, tx("TMENU_TILT_FMT"),
                  tx(a->opt_tilt ? "OPT_TILT_ON" : "OPT_TILT_OFF"));
         const char *items[TMENU_ITEMS] = {
@@ -3584,7 +3584,7 @@ void battle_draw(App *a)
     fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 22, 26, 32, 255 });
 
     if (a->bs == BS_HANDOVER) {
-        char buf[96];
+        char buf[256];
         snprintf(buf, sizeof buf, tx("HANDOVER_FMT"), faction_name(g->current));
         draw_text_center(a, a->font_xl, WIN_W / 2, 300, COL_P[g->current], buf);
         draw_text_center(a, a->font_m, WIN_W / 2, 400, COL_WHITE,
@@ -3628,7 +3628,9 @@ void battle_draw(App *a)
         fill_rect(a, 0, WIN_H / 2 - 50, WIN_W, 100, bg);
         SDL_Color fg = COL_WHITE;
         fg.a = (Uint8)alpha;
-        draw_text_center(a, a->font_xl, WIN_W / 2, WIN_H / 2 - 32, fg, a->banner);
+        /* 長い名前（超弩級航空戦艦「計画200号」など）で画面からはみ出すときは一回り小さく */
+        TTF_Font *bf = text_width(a, a->font_xl, a->banner) > WIN_W - 40 ? a->font_l : a->font_xl;
+        draw_text_center(a, bf, WIN_W / 2, WIN_H / 2 - (bf == a->font_xl ? 32 : 22), fg, a->banner);
     }
 }
 

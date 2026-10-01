@@ -6,7 +6,8 @@
 #include "campaign.h"
 
 #define SAVE_MAGIC   "HXWS"
-#define SAVE_VERSION 20  /* v20: 偵察の「明かしたマス」の端数（Unit.recon_cells）。
+#define SAVE_VERSION 21  /* v21: イベント・増援の知らせの長さを 96/64 → 192 に。
+                          * v20: 偵察の「明かしたマス」の端数（Unit.recon_cells）。
                           * v19: 研究ポイントを領域（陸・空・海）ごとに持つ。
                           * v18: 研究ポイントと超兵器の建造状況。
                           * v17: この手番に必殺技を使ったか（1手番1回の制限）。

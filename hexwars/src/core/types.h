@@ -326,7 +326,7 @@ typedef struct {
     int16_t c1, c2, c3, c4;
     uint8_t act;               /* EvAct */
     int16_t a1, a2, a3, a4, a5;
-    char    msg[96];
+    char    msg[192];  /* 日本語で約60字。以前の96では長い知らせの末尾の1文字が欠けた */
 } MapEvent;
 
 /* マップ1ヘクス */
