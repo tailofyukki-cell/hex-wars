@@ -400,6 +400,9 @@ ULIST_ROW_FMT   = HP%2d  %s  (%d,%d)
 ULIST_EXP_FMT   = EXP%3d (Rank %d)
 ULIST_FUEL_FMT  = Fuel%3d/%d
 ULIST_EMPTY     = No units left to move
+KIND_LAND       = Land
+KIND_SEA        = Naval
+KIND_AIR        = Air
 
 # --- deployment ---
 DEPLOY_TITLE      = Deployment

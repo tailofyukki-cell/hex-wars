@@ -1264,6 +1264,17 @@ static const char *layer_tag(Layer L)
             : L == LAYER_UNDER ? "LAYER_UNDER" : "LAYER_SURFACE");
 }
 
+/* 未行動一覧の種別。レイヤー（地上/空/海中）だと艦船まで「地上」になって
+ * 分かりにくいので、部隊の種類で分ける: 陸=地上、艦船・潜水艦=艦船、空=航空 */
+static const char *unit_kind_tag(MoveClass mc)
+{
+    switch (mc) {
+    case MC_AIR: return tx("KIND_AIR");
+    case MC_SEA: case MC_SUB: return tx("KIND_SEA");
+    default: return tx("KIND_LAND");
+    }
+}
+
 static SDL_Rect lpick_rect(App *a, int i)
 {
     float cx, cy;
@@ -2974,7 +2985,7 @@ static void draw_menus(App *a)
                 outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
                 char buf[160];
                 snprintf(buf, sizeof buf, "[%s] %s",
-                         layer_tag(unit_layer(ut->mclass)),
+                         unit_kind_tag((MoveClass)ut->mclass),
                          unit_name_of(ut, u->owner));
                 draw_text(a, a->font_s, r.x + 12, r.y + 9,
                           sel ? COL_WHITE : COL_GRAY, buf);

@@ -398,6 +398,9 @@ ULIST_ROW_FMT   = HP%2d  %s  (%d,%d)
 ULIST_EXP_FMT   = 経験%3d (ランク%d)
 ULIST_FUEL_FMT  = 燃料%3d/%d
 ULIST_EMPTY     = 未行動のユニットはありません
+KIND_LAND       = 地上
+KIND_SEA        = 艦船
+KIND_AIR        = 航空
 
 # --- 出撃部隊の編成（持越しが上限を超えたとき）---
 DEPLOY_TITLE      = 出撃部隊の編成
