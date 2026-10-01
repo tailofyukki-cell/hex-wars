@@ -1307,6 +1307,39 @@ static void test_campaign_fast_route(void)
     printf("test_campaign_fast_route OK\n");
 }
 
+/* 偵察: 移動で新しく明かしたマス5つで経験値1。端数は持ち越す */
+static void test_recon_exp(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    CHECK(data_load_map(g, "data/maps/test_arena.map", err, sizeof err) == 0);
+    game_start(g, 1u);
+    g->n_units = 0; g->fog = 1;
+    int sc = data_find_unit_type(g, "SCOUT_PLANE");
+    CHECK(sc >= 0 && g->types[sc].recon);
+    int u = game_spawn_unit(g, 0, sc, 2, 2, 10);
+    CHECK(game_spawn_unit(g, 1, data_find_unit_type(g, "INFANTRY"), g->w - 2, g->h - 2, 10) >= 0);
+    game_update_vision(g);
+    int total = 0;
+    for (int step = 0; step < 6; step++) {
+        int before = 0, after = 0;
+        for (int y = 0; y < g->h; y++) for (int x = 0; x < g->w; x++) before += g->visible[0][y][x] != 0;
+        int e0 = g->units[u].exp * 5 + g->units[u].recon_cells;
+        game_move_unit(g, u, g->units[u].pos.x + 1, g->units[u].pos.y + (step & 1), 0);
+        for (int y = 0; y < g->h; y++) for (int x = 0; x < g->w; x++) after += g->visible[0][y][x] != 0;
+        (void)before; (void)after;
+        int e1 = g->units[u].exp * 5 + g->units[u].recon_cells;
+        CHECK(e1 >= e0);
+        total = e1;
+    }
+    /* 明かしたマスの合計 = 経験値×5 + 端数。何マスか明かしていれば経験値も入っている */
+    CHECK(total >= 5 && g->units[u].exp == total / 5 && g->units[u].recon_cells == total % 5);
+    printf("test_recon_exp OK (cells %d -> exp %d)\n", total, g->units[u].exp);
+}
+
 /* 進化した輸送手段にも従来どおり搭載できること。
  * transport_by には進化前のID（CARRIER 等）しか書かれておらず、しかも4件までで
  * 歩兵は使い切っているため、進化後のIDを書き足すことができない。
@@ -4657,6 +4690,7 @@ int main(void)
     test_carrier_launch();
     test_loss_log();
     test_campaign_fast_route();
+    test_recon_exp();
     test_superweapon();
     test_language();
     test_paradrop();

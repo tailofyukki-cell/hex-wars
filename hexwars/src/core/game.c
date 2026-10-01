@@ -309,7 +309,7 @@ static void clear_capture_by(Game *g, int ui)
  * 占領は歩兵が戦闘でも稼げるので「代わり」ではなく上乗せ。 */
 #define EXP_UNLOAD   10   /* 輸送: 1体降ろす */
 #define EXP_SUPPLY    1   /* 補給: 物資1消費 */
-#define EXP_RECON     1   /* 偵察: 新しい土地を明かした移動 */
+#define RECON_CELLS_PER_EXP 5   /* 偵察: 新しく明かしたマス5つで経験値1（500マスで進化） */
 #define EXP_CARRIER   2   /* 空母: 艦載機1機を整備 */
 #define EXP_CAPTURE  15   /* 占領完了（戦闘ぶんへの上乗せ） */
 
@@ -343,10 +343,12 @@ void game_move_unit(Game *g, int ui, int x, int y, int fuel_cost)
             g->units[u->cargo[s]].pos.y = (uint8_t)y;
         }
 
-    /* 偵察部隊は「今まで見えなかった土地を明かした移動」で経験値を得る。
-     * 戦えない偵察機にとっては唯一の成長手段。visible[] は今見えているかだけを
-     * 持つので、往復すると同じ土地で何度も稼げる——現状はそれを許容している
-     * （偵察の仕事は見えない場所を見ることなので、遊んでみて問題なら見直す）。 */
+    /* 偵察部隊は、移動で新しく見えるようになったマスの数で経験値を得る。
+     * 5マスで経験値1、端数は部隊ごとに持ち越すので、合計500マスで満タン（進化可能）。
+     * 戦えない偵察機にとっては唯一の成長手段。以前は「1回の移動で1」だけで、
+     * 進化まで最低100回の移動が要った。visible[] は今見えているかだけを持つので、
+     * 往復すると同じ土地でも数えられる——偵察の仕事は見えない場所を見ることなので、
+     * 遊んでみて問題なら見直す。 */
     bool was_visible[MAX_MAP_H][MAX_MAP_W];
     const UnitType *mt = unit_type(g, u);
     bool count_recon = mt->recon && g->fog;
@@ -361,8 +363,10 @@ void game_move_unit(Game *g, int ui, int x, int y, int fuel_cost)
         for (int yy = 0; yy < g->h; yy++)
             for (int xx = 0; xx < g->w; xx++)
                 if (!was_visible[yy][xx] && g->visible[u->owner][yy][xx]) {
-                    gain_exp(g, u, EXP_RECON);
-                    return;                  /* 1回の移動につき1回だけ */
+                    if (++u->recon_cells >= RECON_CELLS_PER_EXP) {
+                        u->recon_cells = 0;
+                        gain_exp(g, u, 1);
+                    }
                 }
     }
 }
@@ -1291,6 +1295,7 @@ int game_evolve_unit(Game *g, int ui)
     g->funds[u->owner] -= game_evolve_cost(g, ui);   /* 型を変える前に引く */
     u->type = (uint8_t)nt;
     u->exp = 0;                    /* 熟練度は振り出しに戻る＝これが進化の代償 */
+    u->recon_cells = 0;
     /* HP は据え置き（満タンにすると前線での回復手段になってしまう）。
      * 燃料・弾薬は新しい上限で満タン（上位種は上限が上がることが多く、
      * 比率のままだと進化した瞬間に息切れするため）。 */

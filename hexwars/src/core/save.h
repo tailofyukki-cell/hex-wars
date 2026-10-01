@@ -6,7 +6,8 @@
 #include "campaign.h"
 
 #define SAVE_MAGIC   "HXWS"
-#define SAVE_VERSION 19  /* v19: 研究ポイントを領域（陸・空・海）ごとに持つ。
+#define SAVE_VERSION 20  /* v20: 偵察の「明かしたマス」の端数（Unit.recon_cells）。
+                          * v19: 研究ポイントを領域（陸・空・海）ごとに持つ。
                           * v18: 研究ポイントと超兵器の建造状況。
                           * v17: この手番に必殺技を使ったか（1手番1回の制限）。
                           * v16: マップ本来の天候・昼夜の有無（途中で入り切りするため）。
