@@ -666,7 +666,10 @@ bool game_night_blocks(const Game *g, const Unit *atk, const Unit *def)
 {
     if (!atk || !def) return false;
     if (!game_is_night(g)) return false;
-    return game_unit_domain(g, atk) != game_unit_domain(g, def);
+    /* 夜の空からは地上も海も見えない（雨と同じく「片方だけが空」なら撃てない）。
+     * 以前は陸・空・海の領域が違えば撃てなかったため、夜は陸と艦船が撃ち合えず
+     * 違和感があった。艦船と潜水艦は今までどおり撃ち合える。 */
+    return game_weather_hits(g, atk, def);
 }
 
 int game_range_max(const Game *g, const UnitType *t)

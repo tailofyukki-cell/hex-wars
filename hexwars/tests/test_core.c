@@ -3062,7 +3062,7 @@ static void test_daynight(void)
     CHECK(inf >= 0 && fight >= 0 && aa >= 0 && ninja >= 0 && arty >= 0);
     if (s_fail) return;
 
-    /* 領域制限: 夜は陸VS陸・空VS空だけ。またぐ攻撃は成立しない */
+    /* 夜の制限: 片方だけが空の攻撃は成立しない（陸・艦船・潜水艦どうしは可） */
     {
         g->n_units = 0;
         int ga = game_spawn_unit(g, 0, aa,    9, 4, 10);   /* 地上の対空 */
@@ -3078,6 +3078,18 @@ static void test_daynight(void)
         CHECK(!unit_can_attack_target(g, &g->units[ga], &g->units[pa]));  /* 地→空 不可 */
         CHECK(unit_can_attack_target(g, &g->units[ga], &g->units[gb]));   /* 地→地 可 */
         CHECK(!unit_can_attack_target(g, &g->units[pa], &g->units[gb]));  /* 空→地 不可 */
+
+        /* 陸と艦船は夜でも撃ち合える（片方だけが空のときだけ不可）。
+         * 判定は game_night_blocks だけを見るので、地形に関係なく比べられる */
+        int ds = data_find_unit_type(g, "DESTROYER");
+        int sb = data_find_unit_type(g, "SUBMARINE");
+        CHECK(ds >= 0 && sb >= 0);
+        Unit ship = g->units[gb]; ship.type = (uint8_t)ds;
+        Unit sub  = g->units[gb]; sub.type  = (uint8_t)sb;
+        CHECK(!game_night_blocks(g, &g->units[ga], &ship));   /* 陸→艦 可 */
+        CHECK(!game_night_blocks(g, &ship, &g->units[gb]));   /* 艦→陸 可 */
+        CHECK(!game_night_blocks(g, &ship, &sub));            /* 艦→潜 可 */
+        CHECK(game_night_blocks(g, &g->units[pa], &ship));    /* 空→艦 不可 */
     }
 
     /* 攻撃補正: 夜間ユニット+50% / 通常-20% */
