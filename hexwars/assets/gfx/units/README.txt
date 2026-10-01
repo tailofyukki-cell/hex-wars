@@ -61,7 +61,7 @@ data/units.def の該当ユニットの `image =` の **あと** に行を足し
     at_infantry.png  対戦車兵 / 戦車猟兵（進化後）
     recon.png        偵察車 / 装甲偵察車（進化後）
     tank.png         中戦車「T-40型」 / 主力戦車「T-55型」（進化後）
-    htank.png        重戦車「G-6型」 / 超重戦車「G-9型」（進化後）
+    htank.png        重戦車「G-6型」 / 重戦車改「G-9型」（進化後）
     artillery.png    自走砲「H-15型」 / 重自走砲「H-24型」（進化後）
     aa_tank.png      対空戦車「F-8型」 / 自走対空機関砲（進化後）
     truck.png        トラック / 装甲兵員輸送車（進化後）

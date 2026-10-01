@@ -1276,13 +1276,13 @@ transport_by = T_SHIP
 no_produce   = 1
 
 [unit HTANK_V]
-name         = 超重戦車「G-9型」
-name1     = 超重戦車「ZK-90」
+name         = 重戦車改「G-9型」
+name1     = 重戦車改「ZK-90」
 name2     = 大犀
 name3     = 五式改重戦車
 name4     = 動く砦
-name@en   = G-9 Super-Heavy Tank
-name1@en  = ZK-90 Super-Heavy Tank
+name@en   = G-9 Heavy Tank Kai
+name1@en  = ZK-90 Heavy Tank Kai
 name2@en  = Great Rhino
 name3@en  = Type 5 Kai Heavy Tank
 name4@en  = Moving Fortress
