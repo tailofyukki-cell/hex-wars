@@ -2367,92 +2367,108 @@ static void draw_topbar(App *a)
     fill_rect(a, 0, 0, WIN_W, TOPBAR_H, (SDL_Color){ 28, 32, 38, 235 });
 
     char buf[160];
-    if (g->turn_limit > 0)
-        snprintf(buf, sizeof buf, tx("TOP_TURNLIM_FMT"), g->map_name, g->turn, g->turn_limit);
-    else
-        snprintf(buf, sizeof buf, tx("TOP_TURN_FMT"), g->map_name, g->turn);
     /* **固定座標で並べないこと**。マップ名も天候の文言も長さが変わるので、
      * 測った幅で左から詰める。以前は昼夜(862)と拠点条件(980)が
-     * 指揮官ゲージ(900〜1140)の下に潜って読めなくなっていた。 */
+     * 指揮官ゲージ(900〜1140)の下に潜って読めなくなっていた。
+     *
+     * 研究ポイント・天候・昼夜がそろうと、それでも指揮官ゲージ（無ければメニュー
+     * ボタン）にぶつかる。先に全部の幅を測り、収まらなければ段階的に短くする:
+     *   1) 間隔を詰める  2) 天候の予報（次:◯）を省く  3) 研究ポイントを短く
+     *   4) マップ名を省く（ターン数は残す） */
+    static const char *WXK[WX_COUNT] = { "WX_CLEAR", "WX_CLOUDY", "WX_RAIN" };
+    Weather w = game_weather(g);
+    Weather nx = (Weather)(g->weather_next < WX_COUNT ? g->weather_next : WX_CLEAR);
+    /* 「次」は「次のターン」ではなく「今の天候が終わったあと」。
+     * weather_left は「この先何回 continue するか」なので、今ターンを含めて +1。 */
+    int wleft = g->weather_left + 1;
+    bool has_lab = false;
+    for (int d = 0; d < 3; d++) if (g->lab_points[g->current][d] > 0) has_lab = true;
+    for (int y = 0; y < g->h && !has_lab; y++)
+        for (int x = 0; x < g->w && !has_lab; x++)
+            if (g->terrains[g->tiles[y][x].terrain].is_lab) has_lab = true;
+    bool fixed = !g->night_on;
+    bool nite = !fixed && game_is_night(g);
+
+    char s_turn[160], s_fac[96], s_fund[64], s_lab[96], s_wx[160], s_ph[96];
+    int right = game_co(g, g->current) ? co_gauge_rect().x : WIN_W - 130;
+    int level = 0, gap = 24;
+    for (level = 0; level <= 4; level++) {
+        gap = level >= 1 ? 14 : 24;
+        if (level >= 4)
+            snprintf(s_turn, sizeof s_turn, tx(g->turn_limit > 0 ? "TOP_TURNLIM_SHORT_FMT" : "TOP_TURN_SHORT_FMT"),
+                     g->turn, g->turn_limit);
+        else if (g->turn_limit > 0)
+            snprintf(s_turn, sizeof s_turn, tx("TOP_TURNLIM_FMT"), g->map_name, g->turn, g->turn_limit);
+        else
+            snprintf(s_turn, sizeof s_turn, tx("TOP_TURN_FMT"), g->map_name, g->turn);
+        snprintf(s_fac, sizeof s_fac, tx("TOP_FACTION_FMT"), faction_name(g->current));
+        snprintf(s_fund, sizeof s_fund, tx("TOP_FUNDS_FMT"), g->funds[g->current]);
+        s_lab[0] = 0;
+        if (has_lab)
+            snprintf(s_lab, sizeof s_lab, tx(level >= 3 ? "TOP_LAB_SHORT_FMT" : "TOP_LAB_FMT"),
+                     g->lab_points[g->current][0], g->lab_points[g->current][1],
+                     g->lab_points[g->current][2]);
+        s_wx[0] = 0;
+        if (g->weather_on) {
+            /* 天候が固定のマップは天候名だけ（予報を出すと変わるかのように見える） */
+            if (g->weather_fixed >= 0)
+                snprintf(s_wx, sizeof s_wx, tx("TOP_WEATHER_FIXED_FMT"), tx(WXK[w]));
+            else if (level >= 2)
+                snprintf(s_wx, sizeof s_wx, tx("TOP_WEATHER_SHORT_FMT"), tx(WXK[w]), wleft);
+            else
+                snprintf(s_wx, sizeof s_wx, tx("TOP_WEATHER_FMT"), tx(WXK[w]), wleft, tx(WXK[nx]));
+        }
+        if (fixed) snprintf(s_ph, sizeof s_ph, "%s", tx("PHASE_DAY_FIXED"));
+        else snprintf(s_ph, sizeof s_ph, tx("TOP_PHASE_FMT"),
+                      tx(nite ? "PHASE_NIGHT" : "PHASE_DAY"), game_phase_left(g));
+        int total = 10 + text_width(a, a->font_m, s_turn) + gap
+                  + text_width(a, a->font_m, s_fac) + gap
+                  + text_width(a, a->font_m, s_fund) + gap
+                  + (s_lab[0] ? text_width(a, a->font_m, s_lab) + gap : 0)
+                  + (s_wx[0] ? 24 + text_width(a, a->font_s, s_wx) + gap : 0)
+                  + 24 + text_width(a, a->font_m, s_ph) + 8;
+        if (total <= right - 8 || level == 4) break;
+    }
+
     int tx_ = 10;
-    draw_text(a, a->font_m, tx_, 6, COL_WHITE, buf);
-    tx_ += text_width(a, a->font_m, buf) + 24;
-
-    snprintf(buf, sizeof buf, tx("TOP_FACTION_FMT"), faction_name(g->current));
-    draw_text(a, a->font_m, tx_, 6, COL_P[g->current], buf);
-    tx_ += text_width(a, a->font_m, buf) + 24;
-
-    snprintf(buf, sizeof buf, tx("TOP_FUNDS_FMT"), g->funds[g->current]);
-    draw_text(a, a->font_m, tx_, 6, COL_YELLOW, buf);
-    tx_ += text_width(a, a->font_m, buf) + 24;
+    draw_text(a, a->font_m, tx_, 6, COL_WHITE, s_turn);
+    tx_ += text_width(a, a->font_m, s_turn) + gap;
+    draw_text(a, a->font_m, tx_, 6, COL_P[g->current], s_fac);
+    tx_ += text_width(a, a->font_m, s_fac) + gap;
+    draw_text(a, a->font_m, tx_, 6, COL_YELLOW, s_fund);
+    tx_ += text_width(a, a->font_m, s_fund) + gap;
 
     /* 研究ポイント（研究所のあるマップか、ポイントを持っているときだけ） */
-    {
-        bool has_lab = false;
-        for (int d = 0; d < 3; d++) if (g->lab_points[g->current][d] > 0) has_lab = true;
-        for (int y = 0; y < g->h && !has_lab; y++)
-            for (int x = 0; x < g->w && !has_lab; x++)
-                if (g->terrains[g->tiles[y][x].terrain].is_lab) has_lab = true;
-        if (has_lab) {
-            snprintf(buf, sizeof buf, tx("TOP_LAB_FMT"), g->lab_points[g->current][0],
-                     g->lab_points[g->current][1], g->lab_points[g->current][2]);
-            draw_text(a, a->font_m, tx_, 6, (SDL_Color){ 150, 210, 255, 255 }, buf);
-            tx_ += text_width(a, a->font_m, buf) + 24;
-        }
+    if (s_lab[0]) {
+        draw_text(a, a->font_m, tx_, 6, (SDL_Color){ 150, 210, 255, 255 }, s_lab);
+        tx_ += text_width(a, a->font_m, s_lab) + gap;
     }
 
     /* 天候と予報（悪天候は色を変えて気づけるように） */
-    if (g->weather_on) {
-        static const char *WXK[WX_COUNT] = { "WX_CLEAR", "WX_CLOUDY", "WX_RAIN" };
-        Weather w = game_weather(g);
-        Weather nx = (Weather)(g->weather_next < WX_COUNT ? g->weather_next : WX_CLEAR);
+    if (s_wx[0]) {
         SDL_Color wc = (w == WX_RAIN)   ? (SDL_Color){ 120, 180, 255, 255 }
                      : (w == WX_CLOUDY) ? (SDL_Color){ 200, 200, 205, 255 }
                                         : (SDL_Color){ 250, 220, 120, 255 };
-        /* 「次」は「次のターン」ではなく「今の天候が終わったあと」。
-         * 残りターン数を出さないと「次は晴なのに雨が続く」と誤読される。
-         * weather_left は「この先何回 continue するか」なので、今ターンを含めて +1。 */
-        int wleft = g->weather_left + 1;
-        /* 天候が固定のマップで予報を出すと「あと1ターンで雨→雨」と
-         * 変わるかのように見えるので、天候名だけにする。 */
-        if (g->weather_fixed >= 0)
-            snprintf(buf, sizeof buf, tx("TOP_WEATHER_FIXED_FMT"), tx(WXK[w]));
-        else
-            snprintf(buf, sizeof buf, tx("TOP_WEATHER_FMT"),
-                     tx(WXK[w]), wleft, tx(WXK[nx]));
         render_weather_icon(a, tx_, 9, (int)w);
         tx_ += 24;
-        draw_text(a, a->font_s, tx_, 9, wc, buf);
-        tx_ += text_width(a, a->font_s, buf) + 18;
+        draw_text(a, a->font_s, tx_, 9, wc, s_wx);
+        tx_ += text_width(a, a->font_s, s_wx) + gap;
     }
 
-    /* 昼夜。周期が固定なので残りターン数を出すと作戦が立てられる。
-     * 天候の隣に置く（どちらも「今の戦場の条件」なので並んでいた方が読みやすい）。 */
+    /* 昼夜。雨や曇りの日は画面が暗く、昼か夜か見分けにくいので、絵と枠で囲んだ
+     * 文字で天候とは別にいつも示す。昼夜なしのマップは「昼（常時）」を控えめな色で。 */
     {
-        /* 昼夜なしのマップ（序盤の作戦など）は常に昼。切り替わらないので
-         * 「あと◯」は出さず、「昼（常時）」とだけ出す。表示が無いと、昼夜のある
-         * マップと違って雨の日に昼か夜か分からない。昼夜ありのマップと区別できるよう、
-         * 枠と色は控えめにしてある。 */
-        bool fixed = !g->night_on;
-        bool nite = !fixed && game_is_night(g);
-        if (fixed)
-            snprintf(buf, sizeof buf, "%s", tx("PHASE_DAY_FIXED"));
-        else
-            snprintf(buf, sizeof buf, tx("TOP_PHASE_FMT"),
-                     tx(nite ? "PHASE_NIGHT" : "PHASE_DAY"), game_phase_left(g));
-        /* 雨や曇りの日は画面が暗く、昼か夜か見分けにくい。絵と、枠で囲んだ
-         * はっきりした色の文字で、天候の表示とは別にいつも示す。 */
         SDL_Color pc = nite ? (SDL_Color){ 170, 190, 255, 255 }
                      : fixed ? (SDL_Color){ 215, 195, 130, 255 }
                              : (SDL_Color){ 255, 225, 120, 255 };
-        int pw = text_width(a, a->font_m, buf);
+        int pw = text_width(a, a->font_m, s_ph);
         fill_rect(a, tx_ - 4, 4, 24 + pw + 8, 28,
                   nite ? (SDL_Color){ 30, 38, 78, 235 }
                        : fixed ? (SDL_Color){ 60, 52, 30, 235 }
                                : (SDL_Color){ 88, 70, 24, 235 });
         outline_rect(a, tx_ - 4, 4, 24 + pw + 8, 28, fixed ? COL_DIM : pc);
         render_phase_icon(a, tx_, 9, nite);
-        draw_text(a, a->font_m, tx_ + 24, 6, pc, buf);
+        draw_text(a, a->font_m, tx_ + 24, 6, pc, s_ph);
         tx_ += 24 + pw + 24;
     }
 
