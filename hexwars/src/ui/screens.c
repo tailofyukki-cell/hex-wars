@@ -1927,6 +1927,9 @@ static void brief_enter(App *a)
                                         &a->brief_tex_w, &a->brief_tex_h);
 }
 
+static int  deploy_air_supply(const App *a);   /* 出撃部隊の編成（下で定義） */
+static bool deploy_has_air(const App *a);
+
 static void brief_start_battle(App *a)
 {
     char err[256];
@@ -1945,6 +1948,10 @@ static void brief_start_battle(App *a)
     a->dep_limit = campaign_deploy_limit(&a->game);
     const CpnNode *node = campaign_find_node(&a->cpn, a->cps.node);
     bool need_pick = node && node->carry && a->cps.n_carry > a->dep_limit;
+    /* 上限に収まっていても、次のマップに自軍の空港が無いのに航空機を持ち越して
+     * いるなら、編成画面を出して選ばせる（黙って出撃させると燃料切れで墜ちる） */
+    if (node && node->carry && deploy_air_supply(a) < 2 && deploy_has_air(a))
+        need_pick = true;
     if (need_pick) {
         a->next_screen = SCREEN_DEPLOY;   /* どの部隊を出すか選ばせる */
         return;
@@ -2497,6 +2504,40 @@ static bool deploy_row_blocked(const App *a, int i)
     return !campaign_type_placeable(&a->game, a->cps.carry[i].type);
 }
 
+/* 次のマップで航空機が燃料を補給できるか。
+ * 0 = 空港（航空機を補給できる地形）がマップのどこにも無い
+ * 1 = あるが、開始時点で自軍のものが無い（占領すれば補給できる）
+ * 2 = 自軍の空港がある
+ * 航空機は空中にいるだけで燃料を使うので、補給先が無いと燃料切れで墜ちるのを
+ * 待つだけになる。うっかり出撃させないよう、編成画面で注意する。 */
+static int deploy_air_supply(const App *a)
+{
+    const Game *g = &a->game;
+    int best = 0;
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++) {
+            const Tile *t = &g->tiles[y][x];
+            if (!(g->terrains[t->terrain].supplies & (1u << MC_AIR))) continue;
+            if (t->owner == 0) return 2;
+            best = 1;
+        }
+    return best;
+}
+
+static bool deploy_row_is_air(const App *a, int i)
+{
+    if (i < 0 || i >= a->cps.n_carry) return false;
+    int t = a->cps.carry[i].type;
+    return t >= 0 && t < a->game.n_types && a->game.types[t].mclass == MC_AIR;
+}
+
+static bool deploy_has_air(const App *a)
+{
+    for (int i = 0; i < a->cps.n_carry; i++)
+        if (deploy_row_is_air(a, i)) return true;
+    return false;
+}
+
 static int deploy_count(const App *a)
 {
     int n = 0;
@@ -2510,9 +2551,11 @@ static void deploy_enter(App *a)
      * carry[] は価格→経験値→HP の順に並んでいるので先頭から埋めればよい
      * （経験値だけで並べると、進化直後で経験値0の精鋭が最後尾に沈む）。 */
     memset(a->dep_sel, 0, sizeof a->dep_sel);
+    bool no_air = deploy_air_supply(a) == 0;
     int n = 0;
     for (int i = 0; i < a->cps.n_carry && n < a->dep_limit; i++) {
         if (deploy_row_blocked(a, i)) continue;   /* 配置先が無い兵种は飛ばす */
+        if (no_air && deploy_row_is_air(a, i)) continue;   /* 補給できない航空機は既定で外す */
         a->dep_sel[i] = 1;
         n++;
     }
@@ -2609,7 +2652,18 @@ static void deploy_draw(App *a)
              deploy_count(a), a->dep_limit, a->cps.n_carry);
     draw_text_center(a, a->font_m, WIN_W / 2, 100,
                      deploy_count(a) >= a->dep_limit ? COL_YELLOW : COL_WHITE, buf);
-    draw_text_center(a, a->font_s, WIN_W / 2, 136, COL_GRAY, tx("DEPLOY_NOTE"));
+    int airsup = deploy_air_supply(a);
+    bool air_warn = airsup < 2 && deploy_has_air(a);
+    if (air_warn) {
+        /* 注意書きは目立たせる（読み落とすと航空機が燃料切れで墜ちるだけになる） */
+        const char *w = tx(airsup == 0 ? "DEPLOY_AIR_NONE" : "DEPLOY_AIR_ENEMY");
+        int ww = text_width(a, a->font_s, w);
+        fill_rect(a, WIN_W / 2 - ww / 2 - 12, 128, ww + 24, 30, (SDL_Color){ 90, 40, 30, 255 });
+        outline_rect(a, WIN_W / 2 - ww / 2 - 12, 128, ww + 24, 30, (SDL_Color){ 240, 140, 90, 255 });
+        draw_text_center(a, a->font_s, WIN_W / 2, 133, (SDL_Color){ 255, 200, 150, 255 }, w);
+    } else {
+        draw_text_center(a, a->font_s, WIN_W / 2, 136, COL_GRAY, tx("DEPLOY_NOTE"));
+    }
 
     int end = a->dep_scroll + DEPLOY_VISIBLE;
     if (end > a->cps.n_carry) end = a->cps.n_carry;
@@ -2644,6 +2698,9 @@ static void deploy_draw(App *a)
         snprintf(buf, sizeof buf, "%s", nm);
         draw_text(a, a->font_s, r.x + 110, r.y + 8,
                   blocked ? COL_DIM : (go ? COL_WHITE : COL_GRAY), buf);
+        if (air_warn && deploy_row_is_air(a, i))
+            draw_text(a, a->font_s, r.x + 110 + text_width(a, a->font_s, buf) + 12, r.y + 8,
+                      (SDL_Color){ 255, 160, 110, 255 }, tx("DEPLOY_AIR_ROW"));
         snprintf(buf, sizeof buf, tx("DEPLOY_EXP_FMT"), exp, rank);
         draw_text(a, a->font_s, r.x + r.w - 220, r.y + 8,
                   blocked ? COL_DIM
