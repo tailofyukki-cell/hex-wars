@@ -1307,7 +1307,7 @@ static void test_campaign_fast_route(void)
     printf("test_campaign_fast_route OK\n");
 }
 
-/* 偵察: 移動で新しく明かしたマス5つで経験値1。端数は持ち越す */
+/* 偵察: 移動で新しく明かしたマス10で経験値1。端数は持ち越す */
 static void test_recon_exp(void)
 {
     Game *g = &s_game;
@@ -1327,16 +1327,16 @@ static void test_recon_exp(void)
     for (int step = 0; step < 6; step++) {
         int before = 0, after = 0;
         for (int y = 0; y < g->h; y++) for (int x = 0; x < g->w; x++) before += g->visible[0][y][x] != 0;
-        int e0 = g->units[u].exp * 5 + g->units[u].recon_cells;
+        int e0 = g->units[u].exp * 10 + g->units[u].recon_cells;
         game_move_unit(g, u, g->units[u].pos.x + 1, g->units[u].pos.y + (step & 1), 0);
         for (int y = 0; y < g->h; y++) for (int x = 0; x < g->w; x++) after += g->visible[0][y][x] != 0;
         (void)before; (void)after;
-        int e1 = g->units[u].exp * 5 + g->units[u].recon_cells;
+        int e1 = g->units[u].exp * 10 + g->units[u].recon_cells;
         CHECK(e1 >= e0);
         total = e1;
     }
-    /* 明かしたマスの合計 = 経験値×5 + 端数。何マスか明かしていれば経験値も入っている */
-    CHECK(total >= 5 && g->units[u].exp == total / 5 && g->units[u].recon_cells == total % 5);
+    /* 明かしたマスの合計 = 経験値×10 + 端数。何マスか明かしていれば経験値も入っている */
+    CHECK(total >= 10 && g->units[u].exp == total / 10 && g->units[u].recon_cells == total % 10);
     printf("test_recon_exp OK (cells %d -> exp %d)\n", total, g->units[u].exp);
 }
 

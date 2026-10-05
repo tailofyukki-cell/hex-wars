@@ -358,7 +358,7 @@ typedef struct {
     uint8_t  ammo;
     uint8_t  exp;         /* 0..100 */
     uint8_t  flags;
-    uint8_t  recon_cells; /* 偵察: 経験値にまだならない「新しく明かしたマス」の端数（0..RECON_CELLS_PER_EXP-1） */
+    uint8_t  recon_cells; /* 偵察: 経験値にまだならない「新しく明かしたマス」の端数（0..RECON_CELLS_PER_EXP-1。今は10マスで1） */
     int16_t  cargo[MAX_CARGO];  /* 搭載ユニットの index、-1で空 */
 } Unit;
 
