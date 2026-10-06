@@ -84,6 +84,8 @@ typedef struct {
     char cutin[64];
 } BattleAnim;
 
+enum { DEP_KEEP = 0, DEP_GO = 1, DEP_DISBAND = 2 };   /* 出撃部隊の編成の各行 */
+
 typedef struct App App;
 
 /* 画面ハンドラ（enter/update/draw は関数ポインタテーブル） */
@@ -144,7 +146,7 @@ struct App {
     int           cpn_result;   /* 0=通常 1=次ノードへ 2=クリア 3=敗北 */
 
     /* 出撃部隊の編成（持越しが上限超過のとき） */
-    uint8_t dep_sel[MAX_CARRY_UNITS];  /* 1=出撃させる */
+    uint8_t dep_sel[MAX_CARRY_UNITS];  /* DEP_KEEP=倉庫 / DEP_GO=出撃 / DEP_DISBAND=解隊 */
     int     dep_limit;                 /* このマップの出撃上限 */
     int     dep_idx, dep_scroll;
     uint32_t dep_seed;                 /* 開戦に使う乱数シード */

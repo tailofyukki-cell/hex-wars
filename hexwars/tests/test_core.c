@@ -1377,6 +1377,20 @@ static void test_hell(void)
            before[0], after[0], before[1], after[1], before[2], after[2]);
 }
 
+/* 倉庫からの出撃費用: 生産価格の半額。進化後は進化前の生産価格 */
+static void test_store_cost(void)
+{
+    Game *g = &s_game;
+    memset(g, 0, sizeof *g);
+    char err[256];
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    int tk = data_find_unit_type(g, "TANK"), tv = data_find_unit_type(g, "TANK_V");
+    CHECK(tk >= 0 && tv >= 0 && !strcmp(g->types[tk].evolve_to, "TANK_V"));
+    CHECK(campaign_store_cost(g, tk) == g->types[tk].cost / 2);
+    CHECK(campaign_store_cost(g, tv) == g->types[tk].cost);
+    printf("test_store_cost OK (tank %d / evolved %d)\n", campaign_store_cost(g, tk), campaign_store_cost(g, tv));
+}
+
 /* 進化した輸送手段にも従来どおり搭載できること。
  * transport_by には進化前のID（CARRIER 等）しか書かれておらず、しかも4件までで
  * 歩兵は使い切っているため、進化後のIDを書き足すことができない。
@@ -4765,6 +4779,7 @@ int main(void)
     test_campaign_fast_route();
     test_recon_exp();
     test_hell();
+    test_store_cost();
     test_superweapon();
     test_language();
     test_paradrop();

@@ -134,6 +134,9 @@ void campaign_store_push(CampaignState *s, int type, int exp);
 
 /* 倉庫の slot 番目を取り出して詰める（配置は呼び出し側が済ませる）。 */
 void campaign_store_remove(CampaignState *s, int slot);
+/* 倉庫から出撃させる費用。生産価格の半額。進化後の部隊は「進化前の生産価格」
+ * （進化後は進化前の2倍の価値として扱い、その半分）。 */
+int campaign_store_cost(const Game *g, int type);
 
 /* .cpn 読込。成功=0 */
 int campaign_load(Campaign *c, const char *path, char *err, int errlen);

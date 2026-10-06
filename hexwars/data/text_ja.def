@@ -435,16 +435,18 @@ KIND_AIR        = 航空
 # --- 出撃部隊の編成（持越しが上限を超えたとき）---
 DEPLOY_TITLE      = 出撃部隊の編成
 DEPLOY_COUNT_FMT  = 出撃 %d / %d 部隊　（引き継ぎ %d 部隊）
-DEPLOY_NOTE       = 出撃させない部隊は倉庫へ送られます（失われません。生産拠点で無料で出撃できます）
+DEPLOY_NOTE       = 出撃させない部隊は倉庫へ（生産拠点から出撃できます。費用は生産の半額）。D/右クリックで解隊すると資金に戻ります
 DEPLOY_AIR_NONE   = ！ このマップには空港がありません。航空機は燃料を補給できず、燃料が尽きると墜落します
 DEPLOY_AIR_ENEMY  = ！ このマップには自軍の空港がありません。空港を占領するまで航空機は燃料を補給できません
 DEPLOY_AIR_ROW    = 補給なし
 DEPLOY_MARK_GO    = ＞ 出撃
 DEPLOY_MARK_KEEP  = 　 倉庫
 DEPLOY_MARK_NA    = × 地形外
+DEPLOY_MARK_DISBAND_FMT = 解隊 +%dG
+DEPLOY_REFUND_FMT = 解隊 +%dG
 DEPLOY_EXP_FMT    = 経験 %d (ランク%d)
 DEPLOY_GO         = この編成で出撃
-DEPLOY_HINT       = ↑↓/ホイール:選択  Z/Space:出撃⇔倉庫  A:価値順で自動  X:出撃
+DEPLOY_HINT       = ↑↓/ホイール:選択  Z/Space:出撃⇔倉庫  D/右クリック:解隊  A:価値順で自動  X:出撃
 
 # --- 副目標（サブミッション） ---
 SUB_TITLE_FMT   = ◆ 副目標（各 +%d）

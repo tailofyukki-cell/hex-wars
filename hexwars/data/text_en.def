@@ -437,16 +437,18 @@ KIND_AIR        = Air
 # --- deployment ---
 DEPLOY_TITLE      = Deployment
 DEPLOY_COUNT_FMT  = Deploying %d / %d   (carried over: %d)
-DEPLOY_NOTE       = Units you leave behind go to the reserve (not lost; deploy them free at a production base)
+DEPLOY_NOTE       = Reserve units can be deployed from a base for half price. D/right-click to disband for funds
 DEPLOY_AIR_NONE   = ! This map has no airports. Aircraft cannot refuel and will crash when out of fuel
 DEPLOY_AIR_ENEMY  = ! You hold no airport here. Aircraft cannot refuel until you capture one
 DEPLOY_AIR_ROW    = No refuel
 DEPLOY_MARK_GO    = > Deploy
 DEPLOY_MARK_KEEP  = - Reserve
 DEPLOY_MARK_NA    = x No terrain
+DEPLOY_MARK_DISBAND_FMT = Disband +%dG
+DEPLOY_REFUND_FMT = Disband +%dG
 DEPLOY_EXP_FMT    = EXP %d (Rank %d)
 DEPLOY_GO         = Deploy this force
-DEPLOY_HINT       = Up/Down/Wheel: Select  Z/Space: Deploy/Reserve  A: Auto by value  X: Deploy
+DEPLOY_HINT       = Up/Down: Select  Z/Space: Deploy/Reserve  D/Right-click: Disband  A: Auto  X: Deploy
 
 # --- secondary objectives ---
 SUB_TITLE_FMT   = Secondary Objectives (+%d each)

@@ -2032,7 +2032,9 @@ static void brief_start_battle(App *a)
     }
     a->dep_limit = campaign_deploy_limit(&a->game);
     const CpnNode *node = campaign_find_node(&a->cpn, a->cps.node);
-    bool need_pick = node && node->carry && a->cps.n_carry > a->dep_limit;
+    /* 持越しがあれば毎回この画面を出す。上限を超えたときに選ばせるだけでなく、
+     * 要らない部隊をここで解隊できる（増えすぎ・育成のための引き延ばしを防ぐ） */
+    bool need_pick = node && node->carry && a->cps.n_carry > 0;
     /* 上限に収まっていても、次のマップに自軍の空港が無いのに航空機を持ち越して
      * いるなら、編成画面を出して選ばせる（黙って出撃させると燃料切れで墜ちる） */
     if (node && node->carry && deploy_air_supply(a) < 2 && deploy_has_air(a))
@@ -2626,7 +2628,7 @@ static bool deploy_has_air(const App *a)
 static int deploy_count(const App *a)
 {
     int n = 0;
-    for (int i = 0; i < a->cps.n_carry; i++) if (a->dep_sel[i]) n++;
+    for (int i = 0; i < a->cps.n_carry; i++) if (a->dep_sel[i] == DEP_GO) n++;
     return n;
 }
 
@@ -2660,15 +2662,37 @@ static void deploy_keep_visible(App *a)
 }
 
 /* 選択を切り替える（上限を超える選択は弾く） */
+/* 編成画面で解隊したときに戻る資金（盤上の解隊と同じく生産価格の半額。持越しは満タン） */
+static int deploy_refund(const App *a, int i)
+{
+    int t = a->cps.carry[i].type;
+    return t < a->game.n_types ? a->game.types[t].cost / 2 : 0;
+}
+
+static int deploy_refund_total(const App *a)
+{
+    int r = 0;
+    for (int i = 0; i < a->cps.n_carry; i++) if (a->dep_sel[i] == DEP_DISBAND) r += deploy_refund(a, i);
+    return r;
+}
+
+/* D: 解隊の印を付ける／外す。地形外（出せない部隊）も解隊はできる */
+static void deploy_disband_toggle(App *a, int i)
+{
+    if (i < 0 || i >= a->cps.n_carry) return;
+    a->dep_sel[i] = (a->dep_sel[i] == DEP_DISBAND) ? DEP_KEEP : DEP_DISBAND;
+    snd_se(SE_CURSOR);
+}
+
 static void deploy_toggle(App *a, int i)
 {
     if (i < 0 || i >= a->cps.n_carry) return;
     if (deploy_row_blocked(a, i)) { snd_se(SE_CANCEL); return; }
-    if (a->dep_sel[i]) {
-        a->dep_sel[i] = 0;
+    if (a->dep_sel[i] != DEP_KEEP) {          /* 出撃・解隊 → 倉庫 */
+        a->dep_sel[i] = DEP_KEEP;
         snd_se(SE_CURSOR);
     } else if (deploy_count(a) < a->dep_limit) {
-        a->dep_sel[i] = 1;
+        a->dep_sel[i] = DEP_GO;
         snd_se(SE_CURSOR);
     } else {
         snd_se(SE_CANCEL);      /* 上限に達している */
@@ -2678,6 +2702,17 @@ static void deploy_toggle(App *a, int i)
 static void deploy_confirm(App *a)
 {
     snd_se(SE_OK);
+    /* 解隊: 持越しから外して資金に戻す（この作戦の開始資金に足す）。
+     * 負けてやり直すときは cps_backup に戻るので、解隊した部隊も戻ってくる。 */
+    a->game.funds[0] += deploy_refund_total(a);
+    int n = 0;
+    for (int i = 0; i < a->cps.n_carry; i++) {
+        if (a->dep_sel[i] == DEP_DISBAND) continue;
+        a->cps.carry[n] = a->cps.carry[i];
+        a->dep_sel[n] = (a->dep_sel[i] == DEP_GO) ? 1 : 0;
+        n++;
+    }
+    a->cps.n_carry = n;
     campaign_begin(&a->game, &a->cpn, &a->cps, a->dep_seed, a->dep_sel);
     app_apply_play_rules(a);
     a->next_screen = SCREEN_BATTLE;
@@ -2704,12 +2739,22 @@ static void deploy_event(App *a, const SDL_Event *e)
         }
         if (k == SDLK_SPACE || k == SDLK_z || k == SDLK_RETURN)
             deploy_toggle(a, a->dep_idx);
+        if (k == SDLK_d) deploy_disband_toggle(a, a->dep_idx);   /* D: 解隊 */
         if (k == SDLK_a) {          /* A: 経験値順に自動で埋め直す */
             deploy_enter(a);
             snd_se(SE_CURSOR);
         }
         if (k == SDLK_x || k == SDLK_ESCAPE) deploy_confirm(a);  /* この編成で出撃 */
         return;
+    }
+    if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_RIGHT) {
+        SDL_Point p = { e->button.x, e->button.y };   /* 右クリック: 解隊 */
+        int end = a->dep_scroll + DEPLOY_VISIBLE;
+        if (end > a->cps.n_carry) end = a->cps.n_carry;
+        for (int i = a->dep_scroll; i < end; i++) {
+            SDL_Rect r = deploy_row_rect(a, i);
+            if (SDL_PointInRect(&p, &r)) { a->dep_idx = i; deploy_disband_toggle(a, i); return; }
+        }
     }
     if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT) {
         SDL_Point p = { e->button.x, e->button.y };
@@ -2735,6 +2780,12 @@ static void deploy_draw(App *a)
     draw_text_center(a, a->font_l, WIN_W / 2, 56, COL_WHITE, tx("DEPLOY_TITLE"));
     snprintf(buf, sizeof buf, tx("DEPLOY_COUNT_FMT"),
              deploy_count(a), a->dep_limit, a->cps.n_carry);
+    if (deploy_refund_total(a) > 0) {
+        char rb[96];
+        snprintf(rb, sizeof rb, tx("DEPLOY_REFUND_FMT"), deploy_refund_total(a));
+        strncat(buf, "    ", sizeof buf - strlen(buf) - 1);   /* 文言の先頭の空白は読込で消えるのでここで空ける */
+        strncat(buf, rb, sizeof buf - strlen(buf) - 1);
+    }
     draw_text_center(a, a->font_m, WIN_W / 2, 100,
                      deploy_count(a) >= a->dep_limit ? COL_YELLOW : COL_WHITE, buf);
     int airsup = deploy_air_supply(a);
@@ -2755,19 +2806,26 @@ static void deploy_draw(App *a)
     for (int i = a->dep_scroll; i < end; i++) {
         SDL_Rect r = deploy_row_rect(a, i);
         bool sel = (a->dep_idx == i);
-        bool go = a->dep_sel[i] != 0;
-        bool blocked = deploy_row_blocked(a, i);
+        bool go = a->dep_sel[i] == DEP_GO;
+        bool dis = a->dep_sel[i] == DEP_DISBAND;
+        bool blocked = deploy_row_blocked(a, i) && !dis;
         fill_rect(a, r.x, r.y, r.w, r.h,
+                  dis ? (sel ? (SDL_Color){ 120, 70, 60, 255 } : (SDL_Color){ 70, 40, 36, 255 }) :
                   blocked ? (SDL_Color){ 38, 34, 34, 255 }
                           : (sel ? (SDL_Color){ 80, 110, 160, 255 }
                                  : (go ? (SDL_Color){ 46, 62, 54, 255 }
                                        : (SDL_Color){ 44, 46, 52, 255 })));
         outline_rect(a, r.x, r.y, r.w, r.h,
+                     dis ? (sel ? COL_YELLOW : (SDL_Color){ 220, 120, 100, 255 }) :
                      blocked ? (SDL_Color){ 90, 70, 70, 255 }
                              : (sel ? COL_YELLOW
                                     : (go ? (SDL_Color){ 120, 200, 130, 255 }
                                           : COL_DIM)));
         /* 出撃するかのマーク（配置先が無い場合は理由を出す） */
+        if (dis) {
+            snprintf(buf, sizeof buf, tx("DEPLOY_MARK_DISBAND_FMT"), deploy_refund(a, i));
+            draw_text(a, a->font_s, r.x + 12, r.y + 8, (SDL_Color){ 255, 170, 140, 255 }, buf);
+        } else
         draw_text(a, a->font_s, r.x + 12, r.y + 8,
                   blocked ? (SDL_Color){ 200, 120, 120, 255 }
                           : (go ? (SDL_Color){ 150, 240, 150, 255 } : COL_DIM),

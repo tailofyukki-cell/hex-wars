@@ -1002,7 +1002,7 @@ static void open_production(App *a, int x, int y)
             a->prod_items[a->prod_n++] = t;
         }
     }
-    /* 倉庫からの引き出し（無料。キャンペーンのみ。この拠点で生産可能な種別のみ） */
+    /* 倉庫からの引き出し（生産価格の半額。キャンペーンのみ。この拠点で出せる種別のみ） */
     if (a->campaign_mode) {
         for (int k = 0; k < a->cps.n_store; k++) {
             int t = a->cps.store[k].type;
@@ -1079,9 +1079,17 @@ static void prod_select(App *a)
         return;
     }
     if (slot >= 0) {
-        /* 倉庫から無料で引き出し（経験値保持）。成功したら倉庫から除去 */
+        /* 倉庫から引き出し（経験値保持）。費用は生産価格の半額、進化後は進化前の価格。
+         * 以前は無料で、育てた部隊を倉庫に溜めて出し放題にできた。 */
         int exp = a->cps.store[slot].exp;
+        int price = campaign_store_cost(g, t);
+        if (g->funds[g->current] < price) {
+            snd_se(SE_CANCEL);
+            set_banner(a, tx("POP_NOFUNDS"), 100);
+            return;
+        }
         if (game_deploy_free(g, a->prod_x, a->prod_y, t, exp) >= 0) {
+            g->funds[g->current] -= price;
             campaign_store_remove(&a->cps, slot);
             battle_add_popup(a, a->prod_x, a->prod_y, tx("POP_WITHDRAW"), COL_WHITE);
             snd_se(SE_OK);
@@ -2913,7 +2921,8 @@ static void draw_menus(App *a)
             int t = a->prod_items[i];
             int slot = a->prod_store[i];
             bool from_store = slot >= 0;
-            bool afford = from_store || g->funds[g->current] >= g->types[t].cost;
+            int price = from_store ? campaign_store_cost(g, t) : g->types[t].cost;
+            bool afford = g->funds[g->current] >= price;
             if (slot == PROD_SW) {
                 bool sel = a->prod_idx == i;
                 bool ok = game_sw_check(g, g->current, a->prod_x, a->prod_y, t) == 0;
@@ -2948,13 +2957,10 @@ static void draw_menus(App *a)
                 snprintf(buf, sizeof buf, "%s", tname);
             draw_text(a, a->font_m, r.x + 14, r.y + 7,
                       afford ? COL_WHITE : COL_DIM, buf);
-            if (from_store)
-                snprintf(buf, sizeof buf, "%s", tx("PROD_FREE"));
-            else
-                snprintf(buf, sizeof buf, "%dG", g->types[t].cost);
+            snprintf(buf, sizeof buf, "%dG", price);
             draw_text(a, a->font_m, r.x + r.w - 90, r.y + 7,
-                      from_store ? (SDL_Color){ 130, 220, 130, 255 }
-                                 : (afford ? COL_YELLOW : COL_DIM), buf);
+                      afford ? (from_store ? (SDL_Color){ 130, 220, 130, 255 } : COL_YELLOW)
+                             : COL_DIM, buf);
             /* 倉庫の部隊は経験値を持ったまま戻ってくるので、同じ名前が
              * 並んだときにどれを出すか選べるよう経験とランクを出す。
              * 名前の長さが種別で変わるため、値段の左に右詰めで置く。 */

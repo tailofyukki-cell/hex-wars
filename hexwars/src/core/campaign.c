@@ -661,6 +661,15 @@ int campaign_op_number(const Campaign *c, const CpnNode *node)
     return 1;
 }
 
+int campaign_store_cost(const Game *g, int type)
+{
+    if (type < 0 || type >= g->n_types) return 0;
+    for (int i = 0; i < g->n_types; i++)          /* 進化後なら、進化前の生産価格 */
+        if (g->types[i].evolve_to[0] && !strcmp(g->types[i].evolve_to, g->types[type].id))
+            return g->types[i].cost;
+    return g->types[type].cost / 2;
+}
+
 static void scale_enemy(Game *g, int player_total, int scale_pct, int waves)
 {
     if (player_total <= 0 || scale_pct <= 0) return;
