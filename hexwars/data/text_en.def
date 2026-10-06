@@ -60,6 +60,23 @@ SETUP_NEED_HUMAN = Choose at least one faction for a human player
 OPP_CPU_EASY    = CPU (EASY)
 OPP_CPU_NORMAL  = CPU (NORMAL)
 OPP_CPU_HARD    = CPU (HARD)
+DIFF_EASY_T     = EASY
+DIFF_EASY_1     = Income at 80%
+DIFF_EASY_2     = Skips its move 1 time in 4
+DIFF_EASY_3     = Does not focus fire
+DIFF_EASY_4     = Often skips powers and evolution
+DIFF_NORMAL_T   = NORMAL
+DIFF_NORMAL_1   = Income at 100%
+DIFF_NORMAL_2   = Always picks its best move
+DIFF_NORMAL_3   = Focus fire, powers, evolution
+DIFF_HARD_T     = HARD
+DIFF_HARD_1     = Income at 120%
+DIFF_HARD_2     = +1 vision from buildings
+DIFF_HARD_3     = Pulls back damaged units
+DIFF_HARD_4     = (HP 3 or less; HP 6 at night)
+DIFF_HUMAN_T    = Human
+DIFF_HUMAN_1    = You control this side
+DIFF_HUMAN_2    = 2+ humans: handover screen each turn
 OPP_HUMAN       = Human (hot seat)
 
 # --- options ---

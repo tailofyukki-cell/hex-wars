@@ -1020,6 +1020,25 @@ static void setup_draw(App *a)
         snprintf(buf, sizeof buf, tx("SETUP_CO_FMT"), faction_name(p));
         draw_text_center(a, a->font_s, 985 + 132, 214, COL_GRAY, buf);
         setup_draw_co_detail(a, a->sel_co[p], 985, 522, 264);
+    } else if (rr >= 0 && rr < n) {
+        /* 操作（難易度）の行: 縮小図の下に、選んでいる難易度の中身を出す。
+         * EASY/NORMAL/HARD の名前だけでは何が違うのか分からないため。 */
+        setup_draw_preview(a, 985, 246, 264, 264);
+        int p = setup_part_at(a, rr);
+        static const char *K[4] = { "DIFF_EASY", "DIFF_NORMAL", "DIFF_HARD", "DIFF_HUMAN" };
+        const char *base = K[a->sel_ctrl[p] & 3];
+        char key[32], buf[256];
+        snprintf(key, sizeof key, "%s_T", base);
+        draw_text(a, a->font_s, 985, 522, COL_YELLOW, tx(key));
+        for (int i = 1; i <= 5; i++) {
+            snprintf(key, sizeof key, "%s_%d", base, i);
+            const char *line = tx(key);
+            if (!line[0] || !strcmp(line, key)) break;   /* 定義の無い行で終わり */
+            /* 「（…）」で始まる行は前の行の補足なので、箇条の印を付けず字下げだけ */
+            bool cont = (line[0] == '(') || !strncmp(line, "（", 3);
+            snprintf(buf, sizeof buf, cont ? "　%s" : "・%s", line);
+            draw_text(a, a->font_s, 985, 522 + i * 24, COL_WHITE, buf);
+        }
     } else {
         /* マップ名は「マップ」の行に出ているので、ここでは繰り返さない
          * （長い名前が枠からはみ出すだけになる）。 */
