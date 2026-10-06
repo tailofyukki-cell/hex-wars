@@ -208,6 +208,8 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
             w_u16(w, (uint16_t)g->sw_build[p][k].type);
         }
     }
+    /* v22: キャンペーンで選んだ難易度 */
+    w_u8(w, (cs && cs->active) ? cs->diff : 0);
 }
 
 static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
@@ -400,6 +402,11 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
                 g->sw_build[p][k].type = (int16_t)r_u16(r);
             }
         }
+    /* v22: キャンペーンの難易度。v21 以前は 0（作戦ごとの指定を使う） */
+    if (ver >= 22) {
+        uint8_t d = r_u8(r);
+        if (cs) cs->diff = d;
+    }
 
     return r->underflow ? -1 : 0;
 }

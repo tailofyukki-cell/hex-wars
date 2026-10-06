@@ -253,6 +253,7 @@ struct App {
     int   lpick_unit[LAYER_COUNT + 1 + MAX_CARGO];   /* レイヤーごと＋生産＋艦載機 */
     struct LossRec loss_show[64];   /* 報告画面に出す損失（手番の頭に写す） */
     int   loss_show_n, loss_scroll;
+    int   cdiff_open, cdiff_idx;   /* キャンペーン開始時の難易度選択（0=閉 / 1=開） */
     int   launch_carrier;   /* 選択中の部隊が空母から出撃した直後なら、その空母。-1=なし */
     int   lpick_n, lpick_idx;
     int   lpick_mode;                /* LP_SELECT=自軍選択 / LP_ATTACK=攻撃対象 */

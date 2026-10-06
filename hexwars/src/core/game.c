@@ -140,7 +140,7 @@ void game_update_vision(Game *g)
             reveal_around(g, p, u->pos.x, u->pos.y, game_unit_vision(g, u));
         }
         /* チームの所有建物: 視界2 */
-        int bonus = (g->ctrl[p] == CTRL_CPU_HARD) ? 1 : 0;
+        int bonus = CTRL_IS_HARD(g->ctrl[p]) ? 1 : 0;
         for (int y = 0; y < g->h; y++)
             for (int x = 0; x < g->w; x++) {
                 int o = g->tiles[y][x].owner;
@@ -158,7 +158,7 @@ int game_unit_vision(const Game *g, const Unit *u)
 {
     int o = u->owner;
     const CommanderType *oco = game_co(g, o);
-    int vb = (g->ctrl[o] == CTRL_CPU_HARD) ? 1 : 0;   /* HARDのみ視界+1 */
+    int vb = CTRL_IS_HARD(g->ctrl[o]) ? 1 : 0;   /* HARD・HELLは視界+1 */
     if (oco && oco->vision_bonus && game_co_affects(g, o, u))
         vb += oco->vision_bonus;
     /* 天候による視界低下（下限1は必ず確保する） */
@@ -1633,6 +1633,12 @@ int game_unload_unit(Game *g, int transport, int x, int y)
 /* ターン処理（仕様書 5.1）                                            */
 /* ------------------------------------------------------------------ */
 
+int game_income(const Game *g, int player);
+static int income_for(const Game *g, int player);
+
+/* 1手番の収入（難易度・指揮官の補正込み）。テストや画面から見る用 */
+int game_income(const Game *g, int player) { return income_for(g, player); }
+
 static int income_for(const Game *g, int player)
 {
     int sum = 0;
@@ -1643,7 +1649,8 @@ static int income_for(const Game *g, int player)
     sum = sum * g->income_scale / 100;
     /* 難易度補正（仕様書 7.2） */
     if (g->ctrl[player] == CTRL_CPU_EASY) sum = sum * 80 / 100;
-    if (g->ctrl[player] == CTRL_CPU_HARD) sum = sum * 120 / 100;
+    if (g->ctrl[player] == CTRL_CPU_HARD) sum = sum * 130 / 100;
+    if (g->ctrl[player] == CTRL_CPU_HELL) sum = sum * 150 / 100;
     /* 指揮官の収入補正 */
     {
         const CommanderType *c = game_co(g, player);
@@ -1766,8 +1773,76 @@ static void end_player_turn(Game *g)
     }
 }
 
+/* HELL: 開戦時に、持っている生産拠点の種類（陸=工場・空=空港・海=港）ごとに、
+ * 同じ拠点をもう1つ近くに建てる。毎ターンの生産数が領域ごとに1つ増える。
+ * 建てる場所は、その拠点に一番近い平地（海の拠点は海に面した平地）で、
+ * 部隊も建物も無いところ。見つからなければその領域は足さない。 */
+static bool game_player_has_units_or_bases(const Game *g, int p)
+{
+    for (int i = 0; i < g->n_units; i++)
+        if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == p) return true;
+    for (int y = 0; y < g->h; y++)
+        for (int x = 0; x < g->w; x++)
+            if (g->tiles[y][x].owner == p) return true;
+    return false;
+}
+
+static void hell_extra_bases(Game *g, int p)
+{
+    int plain = -1;
+    for (int i = 0; i < g->n_terrains; i++)
+        if (!strcmp(g->terrains[i].id, "PLAIN")) plain = i;
+    if (plain < 0) return;
+    static const int KIND[3] = { PROD_LAND, PROD_AIR, PROD_SEA };
+    for (int k = 0; k < 3; k++) {
+        int tmpl = -1;
+        for (int y = 0; y < g->h && tmpl < 0; y++)
+            for (int x = 0; x < g->w; x++) {
+                const Tile *t = &g->tiles[y][x];
+                const TerrainType *tt = &g->terrains[t->terrain];
+                if (t->owner == p && tt->produces == KIND[k] && !tt->is_hq && !tt->is_lab) {
+                    tmpl = t->terrain; break;
+                }
+            }
+        if (tmpl < 0) continue;                 /* その領域の拠点を持っていない */
+        int bx = -1, by = -1, bd = 1 << 30;
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++) {
+                if (g->tiles[y][x].terrain != plain || g->tiles[y][x].owner >= 0) continue;
+                bool busy = false;
+                for (int L = 0; L < LAYER_COUNT; L++)
+                    if (game_unit_at_layer(g, x, y, (Layer)L) >= 0) busy = true;
+                if (busy) continue;
+                if (KIND[k] == PROD_SEA) {      /* 港は海に面していること */
+                    bool coast = false;
+                    for (int yy = y - 1; yy <= y + 1 && !coast; yy++)
+                        for (int xx = x - 1; xx <= x + 1; xx++) {
+                            if (xx < 0 || yy < 0 || xx >= g->w || yy >= g->h) continue;
+                            if (hex_distance(x, y, xx, yy) != 1) continue;
+                            if (g->terrains[g->tiles[yy][xx].terrain].mcost[MC_SEA] > 0 &&
+                                !g->terrains[g->tiles[yy][xx].terrain].capturable) { coast = true; break; }
+                        }
+                    if (!coast) continue;
+                }
+                /* 自分の同じ種類の拠点に一番近いところ */
+                for (int yy = 0; yy < g->h; yy++)
+                    for (int xx = 0; xx < g->w; xx++) {
+                        if (g->tiles[yy][xx].terrain != tmpl || g->tiles[yy][xx].owner != p) continue;
+                        int d = hex_distance(x, y, xx, yy);
+                        if (d < bd) { bd = d; bx = x; by = y; }
+                    }
+            }
+        if (bx < 0) continue;
+        g->tiles[by][bx].terrain = (uint8_t)tmpl;
+        g->tiles[by][bx].owner = (int8_t)p;
+    }
+}
+
 void game_start(Game *g, uint32_t seed)
 {
+    for (int p = 0; p < MAX_PLAYERS; p++)
+        if (g->ctrl[p] == CTRL_CPU_HELL && game_player_has_units_or_bases(g, p))
+            hell_extra_bases(g, p);
     rng_seed(&g->rng, seed);
     g->map_weather_on = g->weather_on;
     g->map_night_on = g->night_on;

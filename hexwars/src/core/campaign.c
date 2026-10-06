@@ -221,6 +221,7 @@ static uint8_t ctrl_from_word(const char *val)
 {
     if (!strcmp(val, "EASY")) return CTRL_CPU_EASY;
     if (!strcmp(val, "HARD")) return CTRL_CPU_HARD;
+    if (!strcmp(val, "HELL")) return CTRL_CPU_HELL;
     return CTRL_CPU_NORMAL;
 }
 
@@ -595,53 +596,6 @@ static int deploy_carry(Game *g, CampaignState *s, const uint8_t *sel)
     return deployed;
 }
 
-/* 自軍が持越しで増えたぶん、敵にも増援を与えて戦力差を埋める。
- * 増援数は「実際に展開した持越しの数」に合わせ、元の敵戦力の
- * (CAMPAIGN_ENEMY_MAX_RATIO-1) 倍を上限とする。
- * 持越しゼロなら増援もゼロなので、負けが込んでいるときに詰まない。 */
-static void reinforce_enemy(Game *g, int player_extra)
-{
-    if (player_extra <= 0) return;
-
-    /* 自軍の敵に回る陣営全部に分けて増援を出す。
-     * 2陣営なら従来どおり陣営1だけ。三つ巴や援軍マップでは
-     * 敵側が複数になるので、一方だけを肥やすと力関係が崩れる。 */
-    /* **居る陣営だけ数えること**。既定の team[p]=p ではマップに居ない
-     * 陣営も「敵」になるので、そのまま割ると増援が発生しない分に消える。 */
-    int foes[MAX_PLAYERS], n_foes = 0;
-    for (int p = 0; p < MAX_PLAYERS; p++) {
-        if (!game_is_enemy(g, 0, p)) continue;
-        for (int i = 0; i < g->n_units; i++)
-            if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == p) {
-                foes[n_foes++] = p; break;
-            }
-    }
-    if (n_foes <= 0) return;
-
-    for (int k = 0; k < n_foes; k++) {
-        int who = foes[k];
-        /* 既存の編成を集める（同じ顔ぶれを増やす） */
-        int types[MAX_UNITS], n_types_seen = 0;
-        for (int i = 0; i < g->n_units; i++) {
-            const Unit *u = &g->units[i];
-            if (!(u->flags & UF_ALIVE) || (u->flags & UF_LOADED)) continue;
-            if (u->owner != who) continue;
-            types[n_types_seen++] = u->type;
-        }
-        if (n_types_seen <= 0) continue;   /* この陣営が居ないマップ */
-
-        /* 人数割り。余りは前の陣営から順に引き受ける。 */
-        int share = player_extra / n_foes + (k < player_extra % n_foes ? 1 : 0);
-        int cap = n_types_seen * (CAMPAIGN_ENEMY_MAX_RATIO - 1);
-        int add = share < cap ? share : cap;
-
-        int ox, oy;
-        find_origin(g, who, &ox, &oy);
-        for (int i = 0; i < add; i++)
-            place_unit_near(g, who, types[i % n_types_seen], ox, oy);
-    }
-}
-
 /* 陣営の部隊数を数える（輸送中の中身は除く）。 */
 static int count_units(const Game *g, int owner)
 {
@@ -695,6 +649,18 @@ static void add_enemies_now(Game *g, const int *foes, int n_foes, int add)
  *
  * 減らすことはしない（マップに置いた敵を消すと地形との対応が崩れる）。
  * マップ側の敵は自軍の初期数以下にしておくこと。 */
+/* 第何作戦か（本線 = start から next_win をたどった順。1始まり）。
+ * 早期勝利で飛ばした作戦も番号は数える（第3作戦は飛ばしても第3作戦）。 */
+int campaign_op_number(const Campaign *c, const CpnNode *node)
+{
+    const CpnNode *n = campaign_find_node(c, c->start);
+    for (int i = 1; n && i <= c->n_nodes; i++) {
+        if (n == node) return i;
+        n = campaign_find_node(c, n->next_win);
+    }
+    return 1;
+}
+
 static void scale_enemy(Game *g, int player_total, int scale_pct, int waves)
 {
     if (player_total <= 0 || scale_pct <= 0) return;
@@ -710,7 +676,7 @@ static void scale_enemy(Game *g, int player_total, int scale_pct, int waves)
         add_enemies_now(g, foes, n_foes, player_total - have);
 
     /* 残りを波に分ける */
-    int extra = player_total * (scale_pct - 100) / 100;
+    int extra = (player_total * (scale_pct - 100) + 99) / 100;   /* 端数は切り上げ */
     if (extra <= 0) return;
     if (waves <= 0) { add_enemies_now(g, foes, n_foes, extra); return; }
     if (waves > MAX_WAVES) waves = MAX_WAVES;
@@ -773,6 +739,11 @@ int campaign_setup_map(Game *g, const Campaign *c, const CampaignState *s,
      * チーム分け（誰が味方か）は .map の team0..4 側の責任。 */
     g->ctrl[0] = CTRL_HUMAN;
     for (int p = 1; p < MAX_PLAYERS; p++) g->ctrl[p] = node->ctrl[p];
+    /* 遊ぶ人が難易度を選んでいれば、敵は全作戦その難易度にする。
+     * 味方の援軍は作戦の指定のまま（味方を強くしても難しくはならない）。 */
+    if (s->diff >= CTRL_CPU_EASY && s->diff <= CTRL_CPU_HELL)
+        for (int p = 1; p < MAX_PLAYERS; p++)
+            if (game_is_enemy(g, 0, p)) g->ctrl[p] = (PlayerCtrl)s->diff;
     /* 指揮官: 自軍はキャンペーンで選んだもの、他はノード指定（無ければ既定） */
     g->co_id[0] = (int8_t)(g->n_cos > 0 ? (s->player_co >= 0 ? s->player_co : 0) : -1);
     for (int p = 1; p < MAX_PLAYERS; p++) {
@@ -807,18 +778,22 @@ void campaign_begin(Game *g, const Campaign *c, CampaignState *s,
     int deployed = 0;
     if (node && node->carry)
         deployed = deploy_carry(g, s, sel);
-    if (node && node->enemy_scale > 0) {
-        /* 敵の総数を自軍の展開数に合わせて決める作戦（大決戦用）。
-         * こちらは持越しの増分ではなく総数で見るので、
-         * 従来の reinforce_enemy とは排他。 */
+    (void)deployed;
+    /* 敵の総数を、自軍の展開数（持越し込み）に対する割合で決める。
+     * 第1作戦で1.00倍、作戦が1つ進むごとに5%ずつ増える（第19作戦で1.90倍）。
+     * 端数は切り上げ。以前は「持越しで増えたぶんだけ、敵の初期数の2倍まで」で、
+     * 後半は自軍の半分程度しか敵がいない作戦もあり、作業になっていた。
+     * enemy_scale を指定した作戦（第19作戦の2倍）はそちらを使う。
+     * no_reinforce の作戦（最終作戦の消化試合）は増やさない。 */
+    if (node && !node->no_reinforce) {
         int player_total = 0;
         for (int i = 0; i < g->n_units; i++)
             if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 0)
                 player_total++;
-        scale_enemy(g, player_total, node->enemy_scale, node->enemy_waves);
-    } else if (node && !node->no_reinforce) {
-        /* 持越しで増えたぶんだけ敵にも増援を出す（2マップ目以降の戦力差対策） */
-        reinforce_enemy(g, deployed);
+        int pct = node->enemy_scale > 0 ? node->enemy_scale
+                                        : 100 + 5 * (campaign_op_number(c, node) - 1);
+        int waves = node->enemy_scale > 0 ? node->enemy_waves : 2;
+        scale_enemy(g, player_total, pct, waves);
     }
     game_start(g, seed);
 }

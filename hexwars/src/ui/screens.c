@@ -328,6 +328,30 @@ static SDL_Rect title_item_rect(int i)
     return r;
 }
 
+/* 難易度の説明を (x,y) から描く。ctrl は PlayerCtrl（CTRL_HUMAN も可）。
+ * 「（…）」で始まる行は前の行の補足なので、箇条の印を付けず字下げだけ。 */
+static void draw_diff_desc(App *a, int ctrl, int x, int y)
+{
+    const char *base = ctrl == CTRL_CPU_EASY ? "DIFF_EASY"
+                     : ctrl == CTRL_CPU_NORMAL ? "DIFF_NORMAL"
+                     : ctrl == CTRL_CPU_HARD ? "DIFF_HARD"
+                     : ctrl == CTRL_CPU_HELL ? "DIFF_HELL" : "DIFF_HUMAN";
+    char key[32], buf[256];
+    snprintf(key, sizeof key, "%s_T", base);
+    draw_text(a, a->font_s, x, y, COL_YELLOW, tx(key));
+    for (int i = 1; i <= 6; i++) {
+        snprintf(key, sizeof key, "%s_%d", base, i);
+        const char *line = tx(key);
+        if (!line[0] || !strcmp(line, key)) break;   /* 定義の無い行で終わり */
+        bool cont = (line[0] == '(') || !strncmp(line, "（", 3);
+        snprintf(buf, sizeof buf, cont ? "　%s" : "・%s", line);
+        draw_text(a, a->font_s, x, y + i * 24, COL_WHITE, buf);
+    }
+}
+
+/* キャンペーンで選べる難易度（上から） */
+static const int CDIFF[4] = { CTRL_CPU_EASY, CTRL_CPU_NORMAL, CTRL_CPU_HARD, CTRL_CPU_HELL };
+
 static void start_campaign(App *a)
 {
     char path[600], err[256];
@@ -340,6 +364,7 @@ static void start_campaign(App *a)
     a->cps.active = true;
     snprintf(a->cps.file, sizeof a->cps.file, "campaign/main.cpn");
     snprintf(a->cps.node, sizeof a->cps.node, "%s", a->cpn.start);
+    a->cps.diff = (uint8_t)CDIFF[a->cdiff_idx & 3];
     a->campaign_mode = true;
     a->next_screen = SCREEN_CPNMAP;
 }
@@ -348,7 +373,7 @@ static void title_select(App *a)
 {
     snd_se(SE_OK);
     switch (a->menu_idx) {
-    case 0: start_campaign(a); break;
+    case 0: a->cdiff_open = 1; if (a->cdiff_idx < 0 || a->cdiff_idx > 3) a->cdiff_idx = 1; break;
     case 1: a->next_screen = SCREEN_SETUP; break;
     case 2: a->next_screen = SCREEN_LOAD; break;
     case 3: a->next_screen = SCREEN_OPTIONS; break;
@@ -356,8 +381,39 @@ static void title_select(App *a)
     }
 }
 
+static SDL_Rect cdiff_rect(int i)
+{
+    SDL_Rect r = { WIN_W / 2 - 360, 250 + i * 64, 300, 52 };
+    return r;
+}
+
 static void title_event(App *a, const SDL_Event *e)
 {
+    /* キャンペーンの難易度選択 */
+    if (a->cdiff_open) {
+        if (e->type == SDL_KEYDOWN) {
+            SDL_Keycode k = e->key.keysym.sym;
+            if (k == SDLK_UP)   { a->cdiff_idx = (a->cdiff_idx + 3) % 4; snd_se(SE_CURSOR); }
+            if (k == SDLK_DOWN) { a->cdiff_idx = (a->cdiff_idx + 1) % 4; snd_se(SE_CURSOR); }
+            if (k == SDLK_z || k == SDLK_RETURN) { a->cdiff_open = 0; snd_se(SE_OK); start_campaign(a); }
+            if (k == SDLK_x || k == SDLK_ESCAPE) { a->cdiff_open = 0; snd_se(SE_CURSOR); }
+        }
+        if (e->type == SDL_MOUSEMOTION || e->type == SDL_MOUSEBUTTONDOWN) {
+            SDL_Point p = { e->type == SDL_MOUSEMOTION ? e->motion.x : e->button.x,
+                            e->type == SDL_MOUSEMOTION ? e->motion.y : e->button.y };
+            for (int i = 0; i < 4; i++) {
+                SDL_Rect r = cdiff_rect(i);
+                if (!SDL_PointInRect(&p, &r)) continue;
+                a->cdiff_idx = i;
+                if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT) {
+                    a->cdiff_open = 0; snd_se(SE_OK); start_campaign(a);
+                }
+            }
+            if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_RIGHT)
+                a->cdiff_open = 0;
+        }
+        return;
+    }
     if (e->type == SDL_KEYDOWN) {
         SDL_Keycode k = e->key.keysym.sym;
         if (k == SDLK_UP) {
@@ -414,6 +470,26 @@ static void title_draw(App *a)
                          sel ? COL_WHITE : COL_GRAY, tx(TITLE_KEYS[i]));
     }
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 40, COL_DIM, tx("TITLE_HINT"));
+
+    if (a->cdiff_open) {
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 10, 12, 16, 200 });
+        fill_rect(a, WIN_W / 2 - 400, 150, 800, 470, (SDL_Color){ 30, 36, 46, 250 });
+        outline_rect(a, WIN_W / 2 - 400, 150, 800, 470, COL_DIM);
+        draw_text_center(a, a->font_l, WIN_W / 2, 170, COL_WHITE, tx("CDIFF_TITLE"));
+        static const char *NAME[4] = { "DIFF_EASY_T", "DIFF_NORMAL_T", "DIFF_HARD_T", "DIFF_HELL_T" };
+        for (int i = 0; i < 4; i++) {
+            SDL_Rect r = cdiff_rect(i);
+            bool sel = (a->cdiff_idx == i);
+            fill_rect(a, r.x, r.y, r.w, r.h, sel ? (SDL_Color){ 70, 100, 150, 255 }
+                                               : (SDL_Color){ 45, 55, 68, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            draw_text_center(a, a->font_m, r.x + r.w / 2, r.y + 12,
+                             sel ? COL_WHITE : COL_GRAY, tx(NAME[i]));
+        }
+        draw_diff_desc(a, CDIFF[a->cdiff_idx & 3], WIN_W / 2 - 20, 260);
+        draw_text_center(a, a->font_s, WIN_W / 2, 545, COL_GRAY, tx("CDIFF_NOTE"));
+        draw_text_center(a, a->font_s, WIN_W / 2, 585, COL_DIM, tx("CDIFF_HINT"));
+    }
 }
 
 /* タイプ表示は**文字単位**で切ること。バイトで切ると
@@ -504,9 +580,9 @@ static int draw_text_wrap(App *a, TTF_Font *f, int x, int y, int w,
 /* フリー対戦セットアップ                                              */
 /* ------------------------------------------------------------------ */
 static const char *P2_KEYS[] = {
-    "OPP_CPU_EASY", "OPP_CPU_NORMAL", "OPP_CPU_HARD", "OPP_HUMAN"
+    "OPP_CPU_EASY", "OPP_CPU_NORMAL", "OPP_CPU_HARD", "OPP_CPU_HELL", "OPP_HUMAN"
 };
-#define SETUP_CTRL_HUMAN 3      /* P2_KEYS の「人間」 */
+#define SETUP_CTRL_HUMAN 4      /* P2_KEYS の「人間」 */
 
 /* 行は「マップ・索敵・(参加陣営ごとの操作者)・(参加陣営ごとの指揮官)・開始・戻る」。
  * 参加陣営数はマップで変わるので行数も変わる。 */
@@ -851,7 +927,7 @@ static void setup_change(App *a, int dir)
     int r = a->setup_row - SETUP_FIXED_TOP;
     if (r < n) {                          /* 操作者 */
         int p = setup_part_at(a, r);
-        a->sel_ctrl[p] = (uint8_t)((a->sel_ctrl[p] + 4 + dir) % 4);
+        a->sel_ctrl[p] = (uint8_t)((a->sel_ctrl[p] + 5 + dir) % 5);
         if (p == 1) a->sel_p2 = a->sel_ctrl[1];   /* 旧フィールドを追随させる */
         return;
     }
@@ -896,6 +972,7 @@ static void setup_start(App *a)
         g->ctrl[p] = (a->sel_ctrl[p] == 0) ? CTRL_CPU_EASY
                    : (a->sel_ctrl[p] == 1) ? CTRL_CPU_NORMAL
                    : (a->sel_ctrl[p] == 2) ? CTRL_CPU_HARD
+                   : (a->sel_ctrl[p] == 3) ? CTRL_CPU_HELL
                    : CTRL_HUMAN;
         g->co_id[p] = (int8_t)(g->n_cos > 0 ? a->sel_co[p] : -1);
     }
@@ -1025,20 +1102,9 @@ static void setup_draw(App *a)
          * EASY/NORMAL/HARD の名前だけでは何が違うのか分からないため。 */
         setup_draw_preview(a, 985, 246, 264, 264);
         int p = setup_part_at(a, rr);
-        static const char *K[4] = { "DIFF_EASY", "DIFF_NORMAL", "DIFF_HARD", "DIFF_HUMAN" };
-        const char *base = K[a->sel_ctrl[p] & 3];
-        char key[32], buf[256];
-        snprintf(key, sizeof key, "%s_T", base);
-        draw_text(a, a->font_s, 985, 522, COL_YELLOW, tx(key));
-        for (int i = 1; i <= 5; i++) {
-            snprintf(key, sizeof key, "%s_%d", base, i);
-            const char *line = tx(key);
-            if (!line[0] || !strcmp(line, key)) break;   /* 定義の無い行で終わり */
-            /* 「（…）」で始まる行は前の行の補足なので、箇条の印を付けず字下げだけ */
-            bool cont = (line[0] == '(') || !strncmp(line, "（", 3);
-            snprintf(buf, sizeof buf, cont ? "　%s" : "・%s", line);
-            draw_text(a, a->font_s, 985, 522 + i * 24, COL_WHITE, buf);
-        }
+        static const int SC[5] = { CTRL_CPU_EASY, CTRL_CPU_NORMAL, CTRL_CPU_HARD,
+                                   CTRL_CPU_HELL, CTRL_HUMAN };
+        draw_diff_desc(a, SC[a->sel_ctrl[p] % 5], 985, 522);
     } else {
         /* マップ名は「マップ」の行に出ているので、ここでは繰り返さない
          * （長い名前が枠からはみ出すだけになる）。 */

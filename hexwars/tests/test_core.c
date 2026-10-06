@@ -1340,6 +1340,43 @@ static void test_recon_exp(void)
     printf("test_recon_exp OK (cells %d -> exp %d)\n", total, g->units[u].exp);
 }
 
+/* HELL: 開戦時に、持っている種類の生産拠点（工場・空港・港）を1つずつ足す。収入は150% */
+static void test_hell(void)
+{
+    Game *g = &s_game;
+    char err[256];
+    int before[3] = { 0, 0, 0 }, after[3] = { 0, 0, 0 };
+    static const int KIND[3] = { PROD_LAND, PROD_AIR, PROD_SEA };
+    for (int pass = 0; pass < 2; pass++) {
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        CHECK(data_load_map(g, "data/maps/m03_archipelago.map", err, sizeof err) == 0);
+        g->ctrl[1] = pass ? CTRL_CPU_HELL : CTRL_CPU_HARD;
+        game_start(g, 3u);
+        int *cnt = pass ? after : before;
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++) {
+                const Tile *t = &g->tiles[y][x];
+                const TerrainType *tt = &g->terrains[t->terrain];
+                if (t->owner != 1 || tt->is_hq || tt->is_lab) continue;
+                for (int k = 0; k < 3; k++) if (tt->produces == KIND[k]) cnt[k]++;
+            }
+        if (pass) {
+            int inc_hell = game_income(g, 1);
+            g->ctrl[1] = CTRL_CPU_NORMAL;
+            int inc_norm = game_income(g, 1);
+            CHECK(inc_hell == inc_norm * 150 / 100);
+        }
+    }
+    for (int k = 0; k < 3; k++) {
+        if (before[k] > 0) CHECK(after[k] == before[k] + 1);   /* 持っている種類だけ1つ増える */
+        else CHECK(after[k] == 0);
+    }
+    printf("test_hell OK (land %d->%d air %d->%d sea %d->%d)\n",
+           before[0], after[0], before[1], after[1], before[2], after[2]);
+}
+
 /* 進化した輸送手段にも従来どおり搭載できること。
  * transport_by には進化前のID（CARRIER 等）しか書かれておらず、しかも4件までで
  * 歩兵は使い切っているため、進化後のIDを書き足すことができない。
@@ -3555,9 +3592,9 @@ static void test_enemy_reinforce(void)
     int z1 = 0;
     for (int i = 0; i < g->n_units; i++)
         if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 1) z1++;
-    CHECK(z1 == base_p1);
+    CHECK(z1 == (base_p1 > base_p0 ? base_p1 : base_p0));   /* 第1作戦は自軍と同数（1.00倍） */
 
-    /* (2) 上限いっぱい持ち越すと敵にも増援が入る */
+    /* (2) 上限いっぱい持ち越すと、敵の総数も自軍の展開数に揃う */
     CampaignState s1;
     memset(&s1, 0, sizeof s1);
     snprintf(s1.node, sizeof s1.node, "M01");
@@ -3579,10 +3616,34 @@ static void test_enemy_reinforce(void)
     }
     int carried = p0 - base_p0;
     CHECK(carried > 0);
-    int added = p1 - base_p1;
-    CHECK(added > 0);                                    /* 増援が入った */
-    CHECK(added <= carried);                             /* 増やしすぎない */
-    CHECK(p1 <= base_p1 * CAMPAIGN_ENEMY_MAX_RATIO);     /* 上限倍率を守る */
+    CHECK(p1 > base_p1);                                 /* 増援が入った */
+    CHECK(p1 == (base_p1 > p0 ? base_p1 : p0));          /* 第1作戦は 1.00倍（開幕に全部） */
+
+    /* 作戦番号と割合: 本線の順で数え、第N作戦は 100 + 5×(N-1) % */
+    CHECK(campaign_op_number(&c, campaign_find_node(&c, "M01")) == 1);
+    CHECK(campaign_op_number(&c, campaign_find_node(&c, "M03")) == 3);
+    CHECK(campaign_op_number(&c, campaign_find_node(&c, "M19")) == 19);
+    {
+        /* 第13作戦（M14）: 自軍に対して 1.60倍。1.00倍ぶんは開幕、残りは2・3ターン目の増援波 */
+        CampaignState s3;
+        memset(&s3, 0, sizeof s3);
+        snprintf(s3.node, sizeof s3.node, "M14");
+        memset(g, 0, sizeof *g);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        CHECK(campaign_setup_map(g, &c, &s3, "", err, sizeof err) == 0);
+        campaign_begin(g, &c, &s3, 5, NULL);
+        int own = 0, foe = 0, wave = 0;
+        for (int i = 0; i < g->n_units; i++) {
+            if (!(g->units[i].flags & UF_ALIVE)) continue;
+            if (g->units[i].owner == 0) own++;
+            else if (game_is_enemy(g, 0, g->units[i].owner)) foe++;
+        }
+        for (int i = 0; i < g->n_waves; i++) wave += g->waves[i].count;
+        int want = (own * 160 + 99) / 100;
+        CHECK(foe + wave >= want);
+        CHECK(foe + wave <= want + 1 || foe > own);      /* マップの敵が元から多い場合は減らさない */
+    }
 
     /* (3) 増援を含めても敵ユニットは全て進入可能な地形の上にいる
      *     （艦船が陸に湧く等の配置ミスがないこと） */
@@ -4703,6 +4764,7 @@ int main(void)
     test_loss_log();
     test_campaign_fast_route();
     test_recon_exp();
+    test_hell();
     test_superweapon();
     test_language();
     test_paradrop();

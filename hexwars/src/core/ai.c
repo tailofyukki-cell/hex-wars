@@ -919,7 +919,7 @@ static void act_unit(Game *g, AiState *s, int ui)
     MoveClass mc = (MoveClass)ut->mclass;
     int me = g->current;
     bool easy = g->ctrl[me] == CTRL_CPU_EASY;
-    bool hard = g->ctrl[me] == CTRL_CPU_HARD;
+    bool hard = CTRL_IS_HARD(g->ctrl[me]);
 
     /* 研究所へ向かう部隊: 研究所に一番近い所まで動き、着いたら解隊する */
     if (s->to_lab[ui]) {

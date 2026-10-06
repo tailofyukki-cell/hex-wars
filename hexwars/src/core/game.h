@@ -14,8 +14,12 @@ typedef enum {
     CTRL_HUMAN = 0,
     CTRL_CPU_EASY,
     CTRL_CPU_NORMAL,
-    CTRL_CPU_HARD
+    CTRL_CPU_HARD,
+    CTRL_CPU_HELL      /* HARD と同じ考え方で、収入150%・開戦時に生産拠点を陸海空1つずつ追加 */
 } PlayerCtrl;
+
+/* HARD 以上（HARD と HELL）。HELL は HARD の上位なので、HARD の振る舞いは全部持つ */
+#define CTRL_IS_HARD(c) ((c) == CTRL_CPU_HARD || (c) == CTRL_CPU_HELL)
 
 /* 段階的な増援の1波。編成は到着時のその陣営の顔ぶれから拾うので、
  * ここには何を出すかを持たない（損耗した分だけ偏るのを避ける）。 */
@@ -225,7 +229,8 @@ int  game_disband_refund(const Game *g, int ui);
 int  game_disband_unit(Game *g, int ui);
 /* 倒された理由（LossRec.why） */
 enum { LOSS_KILLED = 0, LOSS_COUNTER, LOSS_SPLASH, LOSS_FUEL, LOSS_CARGO };
-void game_loss_clear(Game *g);   /* 自軍の研究所の上なら研究ポイントへ */
+void game_loss_clear(Game *g);
+int  game_income(const Game *g, int player);   /* 1手番の収入（難易度・指揮官の補正込み） */   /* 自軍の研究所の上なら研究ポイントへ */
 bool game_on_own_lab(const Game *g, int ui);    /* 自軍の研究所の上で、同じ領域の部隊か */
 int  game_lab_domain(const Game *g, int x, int y);  /* そのマスの研究所の領域（1〜3、0=研究所でない） */
 int  game_unit_lab_domain(const Game *g, int ui);   /* 部隊が解隊できる研究所の領域（1〜3） */

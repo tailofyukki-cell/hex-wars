@@ -124,6 +124,9 @@ typedef struct {
      * 生産拠点で無料で引き出せる（経験値も保持）。 */
     int  n_store;
     struct { uint8_t type; uint8_t exp; } store[MAX_STORE_UNITS];
+    /* 遊ぶ人が選んだ難易度（PlayerCtrl の CPU 値）。全作戦の敵がこの難易度になる。
+     * 0 = 選んでいない（v21 以前のセーブ）。そのときは作戦ごとの指定を使う。 */
+    uint8_t diff;
 } CampaignState;
 
 /* 倉庫へユニットを1体保管（満杯時は最も経験値の低い枠と入れ替え）。 */
@@ -161,5 +164,8 @@ void campaign_begin(Game *g, const Campaign *c, CampaignState *s,
 /* 勝利処理: 持越しユニット・資金を計算し、s->node を次ノードへ進める。
  * 戻り値: 0=次ノードあり 1=キャンペーンクリア(次がWIN) */
 int campaign_on_victory(const Game *g, const Campaign *c, CampaignState *s);
+
+/* 第何作戦か（本線の順、1始まり）。敵の数の割合を作戦が進むほど上げるのに使う */
+int campaign_op_number(const Campaign *c, const CpnNode *node);
 
 #endif
