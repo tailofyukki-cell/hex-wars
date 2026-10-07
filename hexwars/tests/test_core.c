@@ -1436,6 +1436,11 @@ static void test_carry_conservation(void)
         printf("  carry %d store %d alive %d map_own %d before %d\n", s.n_carry, s.n_store, alive, map_own, total_before);
     /* 盤上の生存（マップの初期部隊＋出撃した持越し）＋倉庫（元の3＋出撃させなかった持越し）が全部残る */
     CHECK(s.n_carry + s.n_store == map_own + total_before);
+    CHECK(s.n_store == 0);                        /* 倉庫の部隊も持越しに戻る（編成画面に並ぶ） */
+    for (int i = 1; i < s.n_carry; i++) {         /* 価格→経験値の順 */
+        int c0 = g->types[s.carry[i - 1].type].cost, c1 = g->types[s.carry[i].type].cost;
+        CHECK(c0 > c1 || (c0 == c1 && s.carry[i - 1].exp >= s.carry[i].exp));
+    }
     printf("test_carry_conservation OK (carry %d store %d)\n", s.n_carry, s.n_store);
 }
 

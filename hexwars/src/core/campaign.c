@@ -864,6 +864,35 @@ int campaign_on_victory(const Game *g, const Campaign *c, CampaignState *s)
         /* 持越し上限を超えた生存ユニットは倉庫へ保管（消失させない） */
         for (; i < n; i++)
             campaign_store_push(s, g->units[idx[i]].type, g->units[idx[i]].exp);
+
+        /* 倉庫の部隊も持越しに戻す。以前は一度倉庫に入ると次の作戦の編成画面に
+         * 二度と並ばず、消えたように見えた。全部を編成画面に並べて、毎作戦
+         * 「出撃・倉庫・解隊」を選び直せるようにする。並びは価格→経験値の順に揃える。 */
+        int keep = 0;
+        for (int k = 0; k < s->n_store; k++) {
+            if (s->n_carry < MAX_CARRY_UNITS) {
+                s->carry[s->n_carry].type = s->store[k].type;
+                s->carry[s->n_carry].exp = s->store[k].exp;
+                s->n_carry++;
+            } else {
+                s->store[keep++] = s->store[k];      /* 入りきらない分だけ倉庫に残す */
+            }
+        }
+        s->n_store = keep;
+        for (int a = 1; a < s->n_carry; a++) {      /* 価格→経験値の順（挿入整列） */
+            int ta = s->carry[a].type, ea = s->carry[a].exp;
+            int ca = ta < g->n_types ? g->types[ta].cost : 0;
+            int b = a - 1;
+            while (b >= 0) {
+                int tb = s->carry[b].type;
+                int cb = tb < g->n_types ? g->types[tb].cost : 0;
+                if (cb > ca || (cb == ca && s->carry[b].exp >= ea)) break;
+                s->carry[b + 1] = s->carry[b];
+                b--;
+            }
+            s->carry[b + 1].type = (uint8_t)ta;
+            s->carry[b + 1].exp = (uint8_t)ea;
+        }
     }
 
     /* 作戦評価を記録し、ランクに応じたボーナス資金を上乗せする */
