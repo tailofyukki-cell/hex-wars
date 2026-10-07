@@ -1391,6 +1391,54 @@ static void test_store_cost(void)
     printf("test_store_cost OK (tank %d / evolved %d)\n", campaign_store_cost(g, tk), campaign_store_cost(g, tv));
 }
 
+/* 持越しの保存則: 勝利時に生き残っている自軍の部隊（輸送中を含む）は、全部が
+ * 持越しか倉庫のどちらかに入る。出撃で倉庫へ回した部隊も消えない。 */
+static void test_carry_conservation(void)
+{
+    Game *g = &s_game;
+    static Campaign c;
+    static CampaignState s;
+    char err[256];
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    memset(g, 0, sizeof *g);
+    memset(&s, 0, sizeof s);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    snprintf(s.node, sizeof s.node, "M04");
+    int inf = data_find_unit_type(g, "INFANTRY"), tk = data_find_unit_type(g, "TANK");
+    s.n_carry = 40;                               /* 上限(マップの2倍)を超える持越し */
+    for (int i = 0; i < s.n_carry; i++) { s.carry[i].type = (uint8_t)(i % 2 ? tk : inf); s.carry[i].exp = (uint8_t)i; }
+    s.n_store = 3;
+    for (int i = 0; i < 3; i++) { s.store[i].type = (uint8_t)inf; s.store[i].exp = 90; }
+    int total_before = s.n_carry + s.n_store;
+    CHECK(campaign_setup_map(g, &c, &s, "", err, sizeof err) == 0);
+    int map_own = 0;
+    for (int i = 0; i < g->n_units; i++) if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 0) map_own++;
+    campaign_begin(g, &c, &s, 7u, NULL);
+    /* 1部隊を輸送艦に積んだ状態にする（輸送中も数えられること） */
+    int ts = data_find_unit_type(g, "T_SHIP");
+    for (int i = 0; i < g->n_units; i++) {
+        Unit *u = &g->units[i];
+        if (!(u->flags & UF_ALIVE) || u->owner != 0 || u->type != ts) continue;
+        for (int j = 0; j < g->n_units; j++) {
+            Unit *v = &g->units[j];
+            if ((v->flags & UF_ALIVE) && v->owner == 0 && v->type == inf && !(v->flags & UF_LOADED)) {
+                v->flags |= UF_LOADED; v->pos = u->pos; u->cargo[0] = (int16_t)j; break;
+            }
+        }
+        break;
+    }
+    int alive = 0;
+    for (int i = 0; i < g->n_units; i++) if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 0) alive++;
+    g->winner = 0; g->turn = 30;
+    CHECK(campaign_on_victory(g, &c, &s) == 0);
+    if (s.n_carry + s.n_store != alive + 3 + (total_before - 3) - (alive - map_own))
+        printf("  carry %d store %d alive %d map_own %d before %d\n", s.n_carry, s.n_store, alive, map_own, total_before);
+    /* 盤上の生存（マップの初期部隊＋出撃した持越し）＋倉庫（元の3＋出撃させなかった持越し）が全部残る */
+    CHECK(s.n_carry + s.n_store == map_own + total_before);
+    printf("test_carry_conservation OK (carry %d store %d)\n", s.n_carry, s.n_store);
+}
+
 /* 進化した輸送手段にも従来どおり搭載できること。
  * transport_by には進化前のID（CARRIER 等）しか書かれておらず、しかも4件までで
  * 歩兵は使い切っているため、進化後のIDを書き足すことができない。
@@ -4780,6 +4828,7 @@ int main(void)
     test_recon_exp();
     test_hell();
     test_store_cost();
+    test_carry_conservation();
     test_superweapon();
     test_language();
     test_paradrop();
