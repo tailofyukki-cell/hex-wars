@@ -6,7 +6,8 @@
 #include "campaign.h"
 
 #define SAVE_MAGIC   "HXWS"
-#define SAVE_VERSION 22  /* v22: キャンペーンで選んだ難易度（CampaignState.diff）。
+#define SAVE_VERSION 23  /* v23: 持越しの件数を u16 に（上限超過を消さずに持つため）。
+                          * v22: キャンペーンで選んだ難易度（CampaignState.diff）。
                           * v21: イベント・増援の知らせの長さを 96/64 → 192 に。
                           * v20: 偵察の「明かしたマス」の端数（Unit.recon_cells）。
                           * v19: 研究ポイントを領域（陸・空・海）ごとに持つ。

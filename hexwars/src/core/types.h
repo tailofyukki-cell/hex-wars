@@ -28,10 +28,14 @@
  * **セーブは件数を u8 で書くので 255 を超えられない**。
  * MAX_UNITS に紐づけていたときはそれが 200 だったので問題なかったが、
  * MAX_UNITS を上げたので切り離してある。下の _Static_assert が見張る。 */
-#define MAX_CARRY_UNITS  200
 #define MAX_STORE_UNITS  200   /* 倉庫（出撃枠に入らなかった部隊の保管庫） */
-_Static_assert(MAX_CARRY_UNITS <= 255 && MAX_STORE_UNITS <= 255,
-               "持越し・倉庫の件数はセーブで u8 。255を超えるなら保存幅を広げること");
+/* 持越しの入れ物の大きさ。勝利時は盤上の自軍全部と倉庫の全部を一旦ここに入れ、
+ * 1部隊も勝手に消さない。保有の上限（CARRY_KEEP_LIMIT）を超えた分は、次の作戦の
+ * 編成画面で遊ぶ人に解隊する部隊を選ばせる。v23 からセーブの件数は u16。 */
+#define MAX_CARRY_UNITS  (MAX_UNITS + MAX_STORE_UNITS)
+#define CARRY_KEEP_LIMIT 200   /* 作戦をまたいで持てる部隊の上限（出撃＋倉庫） */
+_Static_assert(MAX_CARRY_UNITS <= 65535 && MAX_STORE_UNITS <= 255,
+               "持越しの件数はセーブで u16、倉庫は u8");
 /* 持越しユニットの初期配置上限 = マップ本来の自軍ユニット数 × この倍率。
  * 超過分は倉庫行き（生産拠点で無料で引き出せる） */
 #define DEPLOY_CARRY_RATIO 2

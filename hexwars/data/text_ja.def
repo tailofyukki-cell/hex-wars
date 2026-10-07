@@ -442,6 +442,7 @@ DEPLOY_AIR_ROW    = 補給なし
 DEPLOY_MARK_GO    = ＞ 出撃
 DEPLOY_MARK_KEEP  = 　 倉庫
 DEPLOY_MARK_NA    = × 地形外
+DEPLOY_OVER_FMT   = ！ 持てる部隊は%d部隊までです。あと%d部隊を解隊してください（D/右クリック）
 DEPLOY_MARK_DISBAND_FMT = 解隊 +%dG
 DEPLOY_REFUND_FMT = 解隊 +%dG
 DEPLOY_EXP_FMT    = 経験 %d (ランク%d)

@@ -861,7 +861,7 @@ int campaign_on_victory(const Game *g, const Campaign *c, CampaignState *s)
             s->carry[s->n_carry].exp = g->units[idx[i]].exp;
             s->n_carry++;
         }
-        /* 持越し上限を超えた生存ユニットは倉庫へ保管（消失させない） */
+        /* MAX_CARRY_UNITS は盤上の自軍の最大数より大きいので、ここで溢れることは無い */
         for (; i < n; i++)
             campaign_store_push(s, g->units[idx[i]].type, g->units[idx[i]].exp);
 

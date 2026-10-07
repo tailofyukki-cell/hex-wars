@@ -1437,6 +1437,21 @@ static void test_carry_conservation(void)
     /* 盤上の生存（マップの初期部隊＋出撃した持越し）＋倉庫（元の3＋出撃させなかった持越し）が全部残る */
     CHECK(s.n_carry + s.n_store == map_own + total_before);
     CHECK(s.n_store == 0);                        /* 倉庫の部隊も持越しに戻る（編成画面に並ぶ） */
+
+    /* 保有上限を超えても勝利時には1部隊も消さない（どれを手放すかは編成画面で選ぶ）。
+     * 倉庫を満杯にして、進化直後（経験値0）の部隊がいても全部が持越しに入ること */
+    {
+        static CampaignState s2;
+        memset(&s2, 0, sizeof s2);
+        snprintf(s2.node, sizeof s2.node, "M04");
+        for (int i = 0; i < MAX_STORE_UNITS; i++) { s2.store[i].type = (uint8_t)inf; s2.store[i].exp = 80; }
+        s2.n_store = MAX_STORE_UNITS;
+        int before = 0;
+        for (int i = 0; i < g->n_units; i++) if ((g->units[i].flags & UF_ALIVE) && g->units[i].owner == 0) before++;
+        CHECK(campaign_on_victory(g, &c, &s2) == 0);
+        CHECK(s2.n_carry == before + MAX_STORE_UNITS && s2.n_store == 0);
+        CHECK(s2.n_carry > CARRY_KEEP_LIMIT);        /* 上限超過のまま持つ（編成画面で選ばせる） */
+    }
     for (int i = 1; i < s.n_carry; i++) {         /* 価格→経験値の順 */
         int c0 = g->types[s.carry[i - 1].type].cost, c1 = g->types[s.carry[i].type].cost;
         CHECK(c0 > c1 || (c0 == c1 && s.carry[i - 1].exp >= s.carry[i].exp));
@@ -2098,10 +2113,11 @@ static void test_campaign(void)
         memset(&s1, 0, sizeof s1);
         snprintf(s1.node, sizeof s1.node, "M01");
         int inf_t = data_find_unit_type(&g2, "INFANTRY");
-        s1.n_carry = MAX_CARRY_UNITS;
+        /* 編成画面が保有上限（CARRY_KEEP_LIMIT）までに絞るので、ここも上限ちょうど */
+        s1.n_carry = CARRY_KEEP_LIMIT;
         for (int i = 0; i < s1.n_carry; i++) {
             s1.carry[i].type = (uint8_t)inf_t;
-            s1.carry[i].exp = (uint8_t)(MAX_CARRY_UNITS - i);  /* 経験値降順 */
+            s1.carry[i].exp = (uint8_t)(CARRY_KEEP_LIMIT - i);  /* 経験値降順 */
         }
         CHECK(campaign_setup_battle(&g2, &c, &s1, "", 5, err, sizeof err) == 0);
         int p0 = 0;

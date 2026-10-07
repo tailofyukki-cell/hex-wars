@@ -153,7 +153,7 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
         w_str(w, cs->node, sizeof cs->node);
         w_i32(w, cs->funds_carry);
         w_u32(w, cs->cleared);
-        w_u8(w, (uint8_t)cs->n_carry);
+        w_u16(w, (uint16_t)cs->n_carry);   /* v23 から u16 */
         for (int i = 0; i < cs->n_carry; i++) {
             w_u8(w, cs->carry[i].type);
             w_u8(w, cs->carry[i].exp);
@@ -321,7 +321,7 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
             r_str(r, cs->node, sizeof cs->node);
             cs->funds_carry = r_i32(r);
             cs->cleared = r_u32(r);
-            cs->n_carry = r_u8(r);
+            cs->n_carry = (ver >= 23) ? r_u16(r) : r_u8(r);
             if (cs->n_carry > MAX_CARRY_UNITS) return -1;
             for (int i = 0; i < cs->n_carry; i++) {
                 cs->carry[i].type = r_u8(r);

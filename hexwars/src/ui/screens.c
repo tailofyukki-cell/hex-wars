@@ -2676,6 +2676,16 @@ static int deploy_refund_total(const App *a)
     return r;
 }
 
+/* 作戦をまたいで持てる部隊の上限（CARRY_KEEP_LIMIT）を超えている数。
+ * 0 より大きい間は出撃できない。どれを手放すかは遊ぶ人が選ぶ（自動では消さない。
+ * 以前は倉庫が満杯になると経験値の低い順に消え、進化直後の部隊が真っ先に消えた） */
+static int deploy_over_limit(const App *a)
+{
+    int kept = a->cps.n_store;
+    for (int i = 0; i < a->cps.n_carry; i++) if (a->dep_sel[i] != DEP_DISBAND) kept++;
+    return kept > CARRY_KEEP_LIMIT ? kept - CARRY_KEEP_LIMIT : 0;
+}
+
 /* D: 解隊の印を付ける／外す。地形外（出せない部隊）も解隊はできる */
 static void deploy_disband_toggle(App *a, int i)
 {
@@ -2701,6 +2711,10 @@ static void deploy_toggle(App *a, int i)
 
 static void deploy_confirm(App *a)
 {
+    if (deploy_over_limit(a) > 0) {      /* 上限を超えたままでは出撃できない */
+        snd_se(SE_CANCEL);
+        return;
+    }
     snd_se(SE_OK);
     /* 解隊: 持越しから外して資金に戻す（この作戦の開始資金に足す）。
      * 負けてやり直すときは cps_backup に戻るので、解隊した部隊も戻ってくる。 */
@@ -2790,7 +2804,14 @@ static void deploy_draw(App *a)
                      deploy_count(a) >= a->dep_limit ? COL_YELLOW : COL_WHITE, buf);
     int airsup = deploy_air_supply(a);
     bool air_warn = airsup < 2 && deploy_has_air(a);
-    if (air_warn) {
+    int over = deploy_over_limit(a);
+    if (over > 0) {
+        snprintf(buf, sizeof buf, tx("DEPLOY_OVER_FMT"), CARRY_KEEP_LIMIT, over);
+        int ww = text_width(a, a->font_s, buf);
+        fill_rect(a, WIN_W / 2 - ww / 2 - 12, 128, ww + 24, 30, (SDL_Color){ 110, 30, 30, 255 });
+        outline_rect(a, WIN_W / 2 - ww / 2 - 12, 128, ww + 24, 30, (SDL_Color){ 255, 120, 110, 255 });
+        draw_text_center(a, a->font_s, WIN_W / 2, 133, (SDL_Color){ 255, 210, 200, 255 }, buf);
+    } else if (air_warn) {
         /* 注意書きは目立たせる（読み落とすと航空機が燃料切れで墜ちるだけになる） */
         const char *w = tx(airsup == 0 ? "DEPLOY_AIR_NONE" : "DEPLOY_AIR_ENEMY");
         int ww = text_width(a, a->font_s, w);
@@ -2857,9 +2878,10 @@ static void deploy_draw(App *a)
 
     /* 出撃ボタン */
     SDL_Rect go = { WIN_W / 2 - 130, WIN_H - 74, 260, 44 };
-    fill_rect(a, go.x, go.y, go.w, go.h, (SDL_Color){ 70, 100, 150, 255 });
-    outline_rect(a, go.x, go.y, go.w, go.h, COL_YELLOW);
-    draw_text_center(a, a->font_m, WIN_W / 2, go.y + 10, COL_WHITE,
+    fill_rect(a, go.x, go.y, go.w, go.h, over > 0 ? (SDL_Color){ 50, 54, 62, 255 }
+                                                  : (SDL_Color){ 70, 100, 150, 255 });
+    outline_rect(a, go.x, go.y, go.w, go.h, over > 0 ? COL_DIM : COL_YELLOW);
+    draw_text_center(a, a->font_m, WIN_W / 2, go.y + 10, over > 0 ? COL_DIM : COL_WHITE,
                      tx("DEPLOY_GO"));
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 24, COL_DIM,
                      tx("DEPLOY_HINT"));
