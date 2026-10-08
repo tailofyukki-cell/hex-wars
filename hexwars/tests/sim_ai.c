@@ -346,6 +346,9 @@ int main(void)
     for (int s5 = 0; s5 < sim_seeds(5); s5++)
         if (run_match_ffa("data/maps/f01_lastStand.map", 210 + (uint32_t)s5,
                           CTRL_CPU_NORMAL) == -100) fail++;
+    for (int s5 = 0; s5 < sim_seeds(5); s5++)            /* 四面楚歌・海 */
+        if (run_match_ffa("data/maps/f14_seasiege.map", 260 + (uint32_t)s5,
+                          CTRL_CPU_NORMAL) == -100) fail++;
 
     printf("== 多陣営の乱戦 ==\n");
     for (int s3 = 0; s3 < sim_seeds(3); s3++)

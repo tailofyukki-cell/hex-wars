@@ -28,3 +28,4 @@ maps/f10_twocontinents.map|二大陸と内海（陸海空の決戦・大規模�
 maps/f11_fiveisles.map|五海諸島（5陣営の海洋決戦・陸海空）|Five Seas Archipelago (5-faction naval)
 maps/f12_grandbattle.map|【試作】大決戦MAX（自軍72対敵144・待ち時間の確認用）|[Prototype] Grand Battle MAX (72 vs 144)
 maps/f13_gunline.map|砲列の海（52x32・戦艦の撃ち合い・生産なしの大艦隊決戦）|Sea of Gunlines (52x32, battleship duel, no production)
+maps/f14_seasiege.map|四面楚歌・海（40x40・5陣営乱戦・艦隊が主役）|Surrounded at Sea (40x40, 5-faction melee, fleets first)
