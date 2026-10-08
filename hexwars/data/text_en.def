@@ -437,13 +437,14 @@ KIND_AIR        = Air
 # --- deployment ---
 DEPLOY_TITLE      = Deployment
 DEPLOY_COUNT_FMT  = Deploying %d / %d   (carried over: %d)
-DEPLOY_NOTE       = Reserve units can be deployed from a base for half price. D/right-click to disband for funds
+DEPLOY_NOTE       = Deploying costs half the build price (evolved: base price). Others go to reserve. D/right-click to disband
 DEPLOY_AIR_NONE   = ! This map has no airports. Aircraft cannot refuel and will crash when out of fuel
 DEPLOY_AIR_ENEMY  = ! You hold no airport here. Aircraft cannot refuel until you capture one
 DEPLOY_AIR_ROW    = No refuel
 DEPLOY_MARK_GO    = > Deploy
 DEPLOY_MARK_KEEP  = - Reserve
 DEPLOY_MARK_NA    = x No terrain
+DEPLOY_COST_FMT = Cost %dG / Funds %dG
 DEPLOY_OVER_FMT   = ! You can keep up to %d units. Disband %d more (D / right-click)
 DEPLOY_MARK_DISBAND_FMT = Disband +%dG
 DEPLOY_REFUND_FMT = Disband +%dG

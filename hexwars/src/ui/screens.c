@@ -2632,6 +2632,27 @@ static int deploy_count(const App *a)
     return n;
 }
 
+/* 持越し部隊を出撃させる費用（倉庫から出すのと同じ: 生産価格の半額、進化後は進化前の価格） */
+static int deploy_cost(const App *a, int i)
+{
+    return campaign_store_cost(&a->game, a->cps.carry[i].type);
+}
+
+static int deploy_cost_total(const App *a)
+{
+    int c = 0;
+    for (int i = 0; i < a->cps.n_carry; i++) if (a->dep_sel[i] == DEP_GO) c += deploy_cost(a, i);
+    return c;
+}
+
+static int deploy_refund_total(const App *a);
+
+/* 出撃に使える資金: この作戦の開始資金（持越し資金込み）＋解隊で戻る分 */
+static int deploy_budget(const App *a)
+{
+    return a->game.funds[0] + deploy_refund_total(a);
+}
+
 static void deploy_enter(App *a)
 {
     /* 既定は「価値の高い順に上限まで」。
@@ -2640,10 +2661,13 @@ static void deploy_enter(App *a)
     memset(a->dep_sel, 0, sizeof a->dep_sel);
     bool no_air = deploy_air_supply(a) == 0;
     int n = 0;
+    int spent = 0, budget = a->game.funds[0];
     for (int i = 0; i < a->cps.n_carry && n < a->dep_limit; i++) {
         if (deploy_row_blocked(a, i)) continue;   /* 配置先が無い兵种は飛ばす */
         if (no_air && deploy_row_is_air(a, i)) continue;   /* 補給できない航空機は既定で外す */
+        if (spent + deploy_cost(a, i) > budget) continue;   /* 資金が足りない部隊は外す */
         a->dep_sel[i] = 1;
+        spent += deploy_cost(a, i);
         n++;
     }
     a->dep_idx = 0;
@@ -2690,7 +2714,13 @@ static int deploy_over_limit(const App *a)
 static void deploy_disband_toggle(App *a, int i)
 {
     if (i < 0 || i >= a->cps.n_carry) return;
-    a->dep_sel[i] = (a->dep_sel[i] == DEP_DISBAND) ? DEP_KEEP : DEP_DISBAND;
+    uint8_t old = a->dep_sel[i];
+    a->dep_sel[i] = (old == DEP_DISBAND) ? DEP_KEEP : DEP_DISBAND;
+    if (deploy_cost_total(a) > deploy_budget(a)) {   /* 解隊を取り消すと出撃費用が払えない */
+        a->dep_sel[i] = old;
+        snd_se(SE_CANCEL);
+        return;
+    }
     snd_se(SE_CURSOR);
 }
 
@@ -2701,6 +2731,8 @@ static void deploy_toggle(App *a, int i)
     if (a->dep_sel[i] != DEP_KEEP) {          /* 出撃・解隊 → 倉庫 */
         a->dep_sel[i] = DEP_KEEP;
         snd_se(SE_CURSOR);
+    } else if (deploy_cost_total(a) + deploy_cost(a, i) > deploy_budget(a)) {
+        snd_se(SE_CANCEL);      /* 資金が足りない */
     } else if (deploy_count(a) < a->dep_limit) {
         a->dep_sel[i] = DEP_GO;
         snd_se(SE_CURSOR);
@@ -2718,7 +2750,7 @@ static void deploy_confirm(App *a)
     snd_se(SE_OK);
     /* 解隊: 持越しから外して資金に戻す（この作戦の開始資金に足す）。
      * 負けてやり直すときは cps_backup に戻るので、解隊した部隊も戻ってくる。 */
-    a->game.funds[0] += deploy_refund_total(a);
+    a->game.funds[0] += deploy_refund_total(a) - deploy_cost_total(a);   /* 解隊で戻り、出撃で払う */
     int n = 0;
     for (int i = 0; i < a->cps.n_carry; i++) {
         if (a->dep_sel[i] == DEP_DISBAND) continue;
@@ -2794,6 +2826,12 @@ static void deploy_draw(App *a)
     draw_text_center(a, a->font_l, WIN_W / 2, 56, COL_WHITE, tx("DEPLOY_TITLE"));
     snprintf(buf, sizeof buf, tx("DEPLOY_COUNT_FMT"),
              deploy_count(a), a->dep_limit, a->cps.n_carry);
+    {
+        char cb[96];
+        snprintf(cb, sizeof cb, tx("DEPLOY_COST_FMT"), deploy_cost_total(a), deploy_budget(a));
+        strncat(buf, "    ", sizeof buf - strlen(buf) - 1);
+        strncat(buf, cb, sizeof buf - strlen(buf) - 1);
+    }
     if (deploy_refund_total(a) > 0) {
         char rb[96];
         snprintf(rb, sizeof rb, tx("DEPLOY_REFUND_FMT"), deploy_refund_total(a));
@@ -2865,6 +2903,11 @@ static void deploy_draw(App *a)
         if (air_warn && deploy_row_is_air(a, i))
             draw_text(a, a->font_s, r.x + 110 + text_width(a, a->font_s, buf) + 12, r.y + 8,
                       (SDL_Color){ 255, 160, 110, 255 }, tx("DEPLOY_AIR_ROW"));
+        if (!dis && !blocked) {
+            snprintf(buf, sizeof buf, "%dG", deploy_cost(a, i));
+            draw_text(a, a->font_s, r.x + r.w - 300, r.y + 8,
+                      go ? COL_YELLOW : COL_GRAY, buf);
+        }
         snprintf(buf, sizeof buf, tx("DEPLOY_EXP_FMT"), exp, rank);
         draw_text(a, a->font_s, r.x + r.w - 220, r.y + 8,
                   blocked ? COL_DIM
