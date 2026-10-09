@@ -2538,10 +2538,15 @@ static void endroll_draw(App *a)
     int n = endroll_lines(a, lines);
     int total_h = n * ENDROLL_LINE_H;
 
-    /* スクロール位置: 画面下から現れて上へ抜ける */
+    /* スクロール位置: 画面下から現れて上へ流れ、最後の行（THANK YOU FOR PLAYING!）が
+     * 画面の中央に来たところで止まる。以前は全部が上へ抜けるまで流し、最後は何も
+     * 映っていない画面に「タイトルへ」だけが出ていた。 */
+    (void)total_h;
+    int last = n - 1;
+    while (last > 0 && !lines[last][0]) last--;
     int elapsed = (int)(SDL_GetTicks() - a->endroll_start_ms);
     int scrolled = elapsed * ENDROLL_SPEED_PXS / 1000;
-    int end_scroll = total_h + WIN_H;
+    int end_scroll = WIN_H / 2 + last * ENDROLL_LINE_H;
     if (a->endroll_done) scrolled = end_scroll;      /* 早送り */
     if (scrolled >= end_scroll) { scrolled = end_scroll; a->endroll_done = 1; }
 

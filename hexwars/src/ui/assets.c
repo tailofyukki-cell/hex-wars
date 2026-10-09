@@ -134,22 +134,35 @@ static TextEntry *get_text_raw(App *a, TTF_Font *f, SDL_Color c, const char *s)
     return e;
 }
 
+/* 透明度はキャッシュの鍵に入れず、描くときに掛ける。以前は色の r,g,b だけで
+ * キャッシュを引いていたので、フェード中に半透明で作った文字の絵がそのまま使い回され、
+ * エンドロールの行が薄いまま流れていた。 */
+static void blit_text(App *a, TextEntry *e, int x, int y, Uint8 alpha)
+{
+    SDL_Rect dst = { x, y, e->w, e->h };
+    SDL_SetTextureAlphaMod(e->tex, alpha);
+    SDL_RenderCopy(a->ren, e->tex, NULL, &dst);
+    SDL_SetTextureAlphaMod(e->tex, 255);
+}
+
 void draw_text(App *a, TTF_Font *f, int x, int y, SDL_Color c, const char *s)
 {
     if (!s || !*s) return;
+    Uint8 alpha = c.a;
+    c.a = 255;
     TextEntry *e = get_text(a, f, c, s);
     if (!e) return;
-    SDL_Rect dst = { x, y, e->w, e->h };
-    SDL_RenderCopy(a->ren, e->tex, NULL, &dst);
+    blit_text(a, e, x, y, alpha);
 }
 
 void draw_text_center(App *a, TTF_Font *f, int cx, int y, SDL_Color c, const char *s)
 {
     if (!s || !*s) return;
+    Uint8 alpha = c.a;
+    c.a = 255;
     TextEntry *e = get_text(a, f, c, s);
     if (!e) return;
-    SDL_Rect dst = { cx - e->w / 2, y, e->w, e->h };
-    SDL_RenderCopy(a->ren, e->tex, NULL, &dst);
+    blit_text(a, e, cx - e->w / 2, y, alpha);
 }
 
 int text_width(App *a, TTF_Font *f, const char *s)
