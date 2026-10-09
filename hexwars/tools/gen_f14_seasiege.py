@@ -84,15 +84,16 @@ for (cx, cy), p, r in ISLANDS:
     put(p1[0], p1[1], "p", p)
     put(p2[0], p2[1], "p", p)
     inner = [c for c in land if c not in ((cx, cy), p1, p2) and hexdist(cx, cy, c[0], c[1]) <= 2]
-    # 工場・空港・都市2 を、首都から離れた順に散らす
+    # 空港・都市2 を、首都から離れた順に散らす。工場は置かない（陸の部隊が補充され続けて
+    # 決着がつかなかったため。生産は港と空港だけ。首都は仕様上、陸を作れる）
     inner.sort(key=lambda c: (-hexdist(cx, cy, c[0], c[1]), c[1], c[0]))
     picked = []
     for c in inner:
         if all(hexdist(c[0], c[1], q[0], q[1]) >= 2 for q in picked):
             picked.append(c)
-        if len(picked) == 4:
+        if len(picked) == 3:
             break
-    for ch, c in zip(("f", "a", "c", "c"), picked):
+    for ch, c in zip(("a", "c", "c"), picked):
         put(c[0], c[1], ch, p)
     if p == 0:   # 中央は都市をもう1つ（四方より囲まれているぶん収入で補う）
         rest = [c for c in inner if grid[c[1]][c[0]] == "."]
@@ -123,7 +124,7 @@ for (cx, cy), p, r in ISLANDS:
 
 name_lines = [
     "# f14 四面楚歌・海 - 5陣営の乱戦の海版。陣営0が中央の要塞島、陣営1..4が四方の島。",
-    "# 艦隊が主役で、航空は補助（空港は各島に1つ）。全陣営が独立。",
+    "# 艦隊が主役で、航空は補助（空港は各島に1つ）。工場は無く、生産は港と空港（と首都）だけ。全陣営が独立。",
     "# 中央の島は岩礁（山）の環で囲み、四方に水路を開けてある。岩礁は艦も潜水艦も",
     "# 通れず、航空機だけが越えられる。環は4つの弧に分かれていて、歩いて中央へは渡れない。",
     "# 首都を取るには輸送艦で歩兵を運んで上陸させる。",
