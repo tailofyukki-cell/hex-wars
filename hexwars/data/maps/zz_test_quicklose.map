@@ -1,0 +1,30 @@
+# 【検証用】すぐに全滅して負けるマップ。後で消してよい。
+# 自軍は HP1 の歩兵1体だけで建物も無い。そのまま手番を終えると、敵の戦車に倒されて全滅する。
+[map]
+name             = 【検証】すぐ負ける
+name@en = [TEST] Quick Defeat
+width            = 12
+height           = 8
+turns            = 20
+timeout_winner   = -1
+funds0           = 1000
+funds1           = 0
+
+[terrain]
+row = ............
+row = ............
+row = ............
+row = ............
+row = ..........H.
+row = ............
+row = ............
+row = ............
+
+[owners]
+own = 10,4,1
+
+[units]
+unit = 0,INFANTRY,5,4,1
+unit = 1,TANK,6,4,10
+unit = 1,TANK,4,4,10
+unit = 1,TANK,5,3,10

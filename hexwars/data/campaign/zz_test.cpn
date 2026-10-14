@@ -1,0 +1,61 @@
+# 【検証用】動作確認のためのキャンペーン。後で消してよい（zz_test_ で始まるファイルは全部検証用）。
+# タイトル画面で F12 を押すと、ここの作戦を選んで始められる（このファイルが無ければ何も起きない）。
+#   T_WIN    すぐ勝ってエンディングまで
+#   T_LOSE   すぐ全滅して負ける
+#   T_STORE  倉庫に200部隊を入れて始める。勝つと次の作戦の編成画面で保有上限（200）超えを確認できる
+# 敵の数の自動調整は切ってある（no_reinforce）。
+[campaign]
+name  = 【検証用】動作確認
+name@en = [TEST] Verification
+start = T_WIN
+
+[node T_WIN]
+title = 【検証】すぐ勝ってエンディング
+title@en = [TEST] Quick win to the ending
+map   = maps/zz_test_quickwin.map
+brief = 隣の敵（HP1の歩兵）を戦車で攻撃すれば勝利し、エンディングに進む。
+brief@en = Attack the adjacent enemy (1 HP infantry) with a tank to win and see the ending.
+next_win  = WIN
+next_lose = LOSE
+carry  = 1
+enemy  = EASY
+no_reinforce = 1
+
+[node T_LOSE]
+title = 【検証】すぐ全滅して負ける
+title@en = [TEST] Quick defeat
+map   = maps/zz_test_quicklose.map
+brief = そのまま手番を終えると全滅して負ける。
+brief@en = End your turn and you will be wiped out.
+next_win  = WIN
+next_lose = LOSE
+carry  = 1
+enemy  = EASY
+no_reinforce = 1
+
+[node T_STORE]
+title = 【検証】倉庫に200部隊
+title@en = [TEST] 200 units in reserve
+map   = maps/zz_test_quickwin.map
+brief = 倉庫に200部隊が入った状態で始まる（生産拠点から有料で出せる）。
+brief = 勝つと、次の作戦の編成画面で保有上限（200）を超えた状態を確認できる。
+brief@en = Starts with 200 units in reserve (deploy them from a base for a fee).
+brief@en = Win to see the over-the-limit state on the next deployment screen.
+next_win  = T_STORE2
+next_lose = LOSE
+carry  = 1
+enemy  = EASY
+no_reinforce = 1
+test_store = 200
+
+[node T_STORE2]
+title = 【検証】保有上限の確認
+title@en = [TEST] Unit limit check
+map   = maps/zz_test_quickwin.map
+brief = 編成画面で解隊して200部隊以下にしないと出撃できない。勝てばエンディング。
+brief@en = Disband down to 200 units before you can deploy. Win to see the ending.
+next_win  = WIN
+next_lose = LOSE
+carry  = 1
+enemy  = EASY
+no_reinforce = 1

@@ -290,6 +290,7 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         else if (!strcmp(key, "fast_turns"))    cur->fast_turns = atoi(val);
         else if (!strcmp(key, "par_turns"))     cur->par_turns = atoi(val);
         else if (!strcmp(key, "no_reinforce"))  cur->no_reinforce = atoi(val);
+        else if (!strcmp(key, "test_store"))    cur->test_store = atoi(val);
         else if (!strcmp(key, "enemy_scale"))   cur->enemy_scale = atoi(val);
         else if (!strcmp(key, "enemy_waves"))   cur->enemy_waves = atoi(val);
         else if (!strcmp(key, "event")) {
@@ -788,6 +789,19 @@ void campaign_begin(Game *g, const Campaign *c, CampaignState *s,
     if (node && node->carry)
         deployed = deploy_carry(g, s, sel);
     (void)deployed;
+    /* 【検証用】倉庫を部隊で埋める（data/campaign/zz_test.cpn の test_store）。
+     * 陸・空・海と進化後を混ぜ、経験値もばらつかせる（進化直後の経験値0も入れる） */
+    if (node && node->test_store > 0 && s->n_store == 0) {
+        static const char *T[] = { "INFANTRY", "TANK", "TANK_V", "ARTILLERY", "FIGHTER",
+                                   "BOMBER", "DESTROYER", "SUBMARINE", "HTANK_V", "RECON" };
+        int nt = (int)(sizeof T / sizeof T[0]);
+        for (int i = 0; i < node->test_store && s->n_store < MAX_STORE_UNITS; i++) {
+            int t = -1;
+            for (int k = 0; k < g->n_types; k++)
+                if (!strcmp(g->types[k].id, T[i % nt])) { t = k; break; }
+            if (t >= 0) campaign_store_push(s, t, (i * 37) % 101);
+        }
+    }
     /* 敵の総数を、自軍の展開数（持越し込み）に対する割合で決める。
      * 第1作戦で1.00倍、作戦が1つ進むごとに5%ずつ増える（第19作戦で1.90倍）。
      * 端数は切り上げ。以前は「持越しで増えたぶんだけ、敵の初期数の2倍まで」で、

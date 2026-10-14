@@ -387,8 +387,45 @@ static SDL_Rect cdiff_rect(int i)
     return r;
 }
 
+/* 【検証用】F12 で data/campaign/zz_test.cpn の作戦を選んで始める。
+ * ファイルが無ければ何もしない（検証用ファイルを消せば、この入口も消える）。 */
+static void test_cpn_start(App *a, int idx)
+{
+    char path[600], err[256];
+    snprintf(path, sizeof path, "%sdata/campaign/zz_test.cpn", a->base_path);
+    if (campaign_load(&a->cpn, path, err, sizeof err) != 0 || idx < 0 || idx >= a->cpn.n_nodes) return;
+    memset(&a->cps, 0, sizeof a->cps);
+    a->cps.active = true;
+    snprintf(a->cps.file, sizeof a->cps.file, "campaign/zz_test.cpn");
+    snprintf(a->cps.node, sizeof a->cps.node, "%s", a->cpn.nodes[idx].id);
+    a->cps.diff = CTRL_CPU_EASY;
+    a->campaign_mode = true;
+    a->next_screen = SCREEN_BRIEFING;
+}
+
 static void title_event(App *a, const SDL_Event *e)
 {
+    /* 【検証用】作戦の選択 */
+    if (a->test_open) {
+        if (e->type == SDL_KEYDOWN) {
+            SDL_Keycode k = e->key.keysym.sym;
+            int n = a->cpn.n_nodes;
+            if (k == SDLK_UP && n > 0)   a->test_idx = (a->test_idx + n - 1) % n;
+            if (k == SDLK_DOWN && n > 0) a->test_idx = (a->test_idx + 1) % n;
+            if (k == SDLK_z || k == SDLK_RETURN) { a->test_open = 0; test_cpn_start(a, a->test_idx); }
+            if (k == SDLK_x || k == SDLK_ESCAPE || k == SDLK_F12) a->test_open = 0;
+        }
+        return;
+    }
+    if (e->type == SDL_KEYDOWN && e->key.keysym.sym == SDLK_F12) {
+        char path[600], err[256];
+        snprintf(path, sizeof path, "%sdata/campaign/zz_test.cpn", a->base_path);
+        if (campaign_load(&a->cpn, path, err, sizeof err) == 0 && a->cpn.n_nodes > 0) {
+            a->test_open = 1;
+            a->test_idx = 0;
+        }
+        return;
+    }
     /* キャンペーンの難易度選択 */
     if (a->cdiff_open) {
         if (e->type == SDL_KEYDOWN) {
@@ -471,6 +508,21 @@ static void title_draw(App *a)
     }
     draw_text_center(a, a->font_s, WIN_W / 2, WIN_H - 40, COL_DIM, tx("TITLE_HINT"));
 
+    if (a->test_open) {           /* 【検証用】作戦の選択（文言は検証用なので直書き） */
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 10, 12, 16, 210 });
+        fill_rect(a, WIN_W / 2 - 360, 150, 720, 120 + a->cpn.n_nodes * 44, (SDL_Color){ 50, 30, 30, 250 });
+        outline_rect(a, WIN_W / 2 - 360, 150, 720, 120 + a->cpn.n_nodes * 44, (SDL_Color){ 240, 140, 120, 255 });
+        draw_text_center(a, a->font_l, WIN_W / 2, 166, COL_WHITE, a->cpn.name);
+        for (int i = 0; i < a->cpn.n_nodes; i++) {
+            bool sel = (a->test_idx == i);
+            SDL_Rect r = { WIN_W / 2 - 330, 220 + i * 44, 660, 38 };
+            fill_rect(a, r.x, r.y, r.w, r.h, sel ? (SDL_Color){ 110, 70, 60, 255 } : (SDL_Color){ 60, 44, 44, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            draw_text_center(a, a->font_m, WIN_W / 2, r.y + 6, sel ? COL_WHITE : COL_GRAY, a->cpn.nodes[i].title);
+        }
+        draw_text_center(a, a->font_s, WIN_W / 2, 230 + a->cpn.n_nodes * 44, COL_DIM,
+                         "↑↓ / Z / X(F12)");
+    }
     if (a->cdiff_open) {
         fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 10, 12, 16, 200 });
         fill_rect(a, WIN_W / 2 - 400, 150, 800, 470, (SDL_Color){ 30, 36, 46, 250 });

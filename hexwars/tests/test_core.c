@@ -1459,6 +1459,43 @@ static void test_carry_conservation(void)
     printf("test_carry_conservation OK (carry %d store %d)\n", s.n_carry, s.n_store);
 }
 
+/* 【検証用】zz_test.cpn: 読み込めて、倉庫200の作戦で倉庫が埋まり、すぐ勝てる／すぐ負ける */
+static void test_zz_test_campaign(void)
+{
+    Game *g = &s_game;
+    static Campaign c;
+    static CampaignState s;
+    char err[256];
+    if (campaign_load(&c, "data/campaign/zz_test.cpn", err, sizeof err) != 0) {
+        printf("test_zz_test_campaign skipped (no file)\n");   /* 検証用ファイルを消したら飛ばす */
+        return;
+    }
+    memset(g, 0, sizeof *g);
+    memset(&s, 0, sizeof s);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    snprintf(s.node, sizeof s.node, "T_STORE");
+    CHECK(campaign_setup_map(g, &c, &s, "", err, sizeof err) == 0);
+    campaign_begin(g, &c, &s, 1u, NULL);
+    CHECK(s.n_store == 200);
+    /* すぐ勝てる: 戦車で HP1 の歩兵を撃つと決着 */
+    int tank = -1, foe = -1;
+    for (int i = 0; i < g->n_units; i++) {
+        if (!(g->units[i].flags & UF_ALIVE)) continue;
+        if (g->units[i].owner == 1) foe = i;
+        else if (g->units[i].type == data_find_unit_type(g, "TANK") && g->units[i].pos.x == 5 && g->units[i].pos.y == 4) tank = i;
+    }
+    CHECK(tank >= 0 && foe >= 0);
+    g->current = 0;
+    game_attack(g, tank, foe, NULL, NULL, NULL);
+    game_check_victory(g);
+    CHECK(g->winner == 0);
+    /* 勝つと倉庫も持越しに入り、保有上限を超える */
+    CHECK(campaign_on_victory(g, &c, &s) == 0);
+    CHECK(!strcmp(s.node, "T_STORE2") && s.n_carry > CARRY_KEEP_LIMIT);
+    printf("test_zz_test_campaign OK (carry %d)\n", s.n_carry);
+}
+
 /* 進化した輸送手段にも従来どおり搭載できること。
  * transport_by には進化前のID（CARRIER 等）しか書かれておらず、しかも4件までで
  * 歩兵は使い切っているため、進化後のIDを書き足すことができない。
@@ -4850,6 +4887,7 @@ int main(void)
     test_hell();
     test_store_cost();
     test_carry_conservation();
+    test_zz_test_campaign();
     test_superweapon();
     test_language();
     test_paradrop();

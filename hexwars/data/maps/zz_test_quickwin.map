@@ -1,0 +1,31 @@
+# 【検証用】すぐにクリアできるマップ。後で消してよい（zz_test_ で始まるファイルは全部検証用）。
+# 敵は HP1 の歩兵1体だけで建物も無い。隣の戦車で攻撃すれば全滅で勝利。
+[map]
+name             = 【検証】すぐ勝てる
+name@en = [TEST] Quick Win
+width            = 12
+height           = 8
+turns            = 20
+timeout_winner   = -1
+funds0           = 1000
+funds1           = 0
+
+[terrain]
+row = ............
+row = ............
+row = ............
+row = ............
+row = ..Hf........
+row = ............
+row = ............
+row = ............
+
+[owners]
+own = 2,4,0
+own = 3,4,0
+
+[units]
+unit = 0,TANK,5,4,10
+unit = 0,TANK,5,3,10
+unit = 0,INFANTRY,2,3,10
+unit = 1,INFANTRY,6,4,1
