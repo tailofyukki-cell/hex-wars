@@ -50,6 +50,7 @@ typedef struct {
     char next_win_fast[24];   /* 早期勝利ルート（空文字=なし） */
     int  fast_turns;          /* このターン以内の勝利で fast ルート */
     int  test_store;          /* 【検証用】作戦開始時に倉庫へこの数の部隊を入れる（0=しない） */
+    int  test_lab;            /* 【検証用】作戦開始時の研究ポイント（陸・空・海とも。0=しない） */
     char next_lose[24];
     int  carry;               /* 1=ユニット持越し有効 */
     int  bonus;               /* 勝利ボーナス資金 */

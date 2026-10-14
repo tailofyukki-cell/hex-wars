@@ -3,6 +3,10 @@
 #   T_WIN    すぐ勝ってエンディングまで
 #   T_LOSE   すぐ全滅して負ける
 #   T_STORE  倉庫に200部隊を入れて始める。勝つと次の作戦の編成画面で保有上限（200）超えを確認できる
+#   T_SW     超兵器: 研究ポイント満タン・資金多め。研究所ですぐ建造できる
+#   T_HELL   敵が HELL。開戦時に敵の工場・空港・港が1つずつ増える
+#   T_FAST   早期勝利の分岐: 2ターン以内に勝つと T_FAST_OK、遅れると T_FAST_NG へ進む
+# F12 から始めた作戦の敵の難易度は、各作戦の enemy= を使う。
 # 敵の数の自動調整は切ってある（no_reinforce）。
 [campaign]
 name  = 【検証用】動作確認
@@ -54,6 +58,73 @@ title@en = [TEST] Unit limit check
 map   = maps/zz_test_quickwin.map
 brief = 編成画面で解隊して200部隊以下にしないと出撃できない。勝てばエンディング。
 brief@en = Disband down to 200 units before you can deploy. Win to see the ending.
+next_win  = WIN
+next_lose = LOSE
+carry  = 1
+enemy  = EASY
+no_reinforce = 1
+
+[node T_SW]
+title = 【検証】超兵器がすぐ作れる
+title@en = [TEST] Build superweapons now
+map   = maps/zz_test_superweapon.map
+brief = 研究ポイントは陸・空・海とも満タン、資金は30000。研究所（陸・空・海）を選ぶと建造できる。
+brief = 3手番で完成する。敵の歩兵（HP1）を戦車で撃てばいつでも勝てる。
+brief@en = Research points are full in every domain and you have 30000 funds. Select a lab to build.
+brief@en = Builds finish in 3 turns. Shoot the 1 HP enemy infantry with the tank to win at any time.
+next_win  = WIN
+next_lose = LOSE
+carry  = 1
+enemy  = EASY
+no_reinforce = 1
+test_lab = 9999
+
+[node T_HELL]
+title = 【検証】HELLの拠点追加
+title@en = [TEST] HELL extra bases
+map   = maps/zz_test_hell.map
+brief = 敵は HELL。マップでは首都・工場・空港・港が1つずつだが、開戦時に工場・空港・港が1つずつ増える。
+brief@en = The enemy is HELL. It starts with one HQ, factory, airport and port, and gains one more factory, airport and port at the start.
+next_win  = WIN
+next_lose = LOSE
+carry  = 1
+enemy  = HELL
+no_reinforce = 1
+
+[node T_FAST]
+title = 【検証】早期勝利の分岐
+title@en = [TEST] Early win branch
+map   = maps/zz_test_quickwin.map
+brief = 2ターン以内に勝つと「早期勝利で来た」作戦へ、3ターン目以降に勝つと「通常ルートで来た」作戦へ進む。
+brief = 遅れて勝つには、1ターン目と2ターン目は攻撃せずに手番を終える。
+brief@en = Win within 2 turns to go to the early route; win from turn 3 on to go to the normal route.
+brief@en = To win late, end turns 1 and 2 without attacking.
+next_win      = T_FAST_NG
+next_win_fast = T_FAST_OK
+fast_turns    = 2
+next_lose = LOSE
+carry  = 1
+enemy  = EASY
+no_reinforce = 1
+
+[node T_FAST_OK]
+title = 【検証】早期勝利で来た（分岐 成功）
+title@en = [TEST] Arrived by the early route
+map   = maps/zz_test_quickwin.map
+brief = 早期勝利の分岐でここへ来た。勝てばエンディング。
+brief@en = You came here by the early-win route. Win to see the ending.
+next_win  = WIN
+next_lose = LOSE
+carry  = 1
+enemy  = EASY
+no_reinforce = 1
+
+[node T_FAST_NG]
+title = 【検証】通常ルートで来た（分岐 なし）
+title@en = [TEST] Arrived by the normal route
+map   = maps/zz_test_quickwin.map
+brief = 2ターン以内に勝たなかったので、通常ルートでここへ来た。勝てばエンディング。
+brief@en = You did not win within 2 turns, so you came by the normal route. Win to see the ending.
 next_win  = WIN
 next_lose = LOSE
 carry  = 1

@@ -1493,6 +1493,51 @@ static void test_zz_test_campaign(void)
     /* 勝つと倉庫も持越しに入り、保有上限を超える */
     CHECK(campaign_on_victory(g, &c, &s) == 0);
     CHECK(!strcmp(s.node, "T_STORE2") && s.n_carry > CARRY_KEEP_LIMIT);
+    /* 超兵器: 研究ポイント満タン・資金多めで、陸の研究所ですぐ建造できる */
+    memset(g, 0, sizeof *g); memset(&s, 0, sizeof s);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    snprintf(s.node, sizeof s.node, "T_SW");
+    CHECK(campaign_setup_map(g, &c, &s, "", err, sizeof err) == 0);
+    campaign_begin(g, &c, &s, 1u, NULL);
+    CHECK(g->lab_points[0][0] >= 5000 && g->lab_points[0][2] >= 5000);
+    CHECK(game_sw_check(g, 0, 3, 4, data_find_unit_type(g, "SW_TANK")) == 0);
+    CHECK(game_sw_check(g, 0, 3, 2, data_find_unit_type(g, "SW_FORTRESS")) == 0);
+    CHECK(game_sw_check(g, 0, 12, 4, data_find_unit_type(g, "SW_BATTLESHIP")) == 0);
+
+    /* HELL: 敵の工場・空港・港が1つずつ増える */
+    memset(g, 0, sizeof *g); memset(&s, 0, sizeof s);
+    CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+    CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+    snprintf(s.node, sizeof s.node, "T_HELL");
+    CHECK(campaign_setup_map(g, &c, &s, "", err, sizeof err) == 0);
+    CHECK(g->ctrl[1] == CTRL_CPU_HELL);
+    campaign_begin(g, &c, &s, 1u, NULL);
+    {
+        int cnt[3] = { 0, 0, 0 };
+        for (int y = 0; y < g->h; y++)
+            for (int x = 0; x < g->w; x++) {
+                const TerrainType *tt = &g->terrains[g->tiles[y][x].terrain];
+                if (g->tiles[y][x].owner != 1 || tt->is_hq) continue;
+                if (tt->produces == PROD_LAND) cnt[0]++;
+                if (tt->produces == PROD_AIR) cnt[1]++;
+                if (tt->produces == PROD_SEA) cnt[2]++;
+            }
+        CHECK(cnt[0] == 2 && cnt[1] == 2 && cnt[2] == 2);
+    }
+
+    /* 早期勝利の分岐: 2ターン以内なら T_FAST_OK、3ターン目なら T_FAST_NG */
+    for (int late = 0; late < 2; late++) {
+        memset(g, 0, sizeof *g); memset(&s, 0, sizeof s);
+        CHECK(data_load_terrain(g, "data/terrain.def", err, sizeof err) == 0);
+        CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
+        snprintf(s.node, sizeof s.node, "T_FAST");
+        CHECK(campaign_setup_map(g, &c, &s, "", err, sizeof err) == 0);
+        campaign_begin(g, &c, &s, 1u, NULL);
+        g->winner = 0; g->turn = late ? 3 : 2;
+        CHECK(campaign_on_victory(g, &c, &s) == 0);
+        CHECK(!strcmp(s.node, late ? "T_FAST_NG" : "T_FAST_OK"));
+    }
     printf("test_zz_test_campaign OK (carry %d)\n", s.n_carry);
 }
 

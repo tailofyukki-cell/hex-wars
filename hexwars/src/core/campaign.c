@@ -291,6 +291,7 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         else if (!strcmp(key, "par_turns"))     cur->par_turns = atoi(val);
         else if (!strcmp(key, "no_reinforce"))  cur->no_reinforce = atoi(val);
         else if (!strcmp(key, "test_store"))    cur->test_store = atoi(val);
+        else if (!strcmp(key, "test_lab"))      cur->test_lab = atoi(val);
         else if (!strcmp(key, "enemy_scale"))   cur->enemy_scale = atoi(val);
         else if (!strcmp(key, "enemy_waves"))   cur->enemy_waves = atoi(val);
         else if (!strcmp(key, "event")) {
@@ -791,6 +792,8 @@ void campaign_begin(Game *g, const Campaign *c, CampaignState *s,
     (void)deployed;
     /* 【検証用】倉庫を部隊で埋める（data/campaign/zz_test.cpn の test_store）。
      * 陸・空・海と進化後を混ぜ、経験値もばらつかせる（進化直後の経験値0も入れる） */
+    if (node && node->test_lab > 0)            /* 【検証用】研究ポイントを満タンに */
+        for (int d = 0; d < 3; d++) g->lab_points[0][d] = node->test_lab;
     if (node && node->test_store > 0 && s->n_store == 0) {
         static const char *T[] = { "INFANTRY", "TANK", "TANK_V", "ARTILLERY", "FIGHTER",
                                    "BOMBER", "DESTROYER", "SUBMARINE", "HTANK_V", "RECON" };

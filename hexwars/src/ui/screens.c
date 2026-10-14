@@ -398,7 +398,7 @@ static void test_cpn_start(App *a, int idx)
     a->cps.active = true;
     snprintf(a->cps.file, sizeof a->cps.file, "campaign/zz_test.cpn");
     snprintf(a->cps.node, sizeof a->cps.node, "%s", a->cpn.nodes[idx].id);
-    a->cps.diff = CTRL_CPU_EASY;
+    a->cps.diff = 0;               /* 敵の難易度は各作戦の enemy= を使う（HELL の検証のため） */
     a->campaign_mode = true;
     a->next_screen = SCREEN_BRIEFING;
 }

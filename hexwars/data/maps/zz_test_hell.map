@@ -1,0 +1,36 @@
+# 【検証用】敵が HELL のとき、開戦時に工場・空港・港が1つずつ増えるのを見るマップ。後で消してよい。
+# 敵（右）は首都・工場・空港・港を1つずつ持って始まる。開戦後は工場・空港・港が2つずつになっているはず。
+[map]
+name             = 【検証】HELLの拠点追加
+name@en = [TEST] HELL extra bases
+width            = 16
+height           = 10
+turns            = 30
+timeout_winner   = -1
+funds0           = 3000
+funds1           = 5000
+
+[terrain]
+row = ................
+row = ................
+row = ................
+row = ..H.........H...
+row = ...........f....
+row = .............a..
+row = ................
+row = ............p...
+row = ~~~~~~~~~~~~~~~~
+row = ~~~~~~~~~~~~~~~~
+
+[owners]
+own = 2,3,0
+own = 12,3,1
+own = 11,4,1
+own = 13,5,1
+own = 12,7,1
+
+[units]
+unit = 0,TANK,3,4,10
+unit = 0,INFANTRY,2,4,10
+unit = 1,INFANTRY,12,2,10
+unit = 1,INFANTRY,13,3,10
