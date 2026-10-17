@@ -1,9 +1,18 @@
 # HEX WARS（仮題）
 
-`hex_wars_spec.md` に基づく、大戦略ライクなターン制ウォー・シミュレーションゲーム。
+`hex_wars_spec.md` に基づく、ターン制ヘックス・ウォー・シミュレーションゲーム。
 C11 + SDL2 + SDL2_ttf 製。ロジック層（`src/core/`）はSDL非依存で単体テスト可能。
 
 ![screen](docs/screenshot.png)
+
+### スクリーンショット
+
+| | |
+|---|---|
+| ![国境の丘（陸戦・指揮官あり）](docs/screenshots/battle_border_hills.png) | ![群島の海戦（雨の夜）](docs/screenshots/battle_archipelago_night_rain.png) |
+| 国境の丘（陸戦・指揮官ゲージ） | 群島の海戦（雨の夜。昼夜と天候は上部に表示） |
+| ![四面楚歌・海](docs/screenshots/battle_seasiege.png) | ![フリー対戦の設定](docs/screenshots/skirmish_setup.png) |
+| 四面楚歌・海（5陣営。中央を岩礁が囲む） | フリー対戦の設定（難易度の中身を右に表示） |
 
 ## 実装状況（仕様書の開発フェーズ対応）
 
