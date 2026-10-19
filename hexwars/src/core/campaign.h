@@ -129,6 +129,8 @@ typedef struct {
     /* 遊ぶ人が選んだ難易度（PlayerCtrl の CPU 値）。全作戦の敵がこの難易度になる。
      * 0 = 選んでいない（v21 以前のセーブ）。そのときは作戦ごとの指定を使う。 */
     uint8_t diff;
+    /* 遊ぶ人が選んだ陣営（見た目だけ。0=西方同盟）。faction_set_player に渡す */
+    uint8_t faction;
 } CampaignState;
 
 /* 倉庫へユニットを1体保管（満杯時は最も経験値の低い枠と入れ替え）。 */

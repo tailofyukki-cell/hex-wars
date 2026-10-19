@@ -210,6 +210,8 @@ static void serialize(const Game *g, const CampaignState *cs, Wb *w)
     }
     /* v22: キャンペーンで選んだ難易度 */
     w_u8(w, (cs && cs->active) ? cs->diff : 0);
+    /* v24: キャンペーンで選んだ陣営 */
+    w_u8(w, (cs && cs->active) ? cs->faction : 0);
 }
 
 static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
@@ -406,6 +408,11 @@ static int deserialize(Game *g, CampaignState *cs, Rb *r, uint32_t ver)
     if (ver >= 22) {
         uint8_t d = r_u8(r);
         if (cs) cs->diff = d;
+    }
+    /* v24: キャンペーンの陣営。v23 以前は西方同盟 */
+    if (ver >= 24) {
+        uint8_t f = r_u8(r);
+        if (cs) cs->faction = f < MAX_PLAYERS ? f : 0;
     }
 
     return r->underflow ? -1 : 0;

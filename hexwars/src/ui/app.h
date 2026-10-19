@@ -256,6 +256,7 @@ struct App {
     struct LossRec loss_show[64];   /* 報告画面に出す損失（手番の頭に写す） */
     int   loss_show_n, loss_scroll;
     int   cdiff_open, cdiff_idx;
+    int   cfac_open, cfac_idx;   /* キャンペーンの陣営選択 */
     int   test_open, test_idx;     /* 【検証用】F12 の作戦選択 */   /* キャンペーン開始時の難易度選択（0=閉 / 1=開） */
     int   launch_carrier;   /* 選択中の部隊が空母から出撃した直後なら、その空母。-1=なし */
     int   lpick_n, lpick_idx;
@@ -293,7 +294,10 @@ void draw_text_center(App *a, TTF_Font *f, int cx, int y, SDL_Color c, const cha
 int  text_width(App *a, TTF_Font *f, const char *s);
 
 /* render.c */
-extern const SDL_Color COL_P[MAX_PLAYERS];
+extern const SDL_Color COL_P_BASE[MAX_PLAYERS];
+/* 陣営 p の色。陣営の見た目の入れ替え（faction_face）を通した表 */
+const SDL_Color *col_p_table(void);
+#define COL_P (col_p_table())
 extern const SDL_Color COL_WHITE, COL_BLACK, COL_YELLOW, COL_GRAY, COL_DIM;
 float hex_size(const App *a);
 void  hex_center_px(const App *a, int x, int y, float *px, float *py);

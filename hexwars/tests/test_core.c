@@ -404,6 +404,12 @@ static void test_language(void)
 
     /* ---- 英語 ---- */
     data_set_lang("en");
+    {   /* 陣営名は画面側が文言表から渡す。ここでは英語名を直接渡す */
+        const char *full[MAX_PLAYERS] = { "Western Alliance", "Eastern Federation", "Southern Union",
+                                          "Northern Pact", "Free Army" };
+        const char *shrt[MAX_PLAYERS] = { "Western", "Eastern", "Southern", "Northern", "Free" };
+        faction_set_names(full, shrt);
+    }
     CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
     CHECK(!strncmp(c.name, "The Western", 11));
     const CpnNode *n = &c.nodes[m01];
@@ -450,6 +456,9 @@ static void test_language(void)
 
     /* 他のテストに影響しないよう日本語へ戻す */
     data_set_lang("ja");
+    {   const char *full[MAX_PLAYERS] = { "西方同盟", "東方連邦", "南方連合", "北方同盟", "自由軍" };
+        const char *shrt[MAX_PLAYERS] = { "西方", "東方", "南方", "北方", "自由" };
+        faction_set_names(full, shrt); }
     CHECK(data_load_units(g, "data/units.def", err, sizeof err) == 0);
     CHECK(!strcmp(unit_name_of(&g->types[tank], 0), "中戦車「T-40型」"));
     printf("test_language OK\n");
@@ -1970,6 +1979,7 @@ static void test_save_load(void)
     cs.store[0].type = 5; cs.store[0].exp = 33;
     cs.store[1].type = 7; cs.store[1].exp = 11;
     cs.cleared = 0x15;   /* M01/M03/M05 クリア済みの想定 */
+    cs.faction = 3;      /* 選んだ陣営（v24） */
     g->objective_count = 16;
     g->objective_player = 0;
     /* 壊れた地形（v12）。現地形だけではなく本来の地形も保存されないと、
@@ -2005,6 +2015,7 @@ static void test_save_load(void)
     CHECK(load_game(&g2, &cs2, "tests/tmp_test.sav", err, sizeof err) == 0);
 
     CHECK(g2.w == g->w && g2.h == g->h);
+    CHECK(cs2.faction == 3);
     CHECK(g2.funds[0] == 4321);
     CHECK(g2.lab_points[0][0] == 3210 && g2.lab_points[0][1] == 41 &&
           g2.lab_points[0][2] == 5 && g2.lab_points[1][2] == 77);
@@ -2712,6 +2723,41 @@ static void test_campaign_story(void)
     /* 全作戦にひとこまがあること。抜けるとその作戦だけ話が飛ぶ。 */
     CHECK(with_story == c.n_nodes);
     CHECK(with_win == c.n_nodes);   /* 勝利直後のひとこまも全作戦分 */
+}
+
+/* 陣営選択: 陣営0 と選んだ陣営の見た目が入れ替わり、物語の陣営名もそれに合わせて
+ * 差し込まれる。ルール上の陣営番号は変わらない。 */
+static void test_campaign_faction(void)
+{
+    static Campaign c;
+    char err[256];
+    /* 既定（西方同盟）。記号が残らず、元の文になる */
+    faction_set_player(0);
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    CHECK(!strcmp(c.name, "西方の反攻"));
+    CHECK(strstr(c.nodes[0].story[0].text, "東方連邦") != NULL);
+    for (int i = 0; i < c.n_nodes; i++) {
+        for (int k = 0; k < c.nodes[i].n_brief; k++) CHECK(!strchr(c.nodes[i].brief[k], '{'));
+        for (int k = 0; k < c.nodes[i].n_story; k++) CHECK(!strchr(c.nodes[i].story[k].text, '{'));
+        for (int k = 0; k < c.nodes[i].n_evs; k++) CHECK(!strchr(c.nodes[i].evs[k].msg, '{'));
+    }
+    /* 東方連邦を選ぶと、敵は西方同盟になる */
+    faction_set_player(1);
+    CHECK(faction_face(0) == 1 && faction_face(1) == 0 && faction_face(2) == 2);
+    CHECK(campaign_load(&c, "data/campaign/main.cpn", err, sizeof err) == 0);
+    CHECK(!strcmp(c.name, "東方の反攻"));
+    CHECK(strstr(c.nodes[0].story[0].text, "西方同盟") != NULL);
+    /* 自由軍を選ぶと、陣営4 が西方同盟の見た目になる */
+    faction_set_player(4);
+    CHECK(faction_face(0) == 4 && faction_face(4) == 0 && faction_face(1) == 1);
+    char s[64] = "{F0}と{F4}、{S1}";
+    faction_expand(s, sizeof s);
+    CHECK(!strcmp(s, "自由軍と西方同盟、東方"));
+    /* 入りきらないときに UTF-8 の途中で切らない */
+    char t[8] = "{F1}";
+    faction_expand(t, sizeof t);
+    CHECK(!strcmp(t, "東方"));
+    faction_set_player(0);
 }
 
 /* キャンペーンの多陣営ノード（第3段階）。
@@ -4957,6 +5003,7 @@ int main(void)
     test_maplist();
     test_ai_production_mix();
     test_campaign_story();
+    test_campaign_faction();
     test_campaign_multi();
     test_terrain_work();
     test_enemy_reinforce();

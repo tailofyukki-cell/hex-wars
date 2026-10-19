@@ -2,6 +2,7 @@
 #include "game.h"
 #include "hex.h"
 #include <string.h>
+#include <stdio.h>
 
 /* 機動ドメイン判定（定義は下方の補給セクション）。指揮官のドメイン判定で先に使う */
 static int move_domain(int mclass);
@@ -76,7 +77,57 @@ int unit_rank(const Unit *u)
 const char *unit_name_of(const UnitType *ut, int owner)
 {
     if (owner < 0 || owner >= MAX_PLAYERS) owner = 0;
-    return ut->name[owner];
+    return ut->name[faction_face(owner)];
+}
+
+static uint8_t s_face[MAX_PLAYERS] = { 0, 1, 2, 3, 4 };
+/* 既定は日本語名（画面側は文言表の名前を faction_set_names で渡し直す。テストやシミュレータ用） */
+static char    s_fac_full[MAX_PLAYERS][64] = { "西方同盟", "東方連邦", "南方連合", "北方同盟", "自由軍" };
+static char    s_fac_short[MAX_PLAYERS][32] = { "西方", "東方", "南方", "北方", "自由" };
+
+void faction_set_player(int f)
+{
+    for (int p = 0; p < MAX_PLAYERS; p++) s_face[p] = (uint8_t)p;
+    if (f > 0 && f < MAX_PLAYERS) { s_face[0] = (uint8_t)f; s_face[f] = 0; }
+}
+
+int faction_face(int p)
+{
+    if (p < 0 || p >= MAX_PLAYERS) return p;
+    return s_face[p];
+}
+
+void faction_set_names(const char *full[MAX_PLAYERS], const char *shrt[MAX_PLAYERS])
+{
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        snprintf(s_fac_full[p], sizeof s_fac_full[p], "%s", full[p] ? full[p] : "");
+        snprintf(s_fac_short[p], sizeof s_fac_short[p], "%s", shrt[p] ? shrt[p] : "");
+    }
+}
+
+void faction_expand(char *s, int size)
+{
+    if (!strchr(s, '{')) return;
+    char out[1024];
+    int o = 0;
+    for (const char *q = s; *q && o < (int)sizeof out - 1; ) {
+        if (q[0] == '{' && (q[1] == 'F' || q[1] == 'S') && q[2] >= '0' && q[2] <= '4' && q[3] == '}') {
+            int face = s_face[q[2] - '0'];
+            const char *nm = q[1] == 'F' ? s_fac_full[face] : s_fac_short[face];
+            int n = snprintf(out + o, sizeof out - (size_t)o, "%s", nm);
+            if (n > 0) o += n;
+            if (o > (int)sizeof out - 1) o = (int)sizeof out - 1;
+            q += 4;
+        } else out[o++] = *q++;
+    }
+    out[o] = 0;
+    /* 入りきらないときは UTF-8 の途中で切らない */
+    if (o >= size) {
+        o = size - 1;
+        while (o > 0 && ((unsigned char)out[o] & 0xC0) == 0x80) o--;
+        out[o] = 0;
+    }
+    memcpy(s, out, (size_t)o + 1);
 }
 
 /* 対潜制限: 潜水艦は anti_sub 持ちからのみ攻撃可能（仕様書 5.5） */

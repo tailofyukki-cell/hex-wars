@@ -88,6 +88,7 @@ SDL_Texture *sprite_get(App *a, int type, int owner)
     /* 陣営ごとに別の絵を引く。以前は 0/1 に丸めていたので、
      * 陣営2〜4 は P1 の絵を使い回していた。 */
     if (owner < 0 || owner >= MAX_PLAYERS) return NULL;
+    owner = faction_face(owner);   /* キャンペーンで選んだ陣営の絵にする */
 
     if (s_state[type][owner] != 0)
         return s_tex[type][owner];

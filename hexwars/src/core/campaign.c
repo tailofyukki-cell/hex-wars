@@ -353,6 +353,19 @@ int campaign_load(Campaign *c, const char *path, char *err, int errlen)
         if (err) snprintf(err, (size_t)errlen, "%s: ノードまたは start がありません", path);
         return -1;
     }
+    /* 陣営名の差し込み（{F0} など）。遊ぶ人が選んだ陣営に合わせて読み直すこと */
+#define FX(buf) faction_expand((buf), (int)sizeof(buf))
+    FX(c->name);
+    for (int i = 0; i < c->n_nodes; i++) {
+        CpnNode *nd = &c->nodes[i];
+        FX(nd->title);
+        for (int k = 0; k < nd->n_brief; k++) FX(nd->brief[k]);
+        for (int k = 0; k < nd->n_story; k++) { FX(nd->story[k].who); FX(nd->story[k].text); }
+        for (int k = 0; k < nd->n_story_win; k++) { FX(nd->story_win[k].who); FX(nd->story_win[k].text); }
+        for (int k = 0; k < nd->n_subs; k++) FX(nd->subs[k].desc);
+        for (int k = 0; k < nd->n_evs; k++) FX(nd->evs[k].msg);
+    }
+#undef FX
     return 0;
 }
 

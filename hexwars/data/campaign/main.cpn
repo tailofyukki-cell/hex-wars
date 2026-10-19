@@ -4,6 +4,13 @@
 # M20「残照」は締めくくりなので、わざと軽くしてある。
 # 西方同盟の一師団司令官として東方連邦の侵攻を押し返し、敵首都へ進撃する
 #
+# --- 陣営名 ---
+# 遊ぶ人は開始時に陣営を選べる（見た目だけ。陣営0 と選んだ陣営の名前・色・絵が入れ替わる）。
+# 文中で陣営の名前を書くときは直接書かず、次の記号にすること（読み込み時に置き換わる）。
+#   {F0}〜{F4}  正式名（西方同盟 / 東方連邦 / 南方連合 / 北方同盟 / 自由軍）
+#   {S0}〜{S4}  短い呼び名（西方 / 東方 …。「{S0}の旗」のように使う）
+# 番号はマップ上の陣営番号（0=自軍 1=主な敵 …）。「東方の要塞島」のような方角はそのまま書く。
+#
 # --- event の書き方 ---
 #   event = 条件 | 動作 | 画面に出すメッセージ
 # 各イベントは1作戦につき1回だけ発火する（発火済みかはセーブに残る）。1作戦16個まで。
@@ -38,8 +45,8 @@
 # **マップ側の敵は自軍の初期数以下にしておくこと**（減らす処理は無い）。
 
 [campaign]
-name  = 西方の反攻
-name@en = The Western Counteroffensive
+name  = {S0}の反攻
+name@en = The {S0} Counteroffensive
 start = M01
 
 [node M01]
@@ -49,12 +56,12 @@ reward = gfx/reward/m01.png
 #reward_video = gfx/anim/m01_clear.mp4
 title = 第1作戦「国境の哨戒線」
 map   = maps/c01_border.map
-brief = 東方連邦軍が国境を越えた。哨戒線一帯の敵前衛部隊を撃破し、
+brief = {F1}軍が国境を越えた。哨戒線一帯の敵前衛部隊を撃破し、
 brief = 国境地帯の敵司令部を制圧せよ。
 brief = 歩兵で都市を占領して収入を確保しつつ、工場で戦力を整えること。
 brief = （10ターン以内に勝利すれば敵の防衛線構築前に進撃でき、次の防衛戦を回避できる）
 # --- 幕間（story = 話者|セリフ。話者空で地の文） ---
-story = 東方連邦軍が国境を越えた。宣戦布告は無かった。
+story = {F1}軍が国境を越えた。宣戦布告は無かった。
 story = ミラ少尉|司令、哨戒線が三か所で破られました。前衛が持ちません。
 story = ミラ少尉|……ご指示を。ここで止められなければ、次は本土です。
 # --- 勝利直後の幕間 ---
@@ -74,11 +81,11 @@ event = TURN:8 | SPAWN:1:INFANTRY:26,19:2 | 敵の後続部隊が前線に到着
 
 # --- English ---
 title@en = Operation 1: Border Patrol Line
-brief@en = The Eastern Federation has crossed the border. Destroy the enemy vanguard along the patrol line
+brief@en = The {F1} has crossed the border. Destroy the enemy vanguard along the patrol line
 brief@en = and take the enemy command post in the border region.
 brief@en = Capture cities with infantry to secure income, and build up your forces at factories.
 brief@en = (Win within 10 turns to advance before the enemy fortifies, and skip the next defensive battle.)
-story@en = The Eastern Federation crossed the border. There was no declaration of war.
+story@en = The {F1} crossed the border. There was no declaration of war.
 story@en = Lt. Mira|Commander, the patrol line is broken in three places. The vanguard can't hold.
 story@en = Lt. Mira|...Your orders? If we can't stop them here, the homeland is next.
 story_win@en = Lt. Mira|We pushed them back from the patrol line. The vanguard held well.
@@ -395,19 +402,19 @@ art   = gfx/brief/m11.png
 reward = gfx/reward/m11.png
 title = 第9作戦「共同戦線」
 map   = maps/c15_alliance.map
-brief = 南方連合が参戦した。東方連邦も北方同盟を引き入れ、戦線は2対2になる。
-brief = 援軍（南方連合）は友軍だ。撃てないし、向こうも撃ってこない。
+brief = {F2}が参戦した。{F1}も{F3}を引き入れ、戦線は2対2になる。
+brief = 援軍（{F2}）は友軍だ。撃てないし、向こうも撃ってこない。
 brief = 援軍の拠点は占領できないが、援軍が見つけた敵はこちらにも見える。
 brief = 工兵を回す。隣接ヘクスの拠点を壊せば、敵の収入と補給を断てる。
-brief = （東方連邦の首都を落とせば勝ち。北方同盟が健在でも決着する）
+brief = （{F1}の首都を落とせば勝ち。{F3}が健在でも決着する）
 brief = （自軍だけで拠点14個を確保しても勝利となる。援軍の分は数えない）
 # --- 幕間（story = 話者|セリフ。話者空で地の文） ---
-story = 南方連合が参戦した。長い中立の末の決断だった。
+story = {F2}が参戦した。長い中立の末の決断だった。
 story = ミラ少尉|友軍です。撃てませんし、向こうも撃ってきません。
 story = ヴェルナー参謀|頼りにするな。あの国は自国の利のために動く。
 story = ミラ少尉|……とはいえ、東からの圧力が減るのは助かります。
 # --- 勝利直後の幕間 ---
-story_win = ミラ少尉|共同戦線、勝利です。南方連合にも損害は出ましたが。
+story_win = ミラ少尉|共同戦線、勝利です。{F2}にも損害は出ましたが。
 story_win = ヴェルナー参謀|……礼は言っておけ。次も同じ側にいるとは限らん。
 next_win  = M08
 next_lose = LOSE
@@ -422,28 +429,28 @@ co3   = GRAF      # 北方同盟（敵の援軍）は守勢。攻めると硬い
 sub = MAX_TURNS:30:30ターン以内に勝利する
 sub = MAX_LOSS:6:損失6部隊以内で勝利する
 event = TURN:2 | SPAWN:0:ENGINEER:5,7:1 | 工兵隊が到着した。隣接ヘクスの地形を壊したり元に戻したりできる。
-event = TURN:12 | MSG | 南方連合が東部で攻勢に出た。此方は西から押せる！
-event = LOSS:1:8 | SPAWN:3:HTANK:6,24:2 | 北方同盟が重戦車を繰り出してきた！
+event = TURN:12 | MSG | {F2}が東部で攻勢に出た。此方は西から押せる！
+event = LOSS:1:8 | SPAWN:3:HTANK:6,24:2 | {F3}が重戦車を繰り出してきた！
 
 # --- English ---
 title@en = Operation 9: Joint Front
-brief@en = The Southern Union has joined the war. The Federation brought in the Northern Pact: 2 vs 2.
-brief@en = The Southern Union is an ally. You can't fire on them, and they won't fire on you.
+brief@en = The {F2} has joined the war. The {F1} brought in the {F3}: 2 vs 2.
+brief@en = The {F2} is an ally. You can't fire on them, and they won't fire on you.
 brief@en = You can't capture allied bases, but enemies the allies spot are visible to you too.
 brief@en = Engineers are coming. Demolish bases on adjacent hexes to cut enemy income and supply.
-brief@en = (Take the Eastern Federation capital to win, even if the Northern Pact still stands.)
+brief@en = (Take the {F1} capital to win, even if the {F3} still stands.)
 brief@en = (Holding 14 bases with your own forces also wins. Allied bases don't count.)
-story@en = The Southern Union entered the war, after a long neutrality.
+story@en = The {F2} entered the war, after a long neutrality.
 story@en = Lt. Mira|They're allies. We can't fire on them, and they won't fire on us.
 story@en = Staff Officer Werner|Don't rely on them. That nation acts in its own interest.
 story@en = Lt. Mira|...Still, less pressure from the east is welcome.
-story_win@en = Lt. Mira|Victory on the joint front. The Southern Union took losses too.
+story_win@en = Lt. Mira|Victory on the joint front. The {F2} took losses too.
 story_win@en = Staff Officer Werner|...Thank them. They may not be on our side next time.
 sub_desc@en = Win within 30 turns
 sub_desc@en = Win losing no more than 6 units
 event_msg@en = Engineers arrived: demolish or restore adjacent terrain.
-event_msg@en = The Southern Union attacks in the east. Push from the west!
-event_msg@en = The Northern Pact has sent in heavy tanks!
+event_msg@en = The {F2} attacks in the east. Push from the west!
+event_msg@en = The {F3} has sent in heavy tanks!
 
 [node M08]
 art   = gfx/brief/m08.png
@@ -534,7 +541,7 @@ brief = 敵野戦軍の主力が平原に展開した。これを撃滅すれば
 brief = 首都への道が開ける。大戦車戦になるだろう。
 brief = 自走砲の支援射撃と対空防御を怠るな。
 # --- 幕間（story = 話者|セリフ。話者空で地の文） ---
-story = ザハロフ元帥|よくぞここまで来た、西方の指揮官。
+story = ザハロフ元帥|よくぞここまで来た、{S0}の指揮官。
 story = ザハロフ元帥|だが平原では小細工が効かん。数と鉄で決まる。
 story = ミラ少尉|……無線を切りますか、司令。
 story = ヴェルナー参謀|切らんでいい。あちらも不安なのだ。
@@ -558,7 +565,7 @@ title@en = Operation 12: Decisive Battle on the Plains
 brief@en = The enemy field army's main force has deployed on the plains. Destroy it
 brief@en = and the road to the capital opens. It will be a great tank battle.
 brief@en = Don't neglect SP gun support fire or air defense.
-story@en = Marshal Zakharov|So you've come this far, commander of the West.
+story@en = Marshal Zakharov|So you've come this far, {S0} commander.
 story@en = Marshal Zakharov|But tricks don't work on the plains. Numbers and steel decide it.
 story@en = Lt. Mira|...Shall I cut the radio, Commander?
 story@en = Staff Officer Werner|No need. He's uneasy too.
@@ -580,11 +587,11 @@ brief = 戦艦の艦砲と艦載機で海岸の敵防御を叩き、輸送艦の
 brief = 敵は海岸砲・対空砲・機甲部隊で固めている。護衛の駆逐艦で沿岸の敵艦を排除し、
 brief = 橋頭堡を築いてから内陸の敵司令部へ進撃せよ。
 # --- 幕間（story = 話者|セリフ。話者空で地の文） ---
-story = 敵本土の海岸線に、初めて西方の旗が向いた。
+story = 敵本土の海岸線に、初めて{S0}の旗が向いた。
 story = ミラ少尉|上陸します。ここから先は、あちらの土地です。
 story = ヴェルナー参謀|慎重にな。追い詰めた獣がいちばん危ない。
 # --- 勝利直後の幕間 ---
-story_win = 敵本土の海岸に、西方の旗が立った。
+story_win = 敵本土の海岸に、{S0}の旗が立った。
 story_win = ミラ少尉|上陸成功です。……ここまで来ましたね、司令。
 next_win  = N4
 next_lose = LOSE
@@ -602,10 +609,10 @@ brief@en = The enemy capital faces the eastern sea. Launch the largest landing i
 brief@en = Pound the shore defenses with naval guns and carrier aircraft, then land troops from transports.
 brief@en = The enemy is dug in with coastal guns, AA, and armor. Clear coastal ships with escort destroyers,
 brief@en = build a bridgehead, then advance on the enemy command post inland.
-story@en = For the first time, Western flags turned toward the enemy's own coast.
+story@en = For the first time, {S0} flags turned toward the enemy's own coast.
 story@en = Lt. Mira|Landing now. From here on, it's their soil.
 story@en = Staff Officer Werner|Carefully. A cornered beast is the most dangerous.
-story_win@en = A Western flag stands on the enemy's home shore.
+story_win@en = A {S0} flag stands on the enemy's home shore.
 story_win@en = Lt. Mira|The landing succeeded. ...We made it this far, Commander.
 sub_desc@en = Keep at least 1 transport ship alive and build a bridgehead
 sub_desc@en = Land successfully within 50 turns
@@ -664,17 +671,17 @@ art   = gfx/brief/m12.png
 reward = gfx/reward/m12.png
 title = 第14作戦「三つ巴の要衝」
 map   = maps/c16_threeway.map
-brief = 共同戦線を離れた南方連合が、要衝の丘に独自に陣取った。
+brief = 共同戦線を離れた{F2}が、要衝の丘に独自に陣取った。
 brief = こちらにも彼らにも味方はいない。三勢力の乱戦だ。
 brief = 二正面にならないよう、両軍がぶつかるのを待つのも手だ。
 brief = （拠点17個を確保すれば、両軍を潰さなくても勝利となる）
 # --- 幕間（story = 話者|セリフ。話者空で地の文） ---
-story = 南方連合が、要衝の丘に独自に陣取った。
+story = {F2}が、要衝の丘に独自に陣取った。
 story = ミラ少尉|共同戦線は終わりだそうです。理由は聞けませんでした。
 story = ヴェルナー参謀|言っただろう。あの国は自国の利で動く。
 story = ミラ少尉|三つ巴です。両軍がぶつかるのを待つ手もありますが。
 # --- 勝利直後の幕間 ---
-story_win = ミラ少尉|三つ巴を制しました。南方連合は西へ退いていきます。
+story_win = ミラ少尉|三つ巴を制しました。{F2}は西へ退いていきます。
 story_win = ヴェルナー参謀|追うな。今、敵を増やす余裕はない。
 next_win  = N3
 next_lose = LOSE
@@ -687,26 +694,26 @@ co2   = DIETER    # 南方連合は足が速い。回り込まれると厄介
 sub = CAPTURE:14:拠点を 14 個以上確保する
 sub = MIN_KILLS:12:両軍合わせて 12 部隊以上を撃破する
 event = TURN:2 | SPAWN:0:ENGINEER:5,7:1 | 工兵隊が到着した。道路を切れば両軍の進出を遅らせる。
-event = TURN:14 | MSG | 東方連邦と南方連合が中央の丘で衝突した。今が好機だ！
-event = BLD:0:16 | SPAWN:1:ROCKET:20,4:1 | 拠点を取られすぎた東方連邦がロケット砲を投入した！
+event = TURN:14 | MSG | {F1}と{F2}が中央の丘で衝突した。今が好機だ！
+event = BLD:0:16 | SPAWN:1:ROCKET:20,4:1 | 拠点を取られすぎた{F1}がロケット砲を投入した！
 
 # --- English ---
 title@en = Operation 14: Three-Way Crossroads
-brief@en = The Southern Union left the joint front and dug in on the key hill on its own.
+brief@en = The {F2} left the joint front and dug in on the key hill on its own.
 brief@en = Neither we nor they have any allies. It's a three-way melee.
 brief@en = To avoid a two-front war, it may pay to wait for the other two to clash.
 brief@en = (Hold 17 bases to win without crushing both armies.)
-story@en = The Southern Union dug in on the key hill on its own.
+story@en = The {F2} dug in on the key hill on its own.
 story@en = Lt. Mira|They say the joint front is over. They wouldn't tell me why.
 story@en = Staff Officer Werner|I told you. That nation acts in its own interest.
 story@en = Lt. Mira|It's three-way now. We could wait for the other two to clash.
-story_win@en = Lt. Mira|We won the three-way battle. The Southern Union is pulling back west.
+story_win@en = Lt. Mira|We won the three-way battle. The {F2} is pulling back west.
 story_win@en = Staff Officer Werner|Don't pursue. We can't afford more enemies right now.
 sub_desc@en = Hold at least 14 bases
 sub_desc@en = Destroy at least 12 units from both armies combined
 event_msg@en = Engineers arrived. Cut the roads to slow both armies down.
-event_msg@en = The Federation and the Union clashed on the hill. Strike now!
-event_msg@en = Losing too many bases, the Federation brings in rockets!
+event_msg@en = The {F1} and the {F2} clashed on the hill. Strike now!
+event_msg@en = Losing too many bases, the {F1} brings in rockets!
 
 [node N3]
 art   = gfx/brief/m03.png
@@ -861,7 +868,7 @@ art   = gfx/brief/m19.png
 reward = gfx/reward/m19.png
 title = 第19作戦「総力戦」
 map   = maps/c19_totalwar.map
-brief = 首都を失った東方連邦が、残る全戦力をこの一戦に投入してきた。
+brief = 首都を失った{F1}が、残る全戦力をこの一戦に投入してきた。
 brief = **開幕の敵はこちらと同数。だが増援が2波に分かれて到着する。**
 brief = 3ターン目には敵の数はこちらの倍になる。それまでに陣を整えろ。
 brief = 陸・海・空のすべてが揃う戦場だ。持ち越した部隊は惜しまず出せ。
@@ -892,7 +899,7 @@ sub = MIN_KILLS:60:敵を60部隊以上撃破する
 
 # --- English ---
 title@en = Operation 19: Total War
-brief@en = Having lost its capital, the Eastern Federation has thrown every remaining force into this battle.
+brief@en = Having lost its capital, the {F1} has thrown every remaining force into this battle.
 brief@en = **At the start the enemy matches your numbers, but reinforcements arrive in two waves.**
 brief@en = By turn 3 the enemy will outnumber you two to one. Get your formation ready before then.
 brief@en = Land, sea, and air are all here. Don't hold back the units you've carried over.
@@ -914,7 +921,7 @@ art   = gfx/brief/m20.png
 reward = gfx/reward/m20.png
 title = 最終作戦「残照」（第20作戦）
 map   = maps/c20_lastlight.map
-brief = 東方連邦の抵抗は終わった。残っているのは司令部の守備隊だけだ。
+brief = {F1}の抵抗は終わった。残っているのは司令部の守備隊だけだ。
 brief = 敵に増援は無い。持ち越した部隊で、静かに幕を引け。
 brief = 敵首都を制圧すれば、この戦争は終わる。
 # --- 幕間（story = 話者|セリフ。話者空で地の文） ---
@@ -938,7 +945,7 @@ sub = MAX_LOSS:1:損失1部隊以内で勝利する
 
 # --- English ---
 title@en = Final Operation: Last Light (Operation 20)
-brief@en = The Eastern Federation's resistance is over. Only the command post garrison remains.
+brief@en = The {F1}'s resistance is over. Only the command post garrison remains.
 brief@en = The enemy has no reinforcements. With the units you carried over, bring the curtain down quietly.
 brief@en = Take the enemy capital and this war is over.
 story@en = Lt. Mira|Enemy command post confirmed. Garrison only. No sign of reinforcements.

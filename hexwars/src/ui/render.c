@@ -6,14 +6,21 @@
 #include <stdio.h>
 #include <string.h>
 
-/* 陣営色。隣り合っても見分けられるよう色相を離してある。 */
-const SDL_Color COL_P[MAX_PLAYERS] = {
+/* 陣営色。隣り合っても見分けられるよう色相を離してある。
+ * 画面からは COL_P[p] で引く（キャンペーンで選んだ陣営の入れ替えが効く。app.h）。 */
+const SDL_Color COL_P_BASE[MAX_PLAYERS] = {
     { 58, 110, 200, 255 },   /* P0 西方同盟: 青 */
     { 205,  72,  58, 255 },  /* P1 東方連邦: 赤 */
     { 226, 168,  52, 255 },  /* P2: 黄 */
     { 92,  172,  96, 255 },  /* P3: 緑 */
     { 158, 104, 200, 255 },  /* P4: 紫 */
 };
+const SDL_Color *col_p_table(void)
+{
+    static SDL_Color t[MAX_PLAYERS];
+    for (int p = 0; p < MAX_PLAYERS; p++) t[p] = COL_P_BASE[faction_face(p)];
+    return t;
+}
 const SDL_Color COL_WHITE  = { 240, 240, 235, 255 };
 const SDL_Color COL_BLACK  = {  25,  28,  30, 255 };
 const SDL_Color COL_YELLOW = { 240, 210,  80, 255 };

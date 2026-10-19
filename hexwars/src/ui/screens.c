@@ -16,7 +16,7 @@ const char *faction_name(int p)
         "FACTION0", "FACTION1", "FACTION2", "FACTION3", "FACTION4"
     };
     if (p < 0 || p >= MAX_PLAYERS) return tx("FACTION1");
-    return tx(K[p]);
+    return tx(K[faction_face(p)]);
 }
 
 /* battle 画面（screen_battle.c） */
@@ -221,6 +221,16 @@ void app_load_text(App *a)
         if (text_load_overlay(path) != 0)
             SDL_Log("text_%s.def が読めません（日本語で表示します）", a->opt_lang);
     }
+    /* キャンペーンの文中の {F0} {S0} などに入れる陣営名 */
+    const char *full[MAX_PLAYERS], *shrt[MAX_PLAYERS];
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        char k1[16], k2[16];
+        snprintf(k1, sizeof k1, "FACTION%d", p);
+        snprintf(k2, sizeof k2, "FACTION_S%d", p);
+        full[p] = tx(k1);
+        shrt[p] = tx(k2);
+    }
+    faction_set_names(full, shrt);
 }
 
 void app_set_language(App *a, const char *code)
@@ -319,6 +329,7 @@ static void title_enter(App *a)
 {
     a->menu_idx = 0;
     a->campaign_mode = false;
+    faction_set_player(0);         /* キャンペーンで選んだ陣営の見た目を戻す */
     snd_music(HWM_TITLE, true);
 }
 
@@ -356,11 +367,15 @@ static void start_campaign(App *a)
 {
     char path[600], err[256];
     snprintf(path, sizeof path, "%sdata/campaign/main.cpn", a->base_path);
+    int fac = (a->cfac_idx >= 0 && a->cfac_idx < MAX_PLAYERS) ? a->cfac_idx : 0;
+    faction_set_player(fac);       /* 文中の陣営名を差し込むので読む前に */
     if (campaign_load(&a->cpn, path, err, sizeof err) != 0) {
         SDL_Log("キャンペーン読込失敗: %s", err);
+        faction_set_player(0);
         return;
     }
     memset(&a->cps, 0, sizeof a->cps);
+    a->cps.faction = (uint8_t)fac;
     a->cps.active = true;
     snprintf(a->cps.file, sizeof a->cps.file, "campaign/main.cpn");
     snprintf(a->cps.node, sizeof a->cps.node, "%s", a->cpn.start);
@@ -387,6 +402,18 @@ static SDL_Rect cdiff_rect(int i)
     return r;
 }
 
+static SDL_Rect cfac_rect(int i)
+{
+    SDL_Rect r = { WIN_W / 2 - 360, 240 + i * 60, 300, 50 };
+    return r;
+}
+
+static void cfac_open(App *a)
+{
+    a->cfac_open = 1;
+    if (a->cfac_idx < 0 || a->cfac_idx >= MAX_PLAYERS) a->cfac_idx = 0;
+}
+
 /* 【検証用】F12 で data/campaign/zz_test.cpn の作戦を選んで始める。
  * ファイルが無ければ何もしない（検証用ファイルを消せば、この入口も消える）。 */
 static void test_cpn_start(App *a, int idx)
@@ -399,6 +426,7 @@ static void test_cpn_start(App *a, int idx)
     snprintf(a->cps.file, sizeof a->cps.file, "campaign/zz_test.cpn");
     snprintf(a->cps.node, sizeof a->cps.node, "%s", a->cpn.nodes[idx].id);
     a->cps.diff = 0;               /* 敵の難易度は各作戦の enemy= を使う（HELL の検証のため） */
+    a->cps.faction = 0;
     a->campaign_mode = true;
     a->next_screen = SCREEN_BRIEFING;
 }
@@ -426,13 +454,40 @@ static void title_event(App *a, const SDL_Event *e)
         }
         return;
     }
+    /* キャンペーンの陣営選択（難易度の次） */
+    if (a->cfac_open) {
+        if (e->type == SDL_KEYDOWN) {
+            SDL_Keycode k = e->key.keysym.sym;
+            int n = MAX_PLAYERS;
+            if (k == SDLK_UP)   { a->cfac_idx = (a->cfac_idx + n - 1) % n; snd_se(SE_CURSOR); }
+            if (k == SDLK_DOWN) { a->cfac_idx = (a->cfac_idx + 1) % n; snd_se(SE_CURSOR); }
+            if (k == SDLK_z || k == SDLK_RETURN) { a->cfac_open = 0; snd_se(SE_OK); start_campaign(a); }
+            if (k == SDLK_x || k == SDLK_ESCAPE) { a->cfac_open = 0; a->cdiff_open = 1; snd_se(SE_CANCEL); }
+        }
+        if (e->type == SDL_MOUSEMOTION || e->type == SDL_MOUSEBUTTONDOWN) {
+            SDL_Point p = { e->type == SDL_MOUSEMOTION ? e->motion.x : e->button.x,
+                            e->type == SDL_MOUSEMOTION ? e->motion.y : e->button.y };
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                SDL_Rect r = cfac_rect(i);
+                if (!SDL_PointInRect(&p, &r)) continue;
+                a->cfac_idx = i;
+                if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT) {
+                    a->cfac_open = 0; snd_se(SE_OK); start_campaign(a);
+                }
+            }
+            if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_RIGHT) {
+                a->cfac_open = 0; a->cdiff_open = 1;
+            }
+        }
+        return;
+    }
     /* キャンペーンの難易度選択 */
     if (a->cdiff_open) {
         if (e->type == SDL_KEYDOWN) {
             SDL_Keycode k = e->key.keysym.sym;
             if (k == SDLK_UP)   { a->cdiff_idx = (a->cdiff_idx + 3) % 4; snd_se(SE_CURSOR); }
             if (k == SDLK_DOWN) { a->cdiff_idx = (a->cdiff_idx + 1) % 4; snd_se(SE_CURSOR); }
-            if (k == SDLK_z || k == SDLK_RETURN) { a->cdiff_open = 0; snd_se(SE_OK); start_campaign(a); }
+            if (k == SDLK_z || k == SDLK_RETURN) { a->cdiff_open = 0; snd_se(SE_OK); cfac_open(a); }
             if (k == SDLK_x || k == SDLK_ESCAPE) { a->cdiff_open = 0; snd_se(SE_CURSOR); }
         }
         if (e->type == SDL_MOUSEMOTION || e->type == SDL_MOUSEBUTTONDOWN) {
@@ -443,7 +498,7 @@ static void title_event(App *a, const SDL_Event *e)
                 if (!SDL_PointInRect(&p, &r)) continue;
                 a->cdiff_idx = i;
                 if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT) {
-                    a->cdiff_open = 0; snd_se(SE_OK); start_campaign(a);
+                    a->cdiff_open = 0; snd_se(SE_OK); cfac_open(a);
                 }
             }
             if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_RIGHT)
@@ -541,6 +596,42 @@ static void title_draw(App *a)
         draw_diff_desc(a, CDIFF[a->cdiff_idx & 3], WIN_W / 2 - 20, 260);
         draw_text_center(a, a->font_s, WIN_W / 2, 545, COL_GRAY, tx("CDIFF_NOTE"));
         draw_text_center(a, a->font_s, WIN_W / 2, 585, COL_DIM, tx("CDIFF_HINT"));
+    }
+    if (a->cfac_open) {
+        fill_rect(a, 0, 0, WIN_W, WIN_H, (SDL_Color){ 10, 12, 16, 200 });
+        fill_rect(a, WIN_W / 2 - 400, 150, 800, 470, (SDL_Color){ 30, 36, 46, 250 });
+        outline_rect(a, WIN_W / 2 - 400, 150, 800, 470, COL_DIM);
+        draw_text_center(a, a->font_l, WIN_W / 2, 170, COL_WHITE, tx("CFAC_TITLE"));
+        char key[16], buf[256];
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+            SDL_Rect r = cfac_rect(i);
+            bool sel = (a->cfac_idx == i);
+            fill_rect(a, r.x, r.y, r.w, r.h, sel ? (SDL_Color){ 70, 100, 150, 255 }
+                                               : (SDL_Color){ 45, 55, 68, 255 });
+            outline_rect(a, r.x, r.y, r.w, r.h, sel ? COL_YELLOW : COL_DIM);
+            fill_rect(a, r.x + 14, r.y + 15, 20, 20, COL_P_BASE[i]);
+            snprintf(key, sizeof key, "FACTION%d", i);
+            draw_text(a, a->font_m, r.x + 48, r.y + 11, sel ? COL_WHITE : COL_GRAY, tx(key));
+        }
+        /* 右側: 選んだ陣営と、敵になる陣営（陣営0 と入れ替わるので、東方連邦を選ぶと西方同盟が敵） */
+        int x = WIN_W / 2 - 20, y = 250;
+        int me = (a->cfac_idx >= 0 && a->cfac_idx < MAX_PLAYERS) ? a->cfac_idx : 0;
+        int foe = me == 1 ? 0 : 1;
+        snprintf(key, sizeof key, "FACTION%d", me);
+        fill_rect(a, x, y + 6, 20, 20, COL_P_BASE[me]);
+        snprintf(buf, sizeof buf, tx("CFAC_YOU_FMT"), tx(key));
+        draw_text(a, a->font_m, x + 30, y, COL_WHITE, buf);
+        snprintf(key, sizeof key, "FACTION%d", foe);
+        fill_rect(a, x, y + 56, 20, 20, COL_P_BASE[foe]);
+        snprintf(buf, sizeof buf, tx("CFAC_FOE_FMT"), tx(key));
+        draw_text(a, a->font_m, x + 30, y + 50, COL_WHITE, buf);
+        for (int i = 1; i <= 4; i++) {
+            snprintf(key, sizeof key, "CFAC_NOTE_%d", i);
+            const char *ln = tx(key);
+            if (!ln[0] || !strcmp(ln, key)) break;
+            draw_text(a, a->font_s, x, y + 110 + (i - 1) * 26, COL_GRAY, ln);
+        }
+        draw_text_center(a, a->font_s, WIN_W / 2, 585, COL_DIM, tx("CFAC_HINT"));
     }
 }
 
@@ -853,6 +944,7 @@ static void setup_draw_co_detail(App *a, int ci, int px, int py, int pw)
 
 static void setup_enter(App *a)
 {
+    faction_set_player(0);         /* フリー対戦は陣営の見た目を入れ替えない */
     a->setup_row = 0;
     if (a->setup_row_boot > 0) {         /* --screen setup <map> <row> */
         a->setup_row = a->setup_row_boot;
@@ -1671,6 +1763,7 @@ static void load_select(App *a)
     app_apply_play_rules(a);
     snd_se(SE_OK);
     a->campaign_mode = a->cps.active;
+    faction_set_player(a->campaign_mode ? a->cps.faction : 0);
     if (a->campaign_mode) {
         char cpath[600];
         snprintf(cpath, sizeof cpath, "%sdata/%s", a->base_path, a->cps.file);
@@ -2518,7 +2611,11 @@ static int endroll_lines(App *a, const char **out)
         /* 未定義キーは tx() がキー名を返す実装なので、それを終端とみなす。
          * 値が空（"END_L03 ="）の行は「空行」として有効に扱う。 */
         if (!s || !strcmp(s, key)) break;
-        out[n++] = s;
+        static char buf[ENDROLL_MAX_LINES][192];   /* 陣営名の差し込み用 */
+        snprintf(buf[n], sizeof buf[n], "%s", s);
+        faction_expand(buf[n], (int)sizeof buf[n]);
+        out[n] = buf[n];
+        n++;
     }
     return n;
 }

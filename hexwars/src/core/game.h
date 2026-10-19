@@ -170,6 +170,16 @@ int  unit_rank(const Unit *u);                          /* 経験ランク 0..5 
 /* 陣営に応じた表示名。**表示にはこれを通すこと**（ut->name[0] を直接読むと
  * 陣営ごとの呼び分けが効かない）。owner が範囲外なら陣営0の名前を返す。 */
 const char *unit_name_of(const UnitType *ut, int owner);
+/* 陣営の見た目（名前・色・ユニット名・絵）の入れ替え。キャンペーンで遊ぶ人が
+ * 陣営 f を選ぶと、陣営0 と陣営f の見た目を入れ替える（ルール上は陣営0のまま）。
+ * faction_face(p) は陣営 p が「どの陣営の見た目で出るか」を返す。既定は p そのもの。
+ * キャンペーン以外では必ず faction_set_player(0) に戻すこと。 */
+void faction_set_player(int f);
+int  faction_face(int p);
+/* 文中の {F0}〜{F4}（正式名）と {S0}〜{S4}（短い呼び名）を、入れ替え後の陣営名に置き換える。
+ * 名前は faction_set_names で先に渡しておく（core は文言表を持たないため）。 */
+void faction_set_names(const char *full[MAX_PLAYERS], const char *shrt[MAX_PLAYERS]);
+void faction_expand(char *s, int size);
 bool unit_can_attack_target(const Game *g, const Unit *atk, const Unit *def);
 bool game_unit_visible_to(const Game *g, int viewer, const Unit *u);
 /* 潜水艦を見つけられる距離（units.def の sonar、無ければ視界の半分） */
