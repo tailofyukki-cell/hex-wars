@@ -1168,6 +1168,70 @@ static SDL_Rect ulist_rect(App *a, int i)
     return r;
 }
 
+#define ULIST_SORT_N 4    /* 種別 / 経験 / HPの少ない順 / 燃料の少ない順 */
+
+static SDL_Rect ulist_sort_rect(void)
+{
+    SDL_Rect r = { WIN_W / 2 + 190, 104, 160, 30 };
+    return r;
+}
+
+static const char *ulist_sort_name(const App *a)
+{
+    static const char *K[ULIST_SORT_N] = {
+        "PROD_SORT_TYPE", "PROD_SORT_EXP", "ULIST_SORT_HP", "ULIST_SORT_FUEL"
+    };
+    return tx(K[a->ulist_sort < ULIST_SORT_N ? a->ulist_sort : 0]);
+}
+
+/* 燃料の残り（割合、千分率）。燃料を持たないユニットは満タン扱い */
+static int ulist_fuel_ratio(const Game *g, const Unit *u)
+{
+    const UnitType *t = unit_type(g, u);
+    if (!t || t->fuel <= 0) return 1000;
+    return u->fuel * 1000 / t->fuel;
+}
+
+static int ulist_cmp(const App *a, int i, int j)
+{
+    const Game *g = &a->game;
+    const Unit *ui = &g->units[i], *uj = &g->units[j];
+    if (a->ulist_sort == 1) {
+        if (ui->exp != uj->exp) return ui->exp > uj->exp ? -1 : 1;
+    } else if (a->ulist_sort == 2) {
+        if (ui->hp != uj->hp) return ui->hp < uj->hp ? -1 : 1;
+    } else if (a->ulist_sort == 3) {
+        int fi = ulist_fuel_ratio(g, ui), fj = ulist_fuel_ratio(g, uj);
+        if (fi != fj) return fi < fj ? -1 : 1;
+    }
+    /* 既定（種別順）と同点のときの後始末。同じ種別は経験の高いものを上に */
+    if (ui->type != uj->type) return ui->type < uj->type ? -1 : 1;
+    if (ui->exp != uj->exp) return ui->exp > uj->exp ? -1 : 1;
+    return i < j ? -1 : (i > j);
+}
+
+/* ulist_sort に従って並べ替える。選んでいたユニットは並びが変わっても追いかける */
+static void ulist_sort_list(App *a)
+{
+    int keep = (a->ulist_idx >= 0 && a->ulist_idx < a->ulist_n) ? a->ulist[a->ulist_idx] : -1;
+    for (int i = 1; i < a->ulist_n; i++) {
+        int v = a->ulist[i], k = i - 1;
+        while (k >= 0 && ulist_cmp(a, a->ulist[k], v) > 0) { a->ulist[k + 1] = a->ulist[k]; k--; }
+        a->ulist[k + 1] = v;
+    }
+    for (int i = 0; i < a->ulist_n; i++) if (a->ulist[i] == keep) a->ulist_idx = i;
+}
+
+static void ulist_keep_visible(App *a);
+
+static void ulist_cycle_sort(App *a)
+{
+    a->ulist_sort = (uint8_t)((a->ulist_sort + 1) % ULIST_SORT_N);
+    ulist_sort_list(a);
+    ulist_keep_visible(a);
+    snd_se(SE_CURSOR);
+}
+
 /* 手番プレイヤーの未行動ユニットを集める（搭載中は盤上にいないので除く） */
 static void build_unit_list(App *a)
 {
@@ -1181,6 +1245,8 @@ static void build_unit_list(App *a)
     }
     a->ulist_idx = 0;
     a->ulist_scroll = 0;
+    ulist_sort_list(a);
+    a->ulist_idx = 0;
 }
 
 static void ulist_keep_visible(App *a)
@@ -1864,6 +1930,8 @@ void battle_event(App *a, const SDL_Event *e)
             return;
         }
         if (a->bs == BS_UNITLIST) {
+            SDL_Rect sr = ulist_sort_rect();
+            if (a->ulist_n > 0 && SDL_PointInRect(&p, &sr)) { ulist_cycle_sort(a); return; }
             int end = a->ulist_scroll + UNITLIST_VISIBLE;
             if (end > a->ulist_n) end = a->ulist_n;
             for (int i = a->ulist_scroll; i < end; i++) {
@@ -2046,6 +2114,7 @@ void battle_event(App *a, const SDL_Event *e)
             if (a->ulist_n > 0) {
                 menu_key_nav(k, &a->ulist_idx, a->ulist_n);
                 ulist_keep_visible(a);
+                if (k == SDLK_s) ulist_cycle_sort(a);
                 if (k == SDLK_z || k == SDLK_RETURN) ulist_confirm(a);
             } else if (k == SDLK_z || k == SDLK_RETURN) {
                 a->bs = BS_IDLE;
@@ -2985,13 +3054,22 @@ static void draw_menus(App *a)
         char title[256];
         snprintf(title, sizeof title, tx("ULIST_TITLE_FMT"), a->ulist_n);
         draw_text_center(a, a->font_m, WIN_W / 2, 108, COL_WHITE, title);
+        /* 並び替えボタン（S キーと同じ）。押すたび 種別→経験→HP→燃料 と巡る */
+        if (a->ulist_n > 0) {
+            SDL_Rect sr = ulist_sort_rect();
+            fill_rect(a, sr.x, sr.y, sr.w, sr.h, (SDL_Color){ 44, 52, 66, 255 });
+            outline_rect(a, sr.x, sr.y, sr.w, sr.h, COL_DIM);
+            char sb[256];
+            snprintf(sb, sizeof sb, tx("PROD_SORT_FMT"), ulist_sort_name(a));
+            draw_text_center(a, a->font_s, sr.x + sr.w / 2, sr.y + 6, COL_YELLOW, sb);
+        }
 
         if (a->ulist_n == 0) {
             draw_text_center(a, a->font_m, WIN_W / 2, 160, COL_GRAY,
                              tx("ULIST_EMPTY"));
         } else {
             if (a->ulist_scroll > 0)
-                draw_text_center(a, a->font_s, WIN_W / 2 + 330, 108, COL_YELLOW, "▲");
+                draw_text_center(a, a->font_s, WIN_W / 2 - 330, 108, COL_YELLOW, "▲");
             if (a->ulist_scroll + UNITLIST_VISIBLE < a->ulist_n)
                 draw_text_center(a, a->font_s, WIN_W / 2, 100 + ph - 20, COL_YELLOW, "▼");
             int end = a->ulist_scroll + UNITLIST_VISIBLE;

@@ -328,6 +328,8 @@ PROD_SORT_FMT   = Sort: %s
 PROD_SORT_TYPE  = Type
 PROD_SORT_EXP   = EXP
 PROD_SORT_COST  = Cost
+ULIST_SORT_HP   = Low HP
+ULIST_SORT_FUEL = Low fuel
 
 PANEL_DEF_FMT    = Defense +%d%%
 PANEL_INCOME_FMT = Income %dG
@@ -362,7 +364,7 @@ FC_NOTE         = Expected values. Actual results vary by +/-15%
 HINT_UNLOAD     = Choose where to unload (repeatable)  Z: Confirm  X: Done
 HINT_WORK       = Choose a hex (red = demolish / green = repair)  Z: Confirm  X: Cancel
 HINT_LAYER_PICK = What to do on this hex  Up/Down: Select  Z: Confirm  X: Back
-HINT_UNITLIST   = Up/Down/Wheel: Select  Z: Go to unit  X: Back
+HINT_UNITLIST   = Up/Down/Wheel: Select  Z: Go to unit  S: Sort  X: Back
 LAYER_AIR       = Air
 LAYER_SURFACE   = Surface
 LAYER_UNDER     = Undersea
@@ -456,7 +458,8 @@ DEPLOY_MARK_DISBAND_FMT = Disband +%dG
 DEPLOY_REFUND_FMT = Disband +%dG
 DEPLOY_EXP_FMT    = EXP %d (Rank %d)
 DEPLOY_GO         = Deploy this force
-DEPLOY_HINT       = Up/Down: Select  Z/Space: Deploy/Reserve  D/Right-click: Disband  A: Auto  X: Deploy
+DEPLOY_HINT       = Up/Down: Select  Z/Space: Deploy/Reserve  D/Right-click: Disband  A: Auto  S: Sort  X: Deploy
+DEPLOY_SORT_VALUE = Value
 
 # --- secondary objectives ---
 SUB_TITLE_FMT   = Secondary Objectives (+%d each)

@@ -2807,7 +2807,79 @@ static int deploy_budget(const App *a)
     return a->game.funds[0] + deploy_refund_total(a);
 }
 
+/* ---- 並び替え ----
+ * carry[] と dep_sel[] を一緒に並べ替える（行番号＝carry の番号のまま扱えるように）。
+ * 0=価値順（生産価格の高い順→経験の高い順。A の自動編成はこの順で上から埋める）
+ * 1=種別順  2=経験の高い順 */
+#define DEPLOY_SORT_N 3
+
+static int deploy_cmp(const App *a, int mode, int ti, int ei, int tj, int ej)
+{
+    const Game *g = &a->game;
+    int ci = ti < g->n_types ? g->types[ti].cost : 0;
+    int cj = tj < g->n_types ? g->types[tj].cost : 0;
+    if (mode == 0 && ci != cj) return ci > cj ? -1 : 1;
+    if (mode == 2 && ei != ej) return ei > ej ? -1 : 1;
+    if (ti != tj) return ti < tj ? -1 : 1;
+    if (ei != ej) return ei > ej ? -1 : 1;
+    return 0;
+}
+
+static void deploy_sort_by(App *a, int mode)
+{
+    CampaignState *cs = &a->cps;
+    for (int i = 1; i < cs->n_carry; i++) {
+        uint8_t t = cs->carry[i].type, e = cs->carry[i].exp, s = a->dep_sel[i];
+        bool cur = (a->dep_idx == i);
+        int k = i - 1;
+        while (k >= 0 && deploy_cmp(a, mode, cs->carry[k].type, cs->carry[k].exp, t, e) > 0) {
+            cs->carry[k + 1] = cs->carry[k];
+            a->dep_sel[k + 1] = a->dep_sel[k];
+            if (a->dep_idx == k) a->dep_idx = k + 1;   /* 選んでいた行を追いかける */
+            k--;
+        }
+        cs->carry[k + 1].type = t; cs->carry[k + 1].exp = e;
+        a->dep_sel[k + 1] = s;
+        if (cur) a->dep_idx = k + 1;
+    }
+}
+
+static const char *deploy_sort_name(const App *a)
+{
+    static const char *K[DEPLOY_SORT_N] = { "DEPLOY_SORT_VALUE", "PROD_SORT_TYPE", "PROD_SORT_EXP" };
+    return tx(K[a->dep_sort < DEPLOY_SORT_N ? a->dep_sort : 0]);
+}
+
+static SDL_Rect deploy_sort_rect(void)
+{
+    SDL_Rect r = { WIN_W / 2 + 160, 48, 160, 30 };
+    return r;
+}
+
+static void deploy_keep_visible(App *a);
+
+static void deploy_cycle_sort(App *a)
+{
+    a->dep_sort = (uint8_t)((a->dep_sort + 1) % DEPLOY_SORT_N);
+    deploy_sort_by(a, a->dep_sort);
+    deploy_keep_visible(a);
+    snd_se(SE_CURSOR);
+}
+
+static void deploy_fill_auto(App *a);
+
+/* 画面に入ったとき: 価値順に上限まで選んでから、遊ぶ人が選んでいる並びにする */
 static void deploy_enter(App *a)
+{
+    a->dep_idx = 0;
+    deploy_sort_by(a, 0);
+    deploy_fill_auto(a);
+    deploy_sort_by(a, a->dep_sort);
+    a->dep_idx = 0;
+    a->dep_scroll = 0;
+}
+
+static void deploy_fill_auto(App *a)
 {
     /* 既定は「価値の高い順に上限まで」。
      * carry[] は価格→経験値→HP の順に並んでいるので先頭から埋めればよい
@@ -2824,8 +2896,6 @@ static void deploy_enter(App *a)
         spent += deploy_cost(a, i);
         n++;
     }
-    a->dep_idx = 0;
-    a->dep_scroll = 0;
 }
 
 static void deploy_keep_visible(App *a)
@@ -2940,10 +3010,11 @@ static void deploy_event(App *a, const SDL_Event *e)
         if (k == SDLK_SPACE || k == SDLK_z || k == SDLK_RETURN)
             deploy_toggle(a, a->dep_idx);
         if (k == SDLK_d) deploy_disband_toggle(a, a->dep_idx);   /* D: 解隊 */
-        if (k == SDLK_a) {          /* A: 経験値順に自動で埋め直す */
+        if (k == SDLK_a) {          /* A: 価値順に自動で埋め直す（並びは今のまま） */
             deploy_enter(a);
             snd_se(SE_CURSOR);
         }
+        if (k == SDLK_s) deploy_cycle_sort(a);                   /* S: 並び替え */
         if (k == SDLK_x || k == SDLK_ESCAPE) deploy_confirm(a);  /* この編成で出撃 */
         return;
     }
@@ -2961,6 +3032,8 @@ static void deploy_event(App *a, const SDL_Event *e)
         /* 「出撃」ボタン */
         SDL_Rect go = { WIN_W / 2 - 130, WIN_H - 74, 260, 44 };
         if (SDL_PointInRect(&p, &go)) { deploy_confirm(a); return; }
+        SDL_Rect sr = deploy_sort_rect();
+        if (SDL_PointInRect(&p, &sr)) { deploy_cycle_sort(a); return; }
         int end = a->dep_scroll + DEPLOY_VISIBLE;
         if (end > a->cps.n_carry) end = a->cps.n_carry;
         for (int i = a->dep_scroll; i < end; i++) {
@@ -2978,6 +3051,13 @@ static void deploy_draw(App *a)
     char buf[192];
 
     draw_text_center(a, a->font_l, WIN_W / 2, 56, COL_WHITE, tx("DEPLOY_TITLE"));
+    {   /* 並び替えボタン（S キーと同じ） */
+        SDL_Rect sr = deploy_sort_rect();
+        fill_rect(a, sr.x, sr.y, sr.w, sr.h, (SDL_Color){ 44, 52, 66, 255 });
+        outline_rect(a, sr.x, sr.y, sr.w, sr.h, COL_DIM);
+        snprintf(buf, sizeof buf, tx("PROD_SORT_FMT"), deploy_sort_name(a));
+        draw_text_center(a, a->font_s, sr.x + sr.w / 2, sr.y + 6, COL_YELLOW, buf);
+    }
     snprintf(buf, sizeof buf, tx("DEPLOY_COUNT_FMT"),
              deploy_count(a), a->dep_limit, a->cps.n_carry);
     {

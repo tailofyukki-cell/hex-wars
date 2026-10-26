@@ -325,6 +325,8 @@ PROD_SORT_FMT   = 並び: %s
 PROD_SORT_TYPE  = 種別順
 PROD_SORT_EXP   = 経験順
 PROD_SORT_COST  = 安い順
+ULIST_SORT_HP   = HP少ない順
+ULIST_SORT_FUEL = 燃料少ない順
 
 PANEL_DEF_FMT    = 防御補正 +%d%%
 PANEL_INCOME_FMT = 収入 %dG
@@ -359,7 +361,7 @@ FC_NOTE         = ※期待値。実際は ±15% ぶれます
 HINT_UNLOAD     = 降ろす先を選択（続けて複数降車可）  Z:決定  X:終了
 HINT_WORK       = 工作するヘクスを選択（赤=破壊 / 緑=復旧）  Z:決定  X:やめる
 HINT_LAYER_PICK = このマスで何をするか  ↑↓:選択  Z:決定  X:戻る
-HINT_UNITLIST   = ↑↓/ホイール:選択  Z:そのユニットへ移動  X:戻る
+HINT_UNITLIST   = ↑↓/ホイール:選択  Z:そのユニットへ移動  S:並び替え  X:戻る
 LAYER_AIR       = 空
 LAYER_SURFACE   = 地上
 LAYER_UNDER     = 海中
@@ -455,7 +457,8 @@ DEPLOY_MARK_DISBAND_FMT = 解隊 +%dG
 DEPLOY_REFUND_FMT = 解隊 +%dG
 DEPLOY_EXP_FMT    = 経験 %d (ランク%d)
 DEPLOY_GO         = この編成で出撃
-DEPLOY_HINT       = ↑↓/ホイール:選択  Z/Space:出撃⇔倉庫  D/右クリック:解隊  A:価値順で自動  X:出撃
+DEPLOY_HINT       = ↑↓/ホイール:選択  Z/Space:出撃⇔倉庫  D/右クリック:解隊  A:価値順で自動  S:並び替え  X:出撃
+DEPLOY_SORT_VALUE = 価値順
 
 # --- 副目標（サブミッション） ---
 SUB_TITLE_FMT   = ◆ 副目標（各 +%d）

@@ -149,6 +149,7 @@ struct App {
     uint8_t dep_sel[MAX_CARRY_UNITS];  /* DEP_KEEP=倉庫 / DEP_GO=出撃 / DEP_DISBAND=解隊 */
     int     dep_limit;                 /* このマップの出撃上限 */
     int     dep_idx, dep_scroll;
+    uint8_t dep_sort;                  /* 並び 0=価値 1=種別 2=経験（S キーで巡回） */
     uint32_t dep_seed;                 /* 開戦に使う乱数シード */
 
     /* ロード画面 */
@@ -237,6 +238,7 @@ struct App {
     bool  story_is_win;
     int   ulist[MAX_UNITS];
     int   ulist_n, ulist_idx, ulist_scroll;
+    uint8_t ulist_sort;      /* 未行動一覧の並び 0=種別 1=経験 2=HP少 3=燃料少（S キーで巡回） */
     /* セーブメニュー */
     int   smenu_idx;
     int   join_target;       /* 合流先 unit index（BS_JOIN_CONFIRM 中のみ有効） */
