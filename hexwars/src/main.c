@@ -351,12 +351,19 @@ int main(int argc, char *argv[])
         save_shot(a);
     SDL_ShowWindow(a->win);
     SDL_RaiseWindow(a->win);
+    /* 文字入力（IME）を止める。SDL2 は既定で文字入力が有効なので、日本語入力が
+     * オンのままだと E や Z などのキーが変換中の文字として IME に取られ、
+     * キー操作の反応がとても悪くなる。このゲームに文字を打つ場面は無い。 */
+    SDL_StopTextInput();
 
     while (!a->quit) {
         uint32_t frame_start = SDL_GetTicks();
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) { a->quit = true; continue; }
+            /* 他の窓から戻ったときに文字入力が戻ることがあるので、その都度止め直す */
+            if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+                SDL_StopTextInput();
             /* 窓の端をドラッグして大きさを変えたら覚えておく（次回もその大きさで開く） */
             if (e.type == SDL_WINDOWEVENT &&
                 e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED && !a->opt_fullscreen) {
